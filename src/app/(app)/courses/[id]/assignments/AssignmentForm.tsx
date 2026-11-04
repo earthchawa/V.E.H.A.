@@ -14,6 +14,7 @@ export type AssignmentDefaults = {
   allowLate: boolean;
   isPublished: boolean;
   checkSimilarity: boolean;
+  ignoreCommon: boolean;
   reportVisibility: "IMMEDIATE" | "AFTER_DUE" | "HIDDEN";
   baseText: string;
 };
@@ -25,6 +26,7 @@ const EMPTY: AssignmentDefaults = {
   allowLate: true,
   isPublished: true,
   checkSimilarity: true,
+  ignoreCommon: true,
   reportVisibility: "IMMEDIATE",
   baseText: "",
 };
@@ -60,6 +62,7 @@ export function AssignmentForm({
         <label className="flex items-center gap-2"><input type="checkbox" name="allowLate" defaultChecked={d.allowLate} className="accent-accent" /> {t("asg.f.allowLate")}</label>
         <label className="flex items-center gap-2"><input type="checkbox" name="isPublished" defaultChecked={d.isPublished} className="accent-accent" /> {t("asg.f.published")}</label>
         <label className="flex items-center gap-2"><input type="checkbox" name="checkSimilarity" defaultChecked={d.checkSimilarity} className="accent-accent" /> {t("asg.f.check")}</label>
+        <label className="flex items-start gap-2 pl-5"><input type="checkbox" name="ignoreCommon" defaultChecked={d.ignoreCommon} className="mt-1 accent-accent" /> <span>{t("asg.f.ignoreCommon")}<span className="block text-xs text-subtle">{t("asg.f.ignoreCommonHint")}</span></span></label>
       </div>
       <div>
         <label className="label" htmlFor="a-vis">{t("asg.f.reportVis")}</label>

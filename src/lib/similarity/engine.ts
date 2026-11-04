@@ -92,9 +92,24 @@ export type CheckOutput = {
 };
 
 /** Compare every submission with every other one (n is a class, so n² is fine). */
-export function checkAll(subs: CheckInput[], baseText?: string | null): CheckOutput {
-  const ignore = ignoredGrams(baseText);
+/** With at least this many submissions, a passage in more than half of them counts as "common". */
+export const COMMON_MIN_SUBMISSIONS = 4;
+
+export function checkAll(
+  subs: CheckInput[],
+  ignoreText?: string | null,
+  opts: { ignoreCommon?: boolean } = {},
+): CheckOutput {
+  const ignore = ignoredGrams(ignoreText);
   const docs = subs.map((s) => buildDoc(s.content, s.segments));
+
+  // Passages most of the class shares (textbook sentences, the question copied into the answer)
+  // say little about copying between particular cadets.
+  if (opts.ignoreCommon && subs.length >= COMMON_MIN_SUBMISSIONS) {
+    const df = new Map<string, number>();
+    for (const d of docs) for (const key of d.grams.keys()) df.set(key, (df.get(key) ?? 0) + 1);
+    for (const [key, n] of df) if (n > subs.length / 2) ignore.add(key);
+  }
   const union = docs.map((d) => new Uint8Array(d.tokens.length));
   const matches: CheckOutput["matches"] = [];
 

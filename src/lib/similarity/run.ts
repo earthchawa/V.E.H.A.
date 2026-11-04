@@ -18,7 +18,9 @@ export async function recheckAssignment(assignmentId: string): Promise<void> {
 
   const result = checkAll(
     assignment.submissions.map((s) => ({ id: s.id, content: s.content, segments: s.segments as Segment[] })),
-    assignment.baseText,
+    // Starter text and the instructions themselves (cadets often paste the questions into answers).
+    [assignment.baseText, assignment.instructions].filter(Boolean).join("\n\n"),
+    { ignoreCommon: assignment.ignoreCommon },
   );
   const now = new Date();
   await db.$transaction([

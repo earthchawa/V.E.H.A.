@@ -200,6 +200,8 @@ model Assignment {
   allowLate        Boolean          @default(true)
   isPublished      Boolean          @default(true)
   checkSimilarity  Boolean          @default(true)
+  /// Ignore passages that more than half the class shares (textbook phrasing, copied questions).
+  ignoreCommon     Boolean          @default(true)
   reportVisibility ReportVisibility @default(IMMEDIATE)
   /// Question text / starter code every cadet is expected to include; ignored by the similarity check.
   baseText         String?

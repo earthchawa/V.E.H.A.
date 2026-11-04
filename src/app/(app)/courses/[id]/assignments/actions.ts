@@ -48,6 +48,7 @@ export async function saveAssignmentAction(
     allowLate: fd.get("allowLate") === "on",
     isPublished: fd.get("isPublished") === "on",
     checkSimilarity: fd.get("checkSimilarity") === "on",
+    ignoreCommon: fd.get("ignoreCommon") === "on",
     reportVisibility: (VIS as readonly string[]).includes(vis) ? (vis as (typeof VIS)[number]) : "IMMEDIATE",
     baseText: String(fd.get("baseText") ?? "").trim().slice(0, 100000) || null,
   };
@@ -57,7 +58,12 @@ export async function saveAssignmentAction(
     if (existing.offeringId !== offeringId) throw new Error("forbidden");
     await db.assignment.update({ where: { id: assignmentId }, data });
     // Starter text or the on/off switch changes the results.
-    if (existing.baseText !== data.baseText || existing.checkSimilarity !== data.checkSimilarity)
+    if (
+      existing.baseText !== data.baseText ||
+      existing.instructions !== data.instructions ||
+      existing.checkSimilarity !== data.checkSimilarity ||
+      existing.ignoreCommon !== data.ignoreCommon
+    )
       await recheckAssignment(assignmentId);
     await audit({ actorId: user.id, action: "assignment.updated", targetType: "Assignment", targetId: assignmentId });
     revalidatePath(`/courses/${offeringId}/assignments`, "layout");

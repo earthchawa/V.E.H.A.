@@ -132,6 +132,7 @@ export default async function AssignmentPage({ params }: { params: Promise<{ id:
                     allowLate: assignment.allowLate,
                     isPublished: assignment.isPublished,
                     checkSimilarity: assignment.checkSimilarity,
+                    ignoreCommon: assignment.ignoreCommon,
                     reportVisibility: assignment.reportVisibility,
                     baseText: assignment.baseText ?? "",
                   }}

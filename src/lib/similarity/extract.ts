@@ -21,7 +21,8 @@ export async function extractFile(name: string, data: Buffer): Promise<Extracted
       const { extractText, getDocumentProxy } = await import("unpdf");
       const pdf = await getDocumentProxy(new Uint8Array(data));
       const { text } = await extractText(pdf, { mergePages: true });
-      return text.trim() ? [{ text, kind: "text" }] : null;
+      // PDFs made with legacy Thai fonts often extract as garbage; don't score what we can't read.
+      return text.trim() && !looksGarbled(text) ? [{ text, kind: "text" }] : null;
     }
     if (ext === "docx") {
       const mammoth = await import("mammoth");
@@ -32,6 +33,29 @@ export async function extractFile(name: string, data: Buffer): Promise<Extracted
     console.warn(`[extract] could not read ${name}:`, err);
   }
   return null;
+}
+
+/**
+ * True when extracted text is mostly unreadable: replacement characters, private-use glyphs
+ * (legacy Thai PDF fonts map vowels/tone marks there), control characters, or Thai combining
+ * marks with no base consonant.
+ */
+export function looksGarbled(text: string): boolean {
+  const chars = [...text.replace(/\s+/g, "")];
+  if (chars.length === 0) return false;
+  let bad = 0;
+  let prev = "";
+  for (const c of chars) {
+    const cp = c.codePointAt(0)!;
+    const privateUse = cp >= 0xe000 && cp <= 0xf8ff;
+    const control = cp < 0x20 || (cp >= 0x7f && cp < 0xa0);
+    // Thai above/below vowels and tone marks must follow a Thai consonant or vowel.
+    const thaiMark = /[\u0E31\u0E34-\u0E3A\u0E47-\u0E4E]/.test(c);
+    const orphanMark = thaiMark && !/[\u0E01-\u0E30\u0E31-\u0E3A\u0E47-\u0E4E]/.test(prev);
+    if (c === "\uFFFD" || privateUse || control || orphanMark) bad++;
+    prev = c;
+  }
+  return bad / chars.length > 0.02;
 }
 
 /** Jupyter notebooks: code cells as code, markdown cells as prose. Outputs are ignored. */
