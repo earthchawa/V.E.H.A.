@@ -1,0 +1,180 @@
+// NKRAFA AI Classroom — data model
+// Phase 1: accounts, terms, courses, course offerings, enrollment, materials, audit log.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  INSTRUCTOR
+  STUDENT
+}
+
+enum EnrollmentRole {
+  STUDENT
+  INSTRUCTOR
+}
+
+enum MaterialType {
+  FILE
+  LINK
+}
+
+model User {
+  id                    String    @id @default(cuid())
+  /// Student ID / staff ID — what people type to log in.
+  username              String    @unique
+  fullName              String
+  /// Optional; required for self-service "forgot password".
+  email                 String?   @unique
+  role                  Role      @default(STUDENT)
+  passwordHash          String
+  /// True for initial and admin-reset passwords: user must set their own on next login.
+  mustChangePassword    Boolean   @default(true)
+  /// A temporary password stops working after this time.
+  tempPasswordExpiresAt DateTime?
+  failedLoginCount      Int       @default(0)
+  lockedUntil           DateTime?
+  isActive              Boolean   @default(true)
+  lastLoginAt           DateTime?
+  passwordChangedAt     DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  sessions    Session[]
+  resetTokens PasswordResetToken[]
+  enrollments Enrollment[]
+  materials   Material[]
+  auditLogs   AuditLog[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  /// SHA-256 of the cookie token; the raw token is never stored.
+  tokenHash String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model Term {
+  id           String    @id @default(cuid())
+  /// Buddhist-era academic year, e.g. 2569.
+  academicYear Int
+  /// 1, 2 or 3 (summer).
+  semester     Int
+  startDate    DateTime?
+  endDate      DateTime?
+  isCurrent    Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+
+  offerings CourseOffering[]
+
+  @@unique([academicYear, semester])
+}
+
+model Course {
+  id          String   @id @default(cuid())
+  /// e.g. CS201
+  code        String   @unique
+  title       String
+  titleTh     String?
+  credits     Int?
+  description String?
+  createdAt   DateTime @default(now())
+
+  offerings CourseOffering[]
+}
+
+/// A course taught in a specific term (and section).
+model CourseOffering {
+  id        String   @id @default(cuid())
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Restrict)
+  termId    String
+  term      Term     @relation(fields: [termId], references: [id], onDelete: Restrict)
+  section   String   @default("1")
+  createdAt DateTime @default(now())
+
+  enrollments Enrollment[]
+  materials   Material[]
+
+  @@unique([courseId, termId, section])
+  @@index([termId])
+}
+
+model Enrollment {
+  id         String         @id @default(cuid())
+  userId     String
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  offeringId String
+  offering   CourseOffering @relation(fields: [offeringId], references: [id], onDelete: Cascade)
+  role       EnrollmentRole @default(STUDENT)
+  createdAt  DateTime       @default(now())
+
+  @@unique([userId, offeringId])
+  @@index([offeringId])
+}
+
+model Material {
+  id          String         @id @default(cuid())
+  offeringId  String
+  offering    CourseOffering @relation(fields: [offeringId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  /// Optional week number for grouping.
+  week        Int?
+  type        MaterialType
+  // FILE
+  fileName    String?
+  storageKey  String?
+  mimeType    String?
+  sizeBytes   Int?
+  // LINK
+  url         String?
+  isPublished Boolean        @default(true)
+  createdById String
+  createdBy   User           @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([offeringId])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  action     String
+  targetType String?
+  targetId   String?
+  details    Json?
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([actorId])
+}

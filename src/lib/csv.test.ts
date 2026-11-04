@@ -1,0 +1,37 @@
+import { describe, expect, it } from "vitest";
+import { parseCsv, parseUserImport, toCsv } from "./csv";
+
+describe("parseCsv", () => {
+  it("handles quotes, commas, CRLF and BOM", () => {
+    expect(parseCsv('﻿a,"b, c","d ""q"""\r\n1,2,3\r\n')).toEqual([
+      ["a", "b, c", 'd "q"'],
+      ["1", "2", "3"],
+    ]);
+  });
+  it("round-trips through toCsv", () => {
+    const rows = [["x", 'y,"z"', "ไทย"]];
+    expect(parseCsv(toCsv(rows))).toEqual(rows);
+  });
+});
+
+describe("parseUserImport", () => {
+  it("skips the header and maps Thai/English roles", () => {
+    const { rows, errors } = parseUserImport(
+      "username,fullName,role,email\n6601001,นนอ.ก ข,student,A@X.AC.TH\nT01,อ.ค,อาจารย์,\n",
+    );
+    expect(errors).toEqual([]);
+    expect(rows).toMatchObject([
+      { username: "6601001", role: "STUDENT", email: "a@x.ac.th" },
+      { username: "T01", role: "INSTRUCTOR", email: null },
+    ]);
+  });
+  it("does not treat a username that starts with 'id' as a header", () => {
+    expect(parseUserImport("id001,Someone").rows).toHaveLength(1);
+  });
+  it("defaults role to student and reports bad rows", () => {
+    const { rows, errors } = parseUserImport("6601001,A\nbad id,B\n6601001,C\n6601002,D,wizard\n6601003,E,,not-an-email");
+    expect(rows).toHaveLength(1);
+    expect(rows[0].role).toBe("STUDENT");
+    expect(errors).toHaveLength(4);
+  });
+});
