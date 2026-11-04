@@ -15,6 +15,7 @@ import { config } from "@/lib/config";
 import { extractFile, type Extracted } from "@/lib/similarity/extract";
 import { assembleContent } from "@/lib/similarity/content";
 import { recheckAssignment } from "@/lib/similarity/run";
+import { copyAssignment, validTargets } from "@/lib/sections";
 
 async function requireManage(offeringId: string) {
   const user = await requireUser();
@@ -91,6 +92,10 @@ export async function saveAssignmentAction(
 
   const created = await db.assignment.create({ data: { ...data, offeringId, createdById: user.id } });
   await syncGradeItem(created.id);
+  for (const target of await validTargets(user, offeringId, fd.getAll("alsoTo"))) {
+    await copyAssignment(created.id, target.id, user.id);
+    revalidatePath(`/courses/${target.id}/assignments`);
+  }
   await audit({ actorId: user.id, action: "assignment.created", targetType: "Assignment", targetId: created.id });
   redirect(`/courses/${offeringId}/assignments/${created.id}`);
 }
@@ -209,4 +214,19 @@ export async function submitAction(assignmentId: string, _: FormState, fd: FormD
   await recheckAssignment(assignmentId);
   revalidatePath(`/courses/${assignment.offeringId}/assignments`, "layout");
   return { success: t(isLate ? "ok.submittedLate" : "ok.submitted") };
+}
+
+/** Copy an assignment (settings + gradebook column, never submissions) to other sections. */
+export async function copyAssignmentAction(_: FormState, fd: FormData): Promise<FormState> {
+  const assignment = await db.assignment.findUniqueOrThrow({ where: { id: String(fd.get("itemId")) } });
+  const user = await requireManage(assignment.offeringId);
+  const { t } = await getI18n();
+  const targets = await validTargets(user, assignment.offeringId, fd.getAll("target"));
+  if (!targets.length) return { error: t("sec.chooseTarget") };
+  for (const target of targets) {
+    await copyAssignment(assignment.id, target.id, user.id);
+    revalidatePath(`/courses/${target.id}`, "layout");
+  }
+  await audit({ actorId: user.id, action: "assignment.copied", targetType: "Assignment", targetId: assignment.id, details: { to: targets.map((x) => x.id) } });
+  return { success: t("sec.copied", { list: targets.map((x) => t("dash.section", { s: x.section })).join(", ") }) };
 }

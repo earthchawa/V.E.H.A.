@@ -3,13 +3,16 @@ import { loadCourse } from "@/lib/course";
 import { db } from "@/lib/db";
 import { formatBytes } from "@/lib/format";
 import { config } from "@/lib/config";
+import { siblingSections } from "@/lib/sections";
+import { CopyToSections } from "@/components/CopyToSections";
 import { getI18n } from "@/lib/i18n/server";
 import { AddMaterialForm } from "./AddMaterialForm";
-import { deleteMaterialAction, toggleMaterialAction } from "./actions";
+import { copyMaterialAction, deleteMaterialAction, toggleMaterialAction } from "./actions";
 
 export default async function CourseMaterialsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { offering, canManage, students } = await loadCourse(id);
+  const { user, offering, canManage, students } = await loadCourse(id);
+  const siblings = canManage ? await siblingSections(user, offering.id) : [];
   const { t, date } = await getI18n();
 
   const materials = await db.material.findMany({
@@ -62,6 +65,7 @@ export default async function CourseMaterialsPage({ params }: { params: Promise<
                       </div>
                       {canManage && (
                         <div className="flex gap-2">
+                          <CopyToSections action={copyMaterialAction} itemId={m.id} sections={siblings} />
                           <form action={toggleMaterialAction}>
                             <input type="hidden" name="materialId" value={m.id} />
                             <button className="btn-secondary">{t(m.isPublished ? "course.hide" : "course.publish")}</button>
@@ -84,7 +88,7 @@ export default async function CourseMaterialsPage({ params }: { params: Promise<
           <aside className="space-y-6">
             <section className="card">
               <h2 className="card-title">{t("course.addMaterial")}</h2>
-              <AddMaterialForm offeringId={offering.id} maxMb={config.maxUploadMb} />
+              <AddMaterialForm offeringId={offering.id} maxMb={config.maxUploadMb} sections={siblings} />
             </section>
             <section className="card">
               <h2 className="card-title">{t("course.cadets")} <span className="font-normal text-subtle">{students.length}</span></h2>

@@ -2,12 +2,13 @@
 
 import { useActionState, useState } from "react";
 import { KeepForm } from "@/components/KeepForm";
+import { SectionCheckboxes, type SectionRef } from "@/components/SectionCheckboxes";
 import { addMaterialAction } from "./actions";
 import { FormMessage } from "@/components/FormMessage";
 import { SubmitButton } from "@/components/SubmitButton";
 import { useI18n } from "@/lib/i18n/client";
 
-export function AddMaterialForm({ offeringId, maxMb }: { offeringId: string; maxMb: number }) {
+export function AddMaterialForm({ offeringId, maxMb, sections = [] }: { offeringId: string; maxMb: number; sections?: SectionRef[] }) {
   const [state, action, pending] = useActionState(addMaterialAction.bind(null, offeringId), undefined);
   const [type, setType] = useState<"FILE" | "LINK">("FILE");
   const { t } = useI18n();
@@ -64,6 +65,7 @@ export function AddMaterialForm({ offeringId, maxMb }: { offeringId: string; max
       <label className="flex items-center gap-2 text-sm text-muted">
         <input type="checkbox" name="isPublished" defaultChecked className="accent-accent" /> {t("mat.visible")}
       </label>
+      <SectionCheckboxes sections={sections} />
       <FormMessage state={clientError ? { error: clientError } : state} />
       <SubmitButton className="btn w-full" pendingText={t("mat.uploading")}>{t("course.addMaterial")}</SubmitButton>
     </KeepForm>

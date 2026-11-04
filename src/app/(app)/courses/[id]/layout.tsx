@@ -1,4 +1,5 @@
 import { loadCourse } from "@/lib/course";
+import { db } from "@/lib/db";
 import { getI18n } from "@/lib/i18n/server";
 import { PageHeader } from "@/components/PageHeader";
 import { CourseTabs } from "./CourseTabs";
@@ -7,10 +8,11 @@ export default async function CourseLayout({ params, children }: { params: Promi
   const { id } = await params;
   const { offering, instructors } = await loadCourse(id);
   const { t, term } = await getI18n();
+  const multiSection = (await db.courseOffering.count({ where: { courseId: offering.courseId, termId: offering.termId } })) > 1;
   return (
     <div>
       <PageHeader
-        eyebrow={`${offering.course.code} · ${term(offering.term)}${offering.section !== "1" ? ` · ${t("dash.section", { s: offering.section })}` : ""}`}
+        eyebrow={`${offering.course.code} · ${term(offering.term)}${multiSection ? ` · ${t("dash.section", { s: offering.section })}` : ""}`}
         title={offering.course.title}
         description={
           <>

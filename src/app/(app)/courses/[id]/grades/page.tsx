@@ -5,7 +5,9 @@ import { computeStudent, formatPct, formatPoints, gradePoints, normaliseScale } 
 import { GradeGrid } from "./GradeGrid";
 import { AddCategoryForm, AddItemForm, CategoryRowForm, ScaleForm } from "./SetupForms";
 import { ConfirmButton } from "./ConfirmButton";
-import { deleteCategoryAction, deleteItemAction, toggleItemReleaseAction, toggleShowTotalAction } from "./actions";
+import { copyGradebookSetupAction, deleteCategoryAction, deleteItemAction, toggleItemReleaseAction, toggleShowTotalAction } from "./actions";
+import { siblingSections } from "@/lib/sections";
+import { CopyToSections } from "@/components/CopyToSections";
 
 export async function generateMetadata() {
   return { title: (await getI18n()).t("course.tab.grades") };
@@ -102,12 +104,16 @@ export default async function GradesPage({ params }: { params: Promise<{ id: str
   const initial: Record<string, number | null> = {};
   for (const g of grades) initial[`${g.itemId}:${g.studentId}`] = g.points;
   const weightSum = categories.reduce((n, c) => n + c.weight, 0);
+  const siblings = await siblingSections(user, offering.id);
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold">{t("gr.title")}</h2>
-        <a href={`/api/offerings/${offering.id}/grades`} className="btn-secondary h-9">{t("gr.export")}</a>
+        <div className="flex items-center gap-2">
+          <CopyToSections action={copyGradebookSetupAction} itemId={offering.id} sections={siblings} label={t("sec.copySetup")} hint={t("sec.copySetupHint")} />
+          <a href={`/api/offerings/${offering.id}/grades`} className="btn-secondary h-9">{t("gr.export")}</a>
+        </div>
       </div>
 
       <GradeGrid

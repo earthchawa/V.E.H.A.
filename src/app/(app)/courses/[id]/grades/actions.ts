@@ -9,6 +9,7 @@ import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { getI18n } from "@/lib/i18n/server";
 import { normaliseScale } from "@/lib/grades";
+import { copyGradebookSetup, validTargets } from "@/lib/sections";
 
 async function requireManage(offeringId: string) {
   const user = await requireUser();
@@ -223,3 +224,18 @@ export async function gradeSubmissionAction(itemId: string, studentId: string, _
   return { success: t("ok.saved") };
 }
 
+
+/** Copy categories, weights, grade scale and standalone items to other sections (never scores). */
+export async function copyGradebookSetupAction(_: FormState, fd: FormData): Promise<FormState> {
+  const offeringId = String(fd.get("itemId"));
+  const user = await requireManage(offeringId);
+  const { t } = await getI18n();
+  const targets = await validTargets(user, offeringId, fd.getAll("target"));
+  if (!targets.length) return { error: t("sec.chooseTarget") };
+  for (const target of targets) {
+    await copyGradebookSetup(offeringId, target.id);
+    refresh(target.id);
+  }
+  await audit({ actorId: user.id, action: "grade.setup_copied", targetType: "CourseOffering", targetId: offeringId, details: { to: targets.map((x) => x.id) } });
+  return { success: t("sec.copied", { list: targets.map((x) => t("dash.section", { s: x.section })).join(", ") }) };
+}

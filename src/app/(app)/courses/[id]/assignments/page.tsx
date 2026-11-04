@@ -5,6 +5,7 @@ import { getI18n } from "@/lib/i18n/server";
 import { studentCanSeeReport, submissionStatus } from "@/lib/assignments";
 import { SimilarityBadge } from "@/components/SimilarityBadge";
 import { AssignmentForm } from "./AssignmentForm";
+import { siblingSections } from "@/lib/sections";
 import { StatusBadge } from "./StatusBadge";
 
 export default async function AssignmentsPage({ params }: { params: Promise<{ id: string }> }) {
@@ -12,6 +13,7 @@ export default async function AssignmentsPage({ params }: { params: Promise<{ id
   const { user, offering, canManage, students } = await loadCourse(id);
   const { t, date } = await getI18n();
 
+  const siblings = canManage ? await siblingSections(user, offering.id) : [];
   const categories = canManage
     ? await db.gradeCategory.findMany({ where: { offeringId: offering.id }, orderBy: { position: "asc" }, select: { id: true, name: true } })
     : [];
@@ -62,7 +64,7 @@ export default async function AssignmentsPage({ params }: { params: Promise<{ id
         <aside>
           <section className="card">
             <h2 className="card-title">{t("asg.new")}</h2>
-            <AssignmentForm offeringId={offering.id} categories={categories} />
+            <AssignmentForm offeringId={offering.id} categories={categories} sections={siblings} />
           </section>
         </aside>
       )}

@@ -12,6 +12,9 @@ import { AssignmentForm } from "../AssignmentForm";
 import { SubmitForm } from "../SubmitForm";
 import { StatusBadge } from "../StatusBadge";
 import { DeleteAssignmentButton, RecheckButton } from "../ManageButtons";
+import { copyAssignmentAction } from "../actions";
+import { siblingSections } from "@/lib/sections";
+import { CopyToSections } from "@/components/CopyToSections";
 
 export default async function AssignmentPage({ params }: { params: Promise<{ id: string; aid: string }> }) {
   const { id, aid } = await params;
@@ -46,6 +49,7 @@ export default async function AssignmentPage({ params }: { params: Promise<{ id:
       assignment.gradeItem ? db.grade.findMany({ where: { itemId: assignment.gradeItem.id } }) : Promise.resolve([]),
     ]);
     const scoreOf = new Map(itemGrades.map((g) => [g.studentId, g.points]));
+    const siblings = await siblingSections(user, offering.id);
     const [submissions, matches] = await Promise.all([
       db.submission.findMany({
         where: { assignmentId: assignment.id },
@@ -109,6 +113,11 @@ export default async function AssignmentPage({ params }: { params: Promise<{ id:
           </div>
 
           <aside className="space-y-6">
+            {siblings.length > 0 && (
+              <div className="flex justify-end">
+                <CopyToSections action={copyAssignmentAction} itemId={assignment.id} sections={siblings} hint={t("sec.copyAssignmentHint")} />
+              </div>
+            )}
             {assignment.checkSimilarity && (
               <section className="card">
                 <h3 className="card-title">{t("asg.topPairs")}</h3>

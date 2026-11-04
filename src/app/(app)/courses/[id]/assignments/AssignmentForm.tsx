@@ -6,6 +6,7 @@ import { saveAssignmentAction } from "./actions";
 import { FormMessage } from "@/components/FormMessage";
 import { SubmitButton } from "@/components/SubmitButton";
 import { useI18n } from "@/lib/i18n/client";
+import { SectionCheckboxes, type SectionRef } from "@/components/SectionCheckboxes";
 
 export type AssignmentDefaults = {
   title: string;
@@ -40,11 +41,14 @@ export function AssignmentForm({
   assignmentId = null,
   defaults = EMPTY,
   categories = [],
+  sections = [],
 }: {
   offeringId: string;
   assignmentId?: string | null;
   defaults?: AssignmentDefaults;
   categories?: { id: string; name: string }[];
+  /** Other sections to optionally create the assignment in too (create mode only). */
+  sections?: SectionRef[];
 }) {
   const [state, action, pending] = useActionState(saveAssignmentAction.bind(null, offeringId, assignmentId), undefined);
   const { t } = useI18n();
@@ -97,6 +101,7 @@ export function AssignmentForm({
         <textarea id="a-base" name="baseText" rows={3} className="input font-mono text-xs" defaultValue={d.baseText} />
         <p className="mt-1.5 text-xs text-subtle">{t("asg.f.baseHint")}</p>
       </div>
+      {!assignmentId && <SectionCheckboxes sections={sections} />}
       <FormMessage state={state} />
       <SubmitButton>{t(assignmentId ? "asg.f.save" : "asg.f.create")}</SubmitButton>
     </KeepForm>

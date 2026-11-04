@@ -10,6 +10,7 @@ import { audit } from "@/lib/audit";
 import { config } from "@/lib/config";
 import { deleteStoredFile, saveFile } from "@/lib/storage";
 import { getI18n } from "@/lib/i18n/server";
+import { copyMaterial, validTargets } from "@/lib/sections";
 
 async function requireManage(offeringId: string) {
   const user = await requireUser();
@@ -74,6 +75,11 @@ export async function addMaterialAction(offeringId: string, _: FormState, fd: Fo
     },
   });
   await audit({ actorId: user.id, action: "material.created", targetType: "Material", targetId: material.id });
+  // "Also add to" other sections of the same course.
+  for (const target of await validTargets(user, offeringId, fd.getAll("alsoTo"))) {
+    await copyMaterial(material.id, target.id, user.id);
+    revalidatePath(`/courses/${target.id}`);
+  }
   revalidatePath(`/courses/${offeringId}`);
   return { success: t("ok.materialAdded") };
 }
@@ -108,4 +114,19 @@ export async function deleteMaterialAction(fd: FormData): Promise<void> {
     details: { title: material.title },
   });
   revalidatePath(`/courses/${material.offeringId}`);
+}
+
+/** Copy an existing material to other sections of the same course. */
+export async function copyMaterialAction(_: FormState, fd: FormData): Promise<FormState> {
+  const material = await db.material.findUniqueOrThrow({ where: { id: String(fd.get("itemId")) } });
+  const user = await requireManage(material.offeringId);
+  const { t } = await getI18n();
+  const targets = await validTargets(user, material.offeringId, fd.getAll("target"));
+  if (!targets.length) return { error: t("sec.chooseTarget") };
+  for (const target of targets) {
+    await copyMaterial(material.id, target.id, user.id);
+    revalidatePath(`/courses/${target.id}`);
+  }
+  await audit({ actorId: user.id, action: "material.copied", targetType: "Material", targetId: material.id, details: { to: targets.map((x) => x.id) } });
+  return { success: t("sec.copied", { list: targets.map((x) => t("dash.section", { s: x.section })).join(", ") }) };
 }

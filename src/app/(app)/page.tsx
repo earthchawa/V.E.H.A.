@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { getI18n } from "@/lib/i18n/server";
 import { PageHeader } from "@/components/PageHeader";
+import { cadetTodo, instructorTodo } from "@/lib/todo";
 
 export async function generateMetadata() {
   return { title: (await getI18n()).t("nav.courses") };
@@ -12,7 +13,7 @@ export async function generateMetadata() {
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ term?: string }> }) {
   const user = await requireUser();
   const { term: termParam } = await searchParams;
-  const { t, tn, term: termLabel } = await getI18n();
+  const { t, tn, term: termLabel, date } = await getI18n();
 
   const terms = await db.term.findMany({ orderBy: [{ academicYear: "desc" }, { semester: "desc" }] });
   const term = terms.find((x) => x.id === termParam) ?? terms.find((x) => x.isCurrent) ?? terms[0];
@@ -30,6 +31,25 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     },
     orderBy: { course: { code: "asc" } },
   });
+
+  // Show "Sec N" whenever a course runs more than one section this term.
+  const multiSection = new Set(
+    term
+      ? (await db.courseOffering.groupBy({ by: ["courseId"], where: { termId: term.id }, _count: { _all: true } }))
+          .filter((g) => g._count._all > 1)
+          .map((g) => g.courseId)
+      : [],
+  );
+  const [teaching, studying] = term
+    ? await Promise.all([
+        db.enrollment.count({ where: { userId: user.id, role: "INSTRUCTOR", offering: { termId: term.id } } }),
+        db.enrollment.count({ where: { userId: user.id, role: "STUDENT", offering: { termId: term.id } } }),
+      ])
+    : [0, 0];
+  const [iTodo, cTodo] = await Promise.all([
+    teaching && term ? instructorTodo(user.id, term.id) : Promise.resolve([]),
+    studying && term ? cadetTodo(user.id, term.id) : Promise.resolve([]),
+  ]);
 
   return (
     <div>
@@ -51,6 +71,54 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         }
       />
 
+      {teaching > 0 && (
+        <section className="mb-8 overflow-hidden rounded-xl border border-border bg-surface" data-testid="instructor-todo">
+          <h2 className="border-b border-border px-5 py-3 text-sm font-semibold">{t("todo.title")}</h2>
+          {iTodo.length === 0 ? (
+            <p className="px-5 py-4 text-sm text-muted">{t("todo.allClear")}</p>
+          ) : (
+            <ul className="divide-y divide-border">
+              {iTodo.map((r) => (
+                <li key={r.assignmentId}>
+                  <Link href={`/courses/${r.offeringId}/assignments/${r.assignmentId}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-3 text-sm transition hover:bg-surface-2">
+                    <span className="font-mono text-xs text-accent">
+                      {r.courseCode}{multiSection.has(r.courseId) ? ` · ${t("dash.section", { s: r.section })}` : ""}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate">{r.title}</span>
+                    {r.ungraded > 0 && <span className="badge bg-accent/15 text-accent">{tn("todo.ungraded", r.ungraded)}</span>}
+                    {r.highSimilarity > 0 && <span className="badge bg-red-500/10 text-danger">{tn("todo.highSim", r.highSimilarity)}</span>}
+                    {r.dueSoon && <span className="text-xs text-subtle">{t("todo.dueSubmitted", { date: date(r.dueSoon), n: r.submitted, total: r.total })}</span>}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
+
+      {studying > 0 && (
+        <section className="mb-8 overflow-hidden rounded-xl border border-border bg-surface" data-testid="cadet-todo">
+          <h2 className="border-b border-border px-5 py-3 text-sm font-semibold">{t("todo.dueSoon")}</h2>
+          {cTodo.length === 0 ? (
+            <p className="px-5 py-4 text-sm text-muted">{t("todo.noDue")}</p>
+          ) : (
+            <ul className="divide-y divide-border">
+              {cTodo.map((r) => (
+                <li key={r.assignmentId}>
+                  <Link href={`/courses/${r.offeringId}/assignments/${r.assignmentId}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-3 text-sm transition hover:bg-surface-2">
+                    <span className="font-mono text-xs text-accent">{r.courseCode}</span>
+                    <span className="min-w-0 flex-1 truncate">{r.title}</span>
+                    <span className={`text-xs ${r.overdue ? "text-warning" : "text-subtle"}`}>
+                      {r.overdue ? t("todo.overdueOpen") : r.dueAt ? t("asg.due", { date: date(r.dueAt) }) : t("asg.noDue")}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
+
       {offerings.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border-strong px-6 py-16 text-center">
           <p className="text-sm text-muted">{t("dash.empty")}</p>
@@ -68,7 +136,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               >
                 <div className="flex items-center justify-between">
                   <span className="font-mono text-xs text-accent">{o.course.code}</span>
-                  {o.section !== "1" && <span className="badge bg-surface-3 text-muted">{t("dash.section", { s: o.section })}</span>}
+                  {multiSection.has(o.courseId) && <span className="badge bg-surface-3 text-muted">{t("dash.section", { s: o.section })}</span>}
                 </div>
                 <div className="mt-3 font-medium leading-snug">{o.course.title}</div>
                 {o.course.titleTh && <div className="mt-0.5 text-sm text-muted">{o.course.titleTh}</div>}

@@ -414,6 +414,26 @@ export const en = {
   "asg.f.pointsHint": "Adds this assignment to the gradebook.",
   "asg.f.category": "Grade category",
   "asg.score": "Score",
+
+  // Sections & dashboard
+  "sec.alsoAddTo": "Also add to",
+  "sec.copyTo": "Copy to…",
+  "sec.copy": "Copy",
+  "sec.copied": "Copied to {list}.",
+  "sec.chooseTarget": "Choose at least one section.",
+  "sec.copySetup": "Copy setup to other sections",
+  "sec.copySetupHint": "Categories, weights, grade scale and items that aren't assignments. Scores are never copied.",
+  "sec.copyAssignmentHint": "Settings and instructions only — submissions and scores stay in this section.",
+  "todo.title": "Needs your attention",
+  "todo.ungraded.one": "{n} submission to grade",
+  "todo.ungraded.other": "{n} submissions to grade",
+  "todo.highSim.one": "{n} high-similarity submission",
+  "todo.highSim.other": "{n} high-similarity submissions",
+  "todo.dueSubmitted": "Due {date} · {n}/{total} submitted",
+  "todo.allClear": "Nothing waiting for you across your courses.",
+  "todo.dueSoon": "Due soon",
+  "todo.noDue": "No work due. You're all caught up.",
+  "todo.overdueOpen": "Past due — late submissions accepted",
 } as const;
 
 export type Key = keyof typeof en;

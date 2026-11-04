@@ -70,6 +70,26 @@ async function main() {
         });
       }
     }
+
+    // CS201 also runs a second section (same instructor, two more cadets) to show copying between sections.
+    const cs201 = await db.course.findUniqueOrThrow({ where: { code: "CS201" } });
+    const sec2 = await db.courseOffering.upsert({
+      where: { courseId_termId_section: { courseId: cs201.id, termId: term.id, section: "2" } },
+      create: { courseId: cs201.id, termId: term.id, section: "2" },
+      update: {},
+    });
+    const sec2Members: { id: string; role: EnrollmentRole }[] = [{ id: teacher.id, role: "INSTRUCTOR" }];
+    for (const i of [6, 7]) {
+      const s = await ensureUser(`66010${String(i).padStart(2, "0")}`, `Cadet Demo ${i}`, "STUDENT");
+      sec2Members.push({ id: s.id, role: "STUDENT" });
+    }
+    for (const { id: userId, role } of sec2Members) {
+      await db.enrollment.upsert({
+        where: { userId_offeringId: { userId, offeringId: sec2.id } },
+        create: { userId, offeringId: sec2.id, role },
+        update: {},
+      });
+    }
   }
 
   if (process.argv.includes("--demo")) await seedDemoAssignments();
@@ -87,7 +107,7 @@ main().finally(() => db.$disconnect());
 
 /** Two demo assignments (Python lab + Thai essay) with submissions, so the similarity report has something to show. */
 async function seedDemoAssignments() {
-  const offering = await db.courseOffering.findFirstOrThrow({ where: { course: { code: "CS201" } }, orderBy: { createdAt: "desc" } });
+  const offering = await db.courseOffering.findFirstOrThrow({ where: { course: { code: "CS201" }, section: "1" }, orderBy: { createdAt: "desc" } });
   const teacher = await db.user.findUniqueOrThrow({ where: { username: "T0001" } });
   for (const demo of DEMO_ASSIGNMENTS) {
     if (await db.assignment.findFirst({ where: { offeringId: offering.id, title: demo.title } })) continue;
