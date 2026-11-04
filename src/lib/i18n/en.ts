@@ -148,6 +148,7 @@ export const en = {
   "err.badUrl": "Link must start with http:// or https://",
   "err.chooseFile": "Please choose a file.",
   "err.fileTooBig": "File is larger than {mb} MB.",
+  "err.filesTooBig": "Attached files total more than {mb} MB.",
   "ok.materialAdded": "Material added.",
 
   // Users (admin)

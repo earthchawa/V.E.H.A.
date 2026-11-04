@@ -10,7 +10,8 @@ import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { getI18n } from "@/lib/i18n/server";
 import { deleteStoredFile, saveBuffer } from "@/lib/storage";
-import { SUBMISSION_LIMITS, acceptsSubmissions, isPastDue, parseBangkokLocal } from "@/lib/assignments";
+import { acceptsSubmissions, isPastDue, parseBangkokLocal, uploadLimits } from "@/lib/assignments";
+import { config } from "@/lib/config";
 import { extractFile, type Extracted } from "@/lib/similarity/extract";
 import { assembleContent } from "@/lib/similarity/content";
 import { recheckAssignment } from "@/lib/similarity/run";
@@ -111,9 +112,11 @@ export async function submitAction(assignmentId: string, _: FormState, fd: FormD
 
   const textAnswer = String(fd.get("textAnswer") ?? "").trim().slice(0, 100000) || null;
   const uploads = fd.getAll("files").filter((f): f is File => f instanceof File && f.size > 0);
-  if (uploads.length > SUBMISSION_LIMITS.maxFiles) return { error: t("err.tooManyFiles", { n: SUBMISSION_LIMITS.maxFiles }) };
-  if (uploads.some((f) => f.size > SUBMISSION_LIMITS.maxFileMb * 1024 * 1024))
-    return { error: t("err.fileTooBig", { mb: SUBMISSION_LIMITS.maxFileMb }) };
+  const limits = uploadLimits(config.maxUploadMb);
+  if (uploads.length > limits.maxFiles) return { error: t("err.tooManyFiles", { n: limits.maxFiles }) };
+  if (uploads.some((f) => f.size > limits.fileMb * 1024 * 1024)) return { error: t("err.fileTooBig", { mb: limits.fileMb }) };
+  if (uploads.reduce((n, f) => n + f.size, 0) > limits.totalMb * 1024 * 1024)
+    return { error: t("err.filesTooBig", { mb: limits.totalMb }) };
 
   const existing = await db.submission.findUnique({
     where: { assignmentId_studentId: { assignmentId, studentId: user.id } },

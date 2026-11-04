@@ -51,7 +51,7 @@ export async function addMaterialAction(offeringId: string, _: FormState, fd: Fo
   } else {
     const file = fd.get("file");
     if (!(file instanceof File) || file.size === 0) return { error: t("err.chooseFile") };
-    if (file.size > config.maxUploadBytes) return { error: t("err.fileTooBig", { mb: 50 }) };
+    if (file.size > config.maxUploadMb * 1024 * 1024) return { error: t("err.fileTooBig", { mb: config.maxUploadMb }) };
     fileData = {
       fileName: file.name.slice(0, 255),
       storageKey: await saveFile(file),

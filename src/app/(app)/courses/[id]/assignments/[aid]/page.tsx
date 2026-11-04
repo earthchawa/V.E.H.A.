@@ -4,7 +4,8 @@ import { loadCourse } from "@/lib/course";
 import { db } from "@/lib/db";
 import { formatBytes } from "@/lib/format";
 import { getI18n } from "@/lib/i18n/server";
-import { acceptsSubmissions, studentCanSeeReport, submissionStatus, toBangkokLocal } from "@/lib/assignments";
+import { acceptsSubmissions, studentCanSeeReport, submissionStatus, toBangkokLocal, uploadLimits } from "@/lib/assignments";
+import { config } from "@/lib/config";
 import { SimilarityBadge } from "@/components/SimilarityBadge";
 import { AssignmentForm } from "../AssignmentForm";
 import { SubmitForm } from "../SubmitForm";
@@ -161,7 +162,7 @@ export default async function AssignmentPage({ params }: { params: Promise<{ id:
           <section className="card">
             <h3 className="card-title">{t("asg.yourSubmission")}</h3>
             {open ? (
-              <SubmitForm assignmentId={assignment.id} defaultText={mine?.textAnswer ?? ""} hasFiles={!!mine?.files.length} resubmit={!!mine} />
+              <SubmitForm assignmentId={assignment.id} defaultText={mine?.textAnswer ?? ""} hasFiles={!!mine?.files.length} resubmit={!!mine} limits={uploadLimits(config.maxUploadMb)} />
             ) : (
               <p className="text-sm text-muted">{t("asg.closed")}</p>
             )}

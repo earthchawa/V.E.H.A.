@@ -2,6 +2,7 @@ import type { Material } from "@prisma/client";
 import { loadCourse } from "@/lib/course";
 import { db } from "@/lib/db";
 import { formatBytes } from "@/lib/format";
+import { config } from "@/lib/config";
 import { getI18n } from "@/lib/i18n/server";
 import { AddMaterialForm } from "./AddMaterialForm";
 import { deleteMaterialAction, toggleMaterialAction } from "./actions";
@@ -83,7 +84,7 @@ export default async function CourseMaterialsPage({ params }: { params: Promise<
           <aside className="space-y-6">
             <section className="card">
               <h2 className="card-title">{t("course.addMaterial")}</h2>
-              <AddMaterialForm offeringId={offering.id} />
+              <AddMaterialForm offeringId={offering.id} maxMb={config.maxUploadMb} />
             </section>
             <section className="card">
               <h2 className="card-title">{t("course.cadets")} <span className="font-normal text-subtle">{students.length}</span></h2>

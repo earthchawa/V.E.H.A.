@@ -114,6 +114,25 @@ docker compose exec app npx tsx prisma/seed.ts     # สร้างบัญช
 3. **อีเมล:** ตั้ง SMTP ของสถาบัน เพื่อให้นักเรียนรีเซ็ตรหัสผ่านเองได้
 4. **อัปเดตเวอร์ชัน:** สั่ง `git pull && docker compose up -d --build` แล้ว migration จะรันอัตโนมัติตอนแอปเริ่ม
 
+## Demo บน Vercel (สำหรับทดลองใช้)
+
+ใช้สำหรับเปิดให้คนลองใช้ก่อนติดตั้งจริงในสถาบัน **อย่าใส่ข้อมูลจริงของ นนอ.** เพราะเป็นเว็บสาธารณะและบัญชี demo ใช้รหัสผ่านเริ่มต้นเดียวกัน
+
+1. ไปที่ [vercel.com/new](https://vercel.com/new) → **Import** repo `nkrafa-ai-classroom`
+2. ในหน้า Configure เพิ่ม Environment Variables:
+   - `DEMO_SEED` = `true`
+   - `DEMO_PASSWORD` = รหัสผ่านเริ่มต้นของบัญชี demo (ตั้งเองได้)
+3. กด **Deploy** ครั้งแรกจะ build ไม่ผ่านเพราะยังไม่มีฐานข้อมูล ซึ่งเป็นเรื่องปกติ
+4. เข้าโปรเจกต์ → **Storage** → **Create Database** → **Neon** (เลือก region Singapore) → **Connect** กับโปรเจกต์ ระบบจะตั้ง `DATABASE_URL` และ `DATABASE_URL_UNPOOLED` ให้อัตโนมัติ
+5. **Deployments** → **Redeploy**
+6. เปิด `https://<ชื่อโปรเจกต์>.vercel.app` แล้วเข้าสู่ระบบด้วย `admin`, `T0001` หรือ `6601001`–`6601005` พร้อม `DEMO_PASSWORD` ระบบจะให้ตั้งรหัสใหม่ตอนเข้าครั้งแรก
+
+สิ่งที่ระบบปรับให้อัตโนมัติเมื่อรันบน Vercel:
+- ไฟล์อัปโหลดเก็บใน Postgres (`STORAGE_DRIVER=db`) เพราะ Vercel ไม่มีดิสก์ถาวร
+- จำกัดอัปโหลดไม่เกิน 4 MB ต่อครั้ง เพราะ Vercel รับ request ได้สูงสุด 4.5 MB ระบบเช็กในเบราว์เซอร์ก่อนส่ง
+- `scripts/vercel-build.sh` รัน migration ผ่าน connection ตรง (unpooled) แล้ว seed ข้อมูล demo (รันซ้ำได้โดยไม่สร้างข้อมูลซ้ำ) แล้วจึง build
+- `vercel.json` ตั้ง region เป็น `sin1` (สิงคโปร์) ให้ใกล้ประเทศไทย
+
 ## โครงสร้างโค้ด
 
 ```

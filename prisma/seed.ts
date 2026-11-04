@@ -3,6 +3,8 @@
  * npm run db:seed:demo   -> also creates a demo term, courses, an instructor and students
  *
  * Every account gets a random temporary password printed here; it must be changed on first login.
+ * With --demo and DEMO_PASSWORD set (e.g. a public demo on Vercel), demo accounts use that
+ * password instead, so no one has to dig it out of the build log.
  */
 import { PrismaClient, type EnrollmentRole, type Role } from "@prisma/client";
 import { generateTempPassword, hashPassword, tempPasswordExpiry } from "../src/lib/auth/password";
@@ -16,7 +18,8 @@ const issued: [string, string, string][] = [];
 async function ensureUser(username: string, fullName: string, role: Role) {
   const existing = await db.user.findUnique({ where: { username } });
   if (existing) return existing;
-  const password = generateTempPassword();
+  const demoPassword = process.argv.includes("--demo") ? process.env.DEMO_PASSWORD : undefined;
+  const password = demoPassword || generateTempPassword();
   issued.push([username, fullName, password]);
   return db.user.create({
     data: {
@@ -73,7 +76,8 @@ async function main() {
 
   if (issued.length) {
     console.log("\nNew accounts (temporary passwords — must be changed at first sign-in):");
-    console.table(issued.map(([username, fullName, password]) => ({ username, fullName, password })));
+    const hide = process.argv.includes("--demo") && !!process.env.DEMO_PASSWORD;
+    console.table(issued.map(([username, fullName, password]) => ({ username, fullName, password: hide ? "(DEMO_PASSWORD)" : password })));
   } else {
     console.log("No new accounts (all already exist).");
   }

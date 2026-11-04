@@ -2,34 +2,46 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { config } from "./config";
+import { db } from "./db";
 
-/** Files are stored under random keys; the original name lives only in the database. */
-function resolveKey(key: string): string {
+/**
+ * Uploaded files are stored under random keys; original names live only in the database.
+ * Driver "disk" writes under UPLOAD_DIR (self-hosted); "db" keeps bytes in Postgres (Vercel).
+ */
+function checkKey(key: string): string {
   if (!/^[a-f0-9-]{36}$/.test(key)) throw new Error("invalid storage key");
-  return path.join(path.resolve(config.uploadDir), key.slice(0, 2), key);
+  return key;
+}
+
+function diskPath(key: string): string {
+  return path.join(path.resolve(config.uploadDir), key.slice(0, 2), checkKey(key));
+}
+
+export async function saveBuffer(data: Buffer): Promise<string> {
+  const key = randomUUID();
+  if (config.storageDriver === "db") {
+    await db.storedFile.create({ data: { key, data: new Uint8Array(data), sizeBytes: data.length } });
+  } else {
+    const target = diskPath(key);
+    await mkdir(path.dirname(target), { recursive: true });
+    await writeFile(target, data);
+  }
+  return key;
 }
 
 export async function saveFile(file: File): Promise<string> {
-  const key = randomUUID();
-  const target = resolveKey(key);
-  await mkdir(path.dirname(target), { recursive: true });
-  await writeFile(target, Buffer.from(await file.arrayBuffer()));
-  return key;
+  return saveBuffer(Buffer.from(await file.arrayBuffer()));
 }
 
-export function readStoredFile(key: string): Promise<Buffer> {
-  return readFile(resolveKey(key));
+export async function readStoredFile(key: string): Promise<Buffer> {
+  if (config.storageDriver === "db") {
+    const row = await db.storedFile.findUniqueOrThrow({ where: { key: checkKey(key) } });
+    return Buffer.from(row.data);
+  }
+  return readFile(diskPath(key));
 }
 
 export async function deleteStoredFile(key: string): Promise<void> {
-  await rm(resolveKey(key), { force: true });
-}
-
-/** Save raw bytes (used when the caller already read the file for text extraction). */
-export async function saveBuffer(data: Buffer): Promise<string> {
-  const key = randomUUID();
-  const target = resolveKey(key);
-  await mkdir(path.dirname(target), { recursive: true });
-  await writeFile(target, data);
-  return key;
+  if (config.storageDriver === "db") await db.storedFile.deleteMany({ where: { key: checkKey(key) } });
+  else await rm(diskPath(key), { force: true });
 }

@@ -274,3 +274,11 @@ model SimilarityMatch {
   @@unique([aId, bId])
   @@index([assignmentId])
 }
+
+/// File bytes, used when STORAGE_DRIVER=db (e.g. on Vercel, which has no persistent disk).
+model StoredFile {
+  key       String   @id
+  data      Bytes
+  sizeBytes Int
+  createdAt DateTime @default(now())
+}

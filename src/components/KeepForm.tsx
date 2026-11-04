@@ -17,6 +17,7 @@ export function KeepForm({
   pending,
   state,
   resetOnSuccess = false,
+  beforeSubmit,
   children,
   ...rest
 }: {
@@ -24,6 +25,8 @@ export function KeepForm({
   pending: boolean;
   state?: FormState;
   resetOnSuccess?: boolean;
+  /** Client-side check; return false to cancel the submit (e.g. a file over the upload cap). */
+  beforeSubmit?: (fd: FormData) => boolean;
 } & Omit<FormHTMLAttributes<HTMLFormElement>, "action" | "onSubmit">) {
   const [, startTransition] = useTransition();
   const ref = useRef<HTMLFormElement>(null);
@@ -40,6 +43,7 @@ export function KeepForm({
         onSubmit={(e) => {
           e.preventDefault();
           const fd = new FormData(e.currentTarget);
+          if (beforeSubmit && !beforeSubmit(fd)) return;
           startTransition(() => action(fd));
         }}
       >

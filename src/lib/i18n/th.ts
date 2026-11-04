@@ -139,6 +139,7 @@ export const th: Record<Key, string> = {
   "err.badUrl": "ลิงก์ต้องขึ้นต้นด้วย http:// หรือ https://",
   "err.chooseFile": "กรุณาเลือกไฟล์",
   "err.fileTooBig": "ไฟล์ใหญ่เกิน {mb} MB",
+  "err.filesTooBig": "ไฟล์แนบรวมกันใหญ่เกิน {mb} MB",
   "ok.materialAdded": "เพิ่มเอกสารแล้ว",
 
   "users.title": "ผู้ใช้",

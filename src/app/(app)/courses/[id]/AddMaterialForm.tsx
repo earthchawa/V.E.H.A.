@@ -7,13 +7,20 @@ import { FormMessage } from "@/components/FormMessage";
 import { SubmitButton } from "@/components/SubmitButton";
 import { useI18n } from "@/lib/i18n/client";
 
-export function AddMaterialForm({ offeringId }: { offeringId: string }) {
+export function AddMaterialForm({ offeringId, maxMb }: { offeringId: string; maxMb: number }) {
   const [state, action, pending] = useActionState(addMaterialAction.bind(null, offeringId), undefined);
   const [type, setType] = useState<"FILE" | "LINK">("FILE");
   const { t } = useI18n();
+  const [clientError, setClientError] = useState<string | null>(null);
+  const check = (fd: FormData) => {
+    const f = fd.get("file");
+    const err = f instanceof File && f.size > maxMb * 1024 * 1024 ? t("err.fileTooBig", { mb: maxMb }) : null;
+    setClientError(err);
+    return !err;
+  };
 
   return (
-    <KeepForm action={action} pending={pending} state={state} resetOnSuccess className="space-y-4">
+    <KeepForm action={action} pending={pending} state={state} resetOnSuccess beforeSubmit={check} className="space-y-4">
       <input type="hidden" name="type" value={type} />
       <div className="grid grid-cols-2 gap-1 rounded-lg bg-surface-2 p-1 text-xs" role="tablist">
         {(["FILE", "LINK"] as const).map((k) => (
@@ -41,7 +48,7 @@ export function AddMaterialForm({ offeringId }: { offeringId: string }) {
       </div>
       {type === "FILE" ? (
         <div>
-          <label className="label" htmlFor="file">{t("mat.file")} <span className="text-subtle">{t("mat.max", { mb: 50 })}</span></label>
+          <label className="label" htmlFor="file">{t("mat.file")} <span className="text-subtle">{t("mat.max", { mb: maxMb })}</span></label>
           <input id="file" name="file" type="file" className="input" required />
         </div>
       ) : (
@@ -57,7 +64,7 @@ export function AddMaterialForm({ offeringId }: { offeringId: string }) {
       <label className="flex items-center gap-2 text-sm text-muted">
         <input type="checkbox" name="isPublished" defaultChecked className="accent-accent" /> {t("mat.visible")}
       </label>
-      <FormMessage state={state} />
+      <FormMessage state={clientError ? { error: clientError } : state} />
       <SubmitButton className="btn w-full" pendingText={t("mat.uploading")}>{t("course.addMaterial")}</SubmitButton>
     </KeepForm>
   );

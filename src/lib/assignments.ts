@@ -2,6 +2,11 @@ import type { Assignment, Submission } from "@prisma/client";
 
 export const SUBMISSION_LIMITS = { maxFiles: 5, maxFileMb: 20 };
 
+/** Per-file and per-request upload limits (MB) for a deployment whose request cap is `maxUploadMb`. */
+export function uploadLimits(maxUploadMb: number) {
+  return { maxFiles: SUBMISSION_LIMITS.maxFiles, fileMb: Math.min(SUBMISSION_LIMITS.maxFileMb, maxUploadMb), totalMb: maxUploadMb };
+}
+
 export function isPastDue(a: Pick<Assignment, "dueAt">, now = new Date()): boolean {
   return !!a.dueAt && a.dueAt < now;
 }
