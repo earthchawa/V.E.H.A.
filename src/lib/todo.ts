@@ -83,3 +83,36 @@ export async function cadetTodo(userId: string, termId: string, now = new Date()
       overdue: !!a.dueAt && a.dueAt < now,
     }));
 }
+
+export type QuizTodo = { offeringId: string; courseId: string; courseCode: string; section: string; quizId: string; title: string; toGrade: number; closesAt: Date | null };
+
+/** Quizzes with hand-graded answers waiting, across courses the instructor teaches. */
+export async function instructorQuizTodo(userId: string, termId: string): Promise<QuizTodo[]> {
+  const quizzes = await db.quiz.findMany({
+    where: { offering: { termId, enrollments: { some: { userId, role: "INSTRUCTOR" } } } },
+    include: { offering: { select: { id: true, courseId: true, section: true, course: { select: { code: true } } } } },
+  });
+  const out: QuizTodo[] = [];
+  for (const q of quizzes) {
+    const toGrade = await db.quizAnswer.count({ where: { points: null, attempt: { quizId: q.id, status: "SUBMITTED" } } });
+    if (toGrade)
+      out.push({ offeringId: q.offering.id, courseId: q.offering.courseId, courseCode: q.offering.course.code, section: q.offering.section, quizId: q.id, title: q.title, toGrade, closesAt: q.closesAt });
+  }
+  return out;
+}
+
+/** Open quizzes the cadet hasn't submitted. */
+export async function cadetQuizTodo(userId: string, termId: string, now = new Date()): Promise<QuizTodo[]> {
+  const quizzes = await db.quiz.findMany({
+    where: {
+      isPublished: true,
+      offering: { termId, enrollments: { some: { userId, role: "STUDENT" } } },
+      OR: [{ opensAt: null }, { opensAt: { lte: now } }],
+      AND: [{ OR: [{ closesAt: null }, { closesAt: { gt: now } }] }],
+      attempts: { none: { studentId: userId, status: "SUBMITTED" } },
+    },
+    include: { offering: { select: { id: true, courseId: true, section: true, course: { select: { code: true } } } } },
+    orderBy: { closesAt: { sort: "asc", nulls: "last" } },
+  });
+  return quizzes.map((q) => ({ offeringId: q.offering.id, courseId: q.offering.courseId, courseCode: q.offering.course.code, section: q.offering.section, quizId: q.id, title: q.title, toGrade: 0, closesAt: q.closesAt }));
+}

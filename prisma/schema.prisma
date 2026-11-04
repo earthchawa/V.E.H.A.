@@ -2,6 +2,7 @@
 // Phase 1: accounts, terms, courses, course offerings, enrollment, materials, audit log.
 // Phase 2: assignments, submissions, similarity checking.
 // Phase 3: gradebook (categories, items, grades, grade scale).
+// Phase 4: online quizzes (questions, attempts, answers, integrity events).
 
 generator client {
   provider = "prisma-client-js"
@@ -64,6 +65,8 @@ model User {
   assignments Assignment[]
   submissions Submission[]
   grades      Grade[]
+  quizzes     Quiz[]
+  attempts    QuizAttempt[]
 }
 
 model Session {
@@ -136,6 +139,7 @@ model CourseOffering {
   assignments Assignment[]
   gradeCategories GradeCategory[]
   gradeItems      GradeItem[]
+  quizzes         Quiz[]
   /// [{ letter, min }] sorted by min, high → low. Null = academy default (A ≥ 80 … F).
   gradeScale          Json?
   /// Whether cadets see their running total and letter grade (from released items).
@@ -319,6 +323,8 @@ model GradeItem {
   category     GradeCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   assignmentId String?        @unique
   assignment   Assignment?    @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  quizId       String?        @unique
+  quiz         Quiz?          @relation(fields: [quizId], references: [id], onDelete: Cascade)
   title        String
   maxPoints    Float
   /// Cadets only see released items.
@@ -344,4 +350,136 @@ model Grade {
   updatedAt  DateTime  @updatedAt
 
   @@unique([itemId, studentId])
+}
+
+enum QuestionType {
+  /// One correct option (also used for true/false).
+  SINGLE
+  /// Several correct options; partial credit.
+  MULTIPLE
+  /// Auto-graded when it matches an accepted answer, otherwise graded by hand.
+  SHORT
+  /// Graded by hand (prose or code).
+  ESSAY
+}
+
+/// What cadets see after the quiz closes.
+enum QuizResults {
+  HIDDEN
+  SCORE
+  FULL
+}
+
+enum AttemptStatus {
+  IN_PROGRESS
+  SUBMITTED
+}
+
+model Quiz {
+  id               String         @id @default(cuid())
+  offeringId       String
+  offering         CourseOffering @relation(fields: [offeringId], references: [id], onDelete: Cascade)
+  title            String
+  instructions     String?
+  opensAt          DateTime?
+  closesAt         DateTime?
+  /// Minutes per attempt; null = until the quiz closes.
+  timeLimitMin     Int?
+  shuffleQuestions Boolean        @default(true)
+  shuffleOptions   Boolean        @default(true)
+  isPublished      Boolean        @default(false)
+  results          QuizResults    @default(SCORE)
+  /// Only allow attempts from Safe Exam Browser.
+  requireSeb       Boolean        @default(false)
+  /// SEB Config Keys (one per line); empty = accept any SEB (User-Agent check only).
+  sebConfigKeys    String?
+  /// Allowed client IPs/CIDRs (one per line), e.g. the exam room network; empty = anywhere.
+  allowedIps       String?
+  createdById      String
+  createdBy        User           @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  questions QuizQuestion[]
+  attempts  QuizAttempt[]
+  gradeItem GradeItem?
+
+  @@index([offeringId])
+}
+
+model QuizQuestion {
+  id        String       @id @default(cuid())
+  quizId    String
+  quiz      Quiz         @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  type      QuestionType
+  prompt    String
+  points    Float
+  position  Int          @default(0)
+  /// SINGLE/MULTIPLE: [{ id, text, correct }]
+  options   Json         @default("[]")
+  /// SHORT: accepted answers, compared case-/space-insensitively.
+  accepted  Json         @default("[]")
+  /// ESSAY: monospace answer box for code.
+  codeAnswer Boolean     @default(false)
+
+  answers QuizAnswer[]
+
+  @@index([quizId])
+}
+
+model QuizAttempt {
+  id           String        @id @default(cuid())
+  quizId       String
+  quiz         Quiz          @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  studentId    String
+  student      User          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  status       AttemptStatus @default(IN_PROGRESS)
+  startedAt    DateTime      @default(now())
+  /// Server-side deadline: start + time limit, capped at the quiz's close time.
+  deadlineAt   DateTime?
+  submittedAt  DateTime?
+  autoSubmitted Boolean      @default(false)
+  /// This attempt's question order and option order: { questions: [id], options: { [qid]: [optId] } }
+  layout       Json
+  /// Sum of awarded points; null until every answer is graded.
+  score        Float?
+  maxScore     Float         @default(0)
+  ip           String?
+  userAgent    String?
+
+  answers QuizAnswer[]
+  events  QuizEvent[]
+
+  @@unique([quizId, studentId])
+}
+
+model QuizAnswer {
+  id         String       @id @default(cuid())
+  attemptId  String
+  attempt    QuizAttempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  questionId String
+  question   QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  /// { choice: [optId] } or { text: "…" }
+  response   Json
+  /// Null = needs grading by hand.
+  points     Float?
+  feedback   String?
+  autoGraded Boolean      @default(false)
+  gradedById String?
+  updatedAt  DateTime     @updatedAt
+
+  @@unique([attemptId, questionId])
+  @@index([questionId])
+}
+
+/// Integrity log: focus loss, fullscreen exit, copy/paste, resumed from another device…
+model QuizEvent {
+  id        String      @id @default(cuid())
+  attemptId String
+  attempt   QuizAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  type      String
+  at        DateTime    @default(now())
+  details   Json?
+
+  @@index([attemptId])
 }

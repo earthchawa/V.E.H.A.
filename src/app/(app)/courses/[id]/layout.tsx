@@ -23,7 +23,7 @@ export default async function CourseLayout({ params, children }: { params: Promi
       />
       <CourseTabs
         base={`/courses/${offering.id}`}
-        labels={{ materials: t("course.tab.materials"), assignments: t("course.tab.assignments"), grades: t("course.tab.grades") }}
+        labels={{ materials: t("course.tab.materials"), assignments: t("course.tab.assignments"), quizzes: t("course.tab.quizzes"), grades: t("course.tab.grades") }}
       />
       {children}
     </div>

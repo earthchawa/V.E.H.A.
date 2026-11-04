@@ -4,7 +4,7 @@ import { requireUser } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { getI18n } from "@/lib/i18n/server";
 import { PageHeader } from "@/components/PageHeader";
-import { cadetTodo, instructorTodo } from "@/lib/todo";
+import { cadetQuizTodo, cadetTodo, instructorQuizTodo, instructorTodo } from "@/lib/todo";
 
 export async function generateMetadata() {
   return { title: (await getI18n()).t("nav.courses") };
@@ -46,10 +46,24 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         db.enrollment.count({ where: { userId: user.id, role: "STUDENT", offering: { termId: term.id } } }),
       ])
     : [0, 0];
-  const [iTodo, cTodo] = await Promise.all([
+  const [iTodo, cTodo, iQuiz, cQuiz] = await Promise.all([
     teaching && term ? instructorTodo(user.id, term.id) : Promise.resolve([]),
     studying && term ? cadetTodo(user.id, term.id) : Promise.resolve([]),
+    teaching && term ? instructorQuizTodo(user.id, term.id) : Promise.resolve([]),
+    studying && term ? cadetQuizTodo(user.id, term.id) : Promise.resolve([]),
   ]);
+  const quizRow = (r: (typeof iQuiz)[number], right: React.ReactNode) => (
+    <li key={r.quizId}>
+      <Link href={`/courses/${r.offeringId}/quizzes/${r.quizId}${r.toGrade ? "/results" : ""}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-3 text-sm transition hover:bg-surface-2">
+        <span className="font-mono text-xs text-accent">
+          {r.courseCode}{multiSection.has(r.courseId) ? ` · ${t("dash.section", { s: r.section })}` : ""}
+        </span>
+        <span className="badge bg-surface-3 text-muted">{t("course.tab.quizzes")}</span>
+        <span className="min-w-0 flex-1 truncate">{r.title}</span>
+        {right}
+      </Link>
+    </li>
+  );
 
   return (
     <div>
@@ -74,10 +88,11 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       {teaching > 0 && (
         <section className="mb-8 overflow-hidden rounded-xl border border-border bg-surface" data-testid="instructor-todo">
           <h2 className="border-b border-border px-5 py-3 text-sm font-semibold">{t("todo.title")}</h2>
-          {iTodo.length === 0 ? (
+          {iTodo.length === 0 && iQuiz.length === 0 ? (
             <p className="px-5 py-4 text-sm text-muted">{t("todo.allClear")}</p>
           ) : (
             <ul className="divide-y divide-border">
+              {iQuiz.map((r) => quizRow(r, <span className="badge bg-accent/15 text-accent">{tn("todo.quizToGrade", r.toGrade)}</span>))}
               {iTodo.map((r) => (
                 <li key={r.assignmentId}>
                   <Link href={`/courses/${r.offeringId}/assignments/${r.assignmentId}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-3 text-sm transition hover:bg-surface-2">
@@ -99,10 +114,13 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       {studying > 0 && (
         <section className="mb-8 overflow-hidden rounded-xl border border-border bg-surface" data-testid="cadet-todo">
           <h2 className="border-b border-border px-5 py-3 text-sm font-semibold">{t("todo.dueSoon")}</h2>
-          {cTodo.length === 0 ? (
+          {cTodo.length === 0 && cQuiz.length === 0 ? (
             <p className="px-5 py-4 text-sm text-muted">{t("todo.noDue")}</p>
           ) : (
             <ul className="divide-y divide-border">
+              {cQuiz.map((r) =>
+                quizRow(r, <span className="text-xs text-success">{r.closesAt ? t("todo.quizOpen", { date: date(r.closesAt) }) : t("qz.phase.open")}</span>),
+              )}
               {cTodo.map((r) => (
                 <li key={r.assignmentId}>
                   <Link href={`/courses/${r.offeringId}/assignments/${r.assignmentId}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-3 text-sm transition hover:bg-surface-2">

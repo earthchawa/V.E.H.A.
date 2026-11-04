@@ -132,6 +132,7 @@ async function seedDemoAssignments() {
     await recheckAssignment(assignment.id);
   }
   await seedDemoGrades(offering.id, teacher.id);
+  await seedDemoQuiz(offering.id, teacher.id);
 }
 
 /** Gradebook demo: weighted categories, linked + standalone items, some released scores. */
@@ -167,4 +168,51 @@ async function seedDemoGrades(offeringId: string, teacherId: string) {
     const student = await db.user.findUniqueOrThrow({ where: { username } });
     await db.grade.create({ data: { itemId: items[item].id, studentId: student.id, points, feedback, gradedById: teacherId } });
   }
+}
+
+/** An open demo quiz mixing all question types (no attempts yet). */
+async function seedDemoQuiz(offeringId: string, teacherId: string) {
+  const title = "Quiz 1: Linked lists";
+  if (await db.quiz.findFirst({ where: { offeringId, title } })) return;
+  const now = Date.now();
+  const quiz = await db.quiz.create({
+    data: {
+      offeringId,
+      title,
+      instructions: "ทำทุกข้อ ห้ามเปิดเอกสารหรือเว็บไซต์อื่นระหว่างสอบ",
+      opensAt: new Date(now - 3600_000),
+      closesAt: new Date(now + 14 * 86400_000),
+      timeLimitMin: 20,
+      isPublished: true,
+      results: "FULL",
+      createdById: teacherId,
+    },
+  });
+  const opt = (id: string, text: string, correct = false) => ({ id, text, correct });
+  const questions = [
+    { type: "SINGLE" as const, points: 1, prompt: "What is the time complexity of inserting at the head of a singly linked list?", options: [opt("a", "O(1)", true), opt("b", "O(log n)"), opt("c", "O(n)"), opt("d", "O(n log n)")] },
+    { type: "MULTIPLE" as const, points: 2, prompt: "ข้อใดเป็นข้อดีของลิงก์ลิสต์เมื่อเทียบกับอาร์เรย์ (เลือกได้หลายข้อ)", options: [opt("a", "เพิ่ม/ลบข้อมูลตรงกลางได้โดยไม่ต้องเลื่อนสมาชิก", true), opt("b", "ขยายขนาดได้ตามต้องการ", true), opt("c", "เข้าถึงสมาชิกตามตำแหน่งได้ในเวลาคงที่"), opt("d", "ใช้หน่วยความจำน้อยกว่าเสมอ")] },
+    { type: "SINGLE" as const, points: 1, prompt: "A doubly linked list node stores a pointer to the previous node.", options: [opt("t", "True", true), opt("f", "False")] },
+    { type: "SHORT" as const, points: 1, prompt: "What is the name of the first node in a linked list?", accepted: ["head", "the head", "หัว", "โหนดหัว"] },
+    { type: "ESSAY" as const, points: 5, prompt: "Write a Python function reverse(head) that reverses a singly linked list and returns the new head.", codeAnswer: true },
+  ];
+  for (const [position, q] of questions.entries()) {
+    await db.quizQuestion.create({
+      data: {
+        quizId: quiz.id,
+        position,
+        type: q.type,
+        prompt: q.prompt,
+        points: q.points,
+        options: "options" in q ? q.options : [],
+        accepted: "accepted" in q ? q.accepted : [],
+        codeAnswer: "codeAnswer" in q ? q.codeAnswer : false,
+      },
+    });
+  }
+  const assignments = await db.gradeCategory.findFirst({ where: { offeringId, name: "Assignments" } });
+  const position = await db.gradeItem.count({ where: { offeringId } });
+  await db.gradeItem.create({
+    data: { offeringId, quizId: quiz.id, title, maxPoints: questions.reduce((n, q) => n + q.points, 0), categoryId: assignments?.id ?? null, position },
+  });
 }
