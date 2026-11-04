@@ -1,15 +1,19 @@
 import Link from "next/link";
 import { AuthShell } from "@/components/AuthShell";
+import { getI18n } from "@/lib/i18n/server";
 import { ForgotPasswordForm } from "./ForgotPasswordForm";
 
-export const metadata = { title: "Reset password" };
+export async function generateMetadata() {
+  return { title: (await getI18n()).t("forgot.title") };
+}
 
-export default function ForgotPasswordPage() {
+export default async function ForgotPasswordPage() {
+  const { t } = await getI18n();
   return (
-    <AuthShell title="Reset password" subtitle="We'll email a reset link to the address on your account.">
+    <AuthShell title={t("forgot.title")} subtitle={t("forgot.subtitle")}>
       <ForgotPasswordForm />
       <div className="mt-5 text-center text-sm">
-        <Link href="/login" className="text-muted transition hover:text-fg">← Back to sign in</Link>
+        <Link href="/login" className="text-muted transition hover:text-fg">{t("forgot.back")}</Link>
       </div>
     </AuthShell>
   );

@@ -9,6 +9,7 @@ import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { config } from "@/lib/config";
 import { deleteStoredFile, saveFile } from "@/lib/storage";
+import { getI18n } from "@/lib/i18n/server";
 
 async function requireManage(offeringId: string) {
   const user = await requireUser();
@@ -17,7 +18,7 @@ async function requireManage(offeringId: string) {
 }
 
 const materialSchema = z.object({
-  title: z.string().trim().min(1, "Title is required.").max(200),
+  title: z.string().trim().min(1).max(200),
   description: z.string().trim().max(2000).optional(),
   week: z.coerce.number().int().min(0).max(30).optional(),
   type: z.enum(["FILE", "LINK"]),
@@ -27,6 +28,7 @@ const materialSchema = z.object({
 
 export async function addMaterialAction(offeringId: string, _: FormState, fd: FormData): Promise<FormState> {
   const user = await requireManage(offeringId);
+  const { t } = await getI18n();
   const parsed = materialSchema.safeParse({
     title: fd.get("title"),
     description: fd.get("description") || undefined,
@@ -35,7 +37,8 @@ export async function addMaterialAction(offeringId: string, _: FormState, fd: Fo
     url: fd.get("url") || undefined,
     isPublished: fd.get("isPublished") === "on",
   });
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
+  if (!parsed.success)
+    return { error: t(parsed.error.issues[0]?.path[0] === "title" ? "err.titleRequired" : "common.invalid") };
   const m = parsed.data;
 
   let fileData: { fileName: string; storageKey: string; mimeType: string; sizeBytes: number } | undefined;
@@ -43,12 +46,12 @@ export async function addMaterialAction(offeringId: string, _: FormState, fd: Fo
 
   if (m.type === "LINK") {
     if (!m.url || !z.url({ protocol: /^https?$/ }).safeParse(m.url).success)
-      return { error: "Link must start with http:// or https://" };
+      return { error: t("err.badUrl") };
     url = m.url;
   } else {
     const file = fd.get("file");
-    if (!(file instanceof File) || file.size === 0) return { error: "Please choose a file." };
-    if (file.size > config.maxUploadBytes) return { error: "File is larger than 50 MB." };
+    if (!(file instanceof File) || file.size === 0) return { error: t("err.chooseFile") };
+    if (file.size > config.maxUploadBytes) return { error: t("err.fileTooBig", { mb: 50 }) };
     fileData = {
       fileName: file.name.slice(0, 255),
       storageKey: await saveFile(file),
@@ -72,7 +75,7 @@ export async function addMaterialAction(offeringId: string, _: FormState, fd: Fo
   });
   await audit({ actorId: user.id, action: "material.created", targetType: "Material", targetId: material.id });
   revalidatePath(`/courses/${offeringId}`);
-  return { success: "Material added." };
+  return { success: t("ok.materialAdded") };
 }
 
 async function loadOwnMaterial(fd: FormData) {

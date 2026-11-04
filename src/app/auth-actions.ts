@@ -16,12 +16,14 @@ import {
   destroyUserSessions,
   requireUser,
 } from "@/lib/auth/session";
+import { getI18n } from "@/lib/i18n/server";
 
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? "");
 
 export async function loginAction(_: FormState, fd: FormData): Promise<FormState> {
+  const { tm } = await getI18n();
   const result = await authenticate(str(fd, "username"), str(fd, "password"));
-  if (!result.ok) return { error: result.error };
+  if (!result.ok) return { error: tm(result.error) };
   await createSession(result.userId);
   redirect(result.mustChangePassword ? "/change-password" : "/");
 }
@@ -32,47 +34,47 @@ export async function logoutAction(): Promise<void> {
 }
 
 export async function changePasswordAction(_: FormState, fd: FormData): Promise<FormState> {
+  const { t, tm } = await getI18n();
   const user = await requireUser({ allowMustChange: true });
   const newPassword = str(fd, "newPassword");
-  if (newPassword !== str(fd, "confirmPassword")) return { error: "New passwords don't match." };
+  if (newPassword !== str(fd, "confirmPassword")) return { error: t("err.mismatch") };
 
   let email: string | null | undefined;
   if (fd.has("email")) {
     const raw = str(fd, "email").trim().toLowerCase();
-    if (raw && !z.email().safeParse(raw).success) return { error: "Please enter a valid email address." };
+    if (raw && !z.email().safeParse(raw).success) return { error: t("err.emailInvalid") };
     email = raw || null;
   }
 
   const error = await changeOwnPassword(user.id, str(fd, "currentPassword"), newPassword, email);
-  if (error) return { error };
+  if (error) return { error: tm(error) };
   // Sign out other devices; keep this one.
   await destroyUserSessions(user.id, true);
   if (user.mustChangePassword) redirect("/");
-  return { success: "Password updated. Other devices have been signed out." };
+  return { success: t("ok.passwordChanged") };
 }
 
 export async function forgotPasswordAction(_: FormState, fd: FormData): Promise<FormState> {
-  await requestPasswordReset(str(fd, "username"));
-  return {
-    success:
-      "If this ID has a recovery email on file, a reset link is on its way (valid for 30 minutes). " +
-      "No email? Ask your instructor or an administrator to reset your password.",
-  };
+  const { t, lang } = await getI18n();
+  await requestPasswordReset(str(fd, "username"), lang);
+  return { success: t("forgot.sent") };
 }
 
 export async function resetPasswordAction(_: FormState, fd: FormData): Promise<FormState> {
+  const { t, tm } = await getI18n();
   const newPassword = str(fd, "newPassword");
-  if (newPassword !== str(fd, "confirmPassword")) return { error: "New passwords don't match." };
+  if (newPassword !== str(fd, "confirmPassword")) return { error: t("err.mismatch") };
   const error = await resetPasswordWithToken(str(fd, "token"), newPassword);
-  if (error) return { error };
+  if (error) return { error: tm(error) };
   redirect("/login?reset=1");
 }
 
 export async function updateEmailAction(_: FormState, fd: FormData): Promise<FormState> {
+  const { t, tm } = await getI18n();
   const user = await requireUser();
   const raw = str(fd, "email").trim().toLowerCase();
-  if (raw && !z.email().safeParse(raw).success) return { error: "Please enter a valid email address." };
+  if (raw && !z.email().safeParse(raw).success) return { error: t("err.emailInvalid") };
   const error = await updateOwnEmail(user.id, str(fd, "currentPassword"), raw || null);
-  if (error) return { error };
-  return { success: raw ? "Email saved." : "Email removed." };
+  if (error) return { error: tm(error) };
+  return { success: t(raw ? "ok.emailSaved" : "ok.emailRemoved") };
 }

@@ -1,73 +1,39 @@
-import { notFound } from "next/navigation";
 import type { Material } from "@prisma/client";
-import { requireUser } from "@/lib/auth/session";
-import { offeringAccess } from "@/lib/access";
+import { loadCourse } from "@/lib/course";
 import { db } from "@/lib/db";
-import { formatBytes, formatDateTime, termLabel } from "@/lib/format";
-import { PageHeader } from "@/components/PageHeader";
+import { formatBytes } from "@/lib/format";
+import { getI18n } from "@/lib/i18n/server";
 import { AddMaterialForm } from "./AddMaterialForm";
 import { deleteMaterialAction, toggleMaterialAction } from "./actions";
 
-export default async function CoursePage({ params }: { params: Promise<{ id: string }> }) {
+export default async function CourseMaterialsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const user = await requireUser();
-  const access = await offeringAccess(user, id);
-  if (!access) notFound();
-  const canManage = access === "manage";
+  const { offering, canManage, students } = await loadCourse(id);
+  const { t, date } = await getI18n();
 
-  const offering = await db.courseOffering.findUnique({
-    where: { id },
-    include: {
-      course: true,
-      term: true,
-      enrollments: {
-        include: { user: { select: { id: true, username: true, fullName: true } } },
-        orderBy: { user: { username: "asc" } },
-      },
-      materials: {
-        where: canManage ? {} : { isPublished: true },
-        orderBy: [{ week: "asc" }, { createdAt: "asc" }],
-      },
-    },
+  const materials = await db.material.findMany({
+    where: { offeringId: offering.id, ...(canManage ? {} : { isPublished: true }) },
+    orderBy: [{ week: "asc" }, { createdAt: "asc" }],
   });
-  if (!offering) notFound();
-
-  const instructors = offering.enrollments.filter((e) => e.role === "INSTRUCTOR");
-  const students = offering.enrollments.filter((e) => e.role === "STUDENT");
-
   const byWeek = new Map<number | null, Material[]>();
-  for (const m of offering.materials) byWeek.set(m.week, [...(byWeek.get(m.week) ?? []), m]);
+  for (const m of materials) byWeek.set(m.week, [...(byWeek.get(m.week) ?? []), m]);
   const groups = [...byWeek.entries()].sort(([a], [b]) => (a ?? -1) - (b ?? -1));
 
   return (
     <div>
-      <PageHeader
-        eyebrow={`${offering.course.code} · ${termLabel(offering.term)}${offering.section !== "1" ? ` · Sec ${offering.section}` : ""}`}
-        title={offering.course.title}
-        description={
-          <>
-            {offering.course.titleTh && <div>{offering.course.titleTh}</div>}
-            <div className="mt-1 text-subtle">
-              {instructors.map((e) => e.user.fullName).join(", ") || "No instructor assigned"}
-            </div>
-          </>
-        }
-      />
-      {offering.course.description && <p className="-mt-4 mb-8 max-w-3xl text-sm text-muted">{offering.course.description}</p>}
-
+      {offering.course.description && <p className="-mt-2 mb-8 max-w-3xl text-sm text-muted">{offering.course.description}</p>}
       <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
         <section>
-          <h2 className="mb-4 text-sm font-semibold">Materials</h2>
           {groups.length === 0 && (
             <div className="rounded-xl border border-dashed border-border-strong px-6 py-12 text-center text-sm text-muted">
-              No materials yet.
+              {t("course.noMaterials")}
             </div>
           )}
           <div className="space-y-8">
             {groups.map(([week, items]) => (
               <div key={week ?? "none"}>
                 <h3 className="mb-2 text-xs font-medium uppercase tracking-wider text-subtle">
-                  {week == null ? "General" : week === 0 ? "Before class" : `Week ${week}`}
+                  {week == null ? t("course.general") : week === 0 ? t("course.beforeClass") : t("course.week", { n: week })}
                 </h3>
                 <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface">
                   {items.map((m) => (
@@ -85,23 +51,23 @@ export default async function CoursePage({ params }: { params: Promise<{ id: str
                           >
                             {m.title}
                           </a>
-                          {!m.isPublished && <span className="badge bg-amber-500/10 text-amber-300">Hidden</span>}
+                          {!m.isPublished && <span className="badge bg-amber-500/10 text-warning">{t("course.hidden")}</span>}
                         </div>
                         {m.description && <p className="mt-0.5 text-sm text-muted">{m.description}</p>}
                         <p className="mt-0.5 text-xs text-subtle">
                           {m.fileName && `${m.fileName} · ${formatBytes(m.sizeBytes)} · `}
-                          {formatDateTime(m.createdAt)}
+                          {date(m.createdAt)}
                         </p>
                       </div>
                       {canManage && (
                         <div className="flex gap-2">
                           <form action={toggleMaterialAction}>
                             <input type="hidden" name="materialId" value={m.id} />
-                            <button className="btn-secondary">{m.isPublished ? "Hide" : "Publish"}</button>
+                            <button className="btn-secondary">{t(m.isPublished ? "course.hide" : "course.publish")}</button>
                           </form>
                           <form action={deleteMaterialAction}>
                             <input type="hidden" name="materialId" value={m.id} />
-                            <button className="btn-danger">Delete</button>
+                            <button className="btn-danger">{t("course.delete")}</button>
                           </form>
                         </div>
                       )}
@@ -116,11 +82,11 @@ export default async function CoursePage({ params }: { params: Promise<{ id: str
         {canManage && (
           <aside className="space-y-6">
             <section className="card">
-              <h2 className="card-title">Add material</h2>
+              <h2 className="card-title">{t("course.addMaterial")}</h2>
               <AddMaterialForm offeringId={offering.id} />
             </section>
             <section className="card">
-              <h2 className="card-title">Cadets <span className="font-normal text-subtle">{students.length}</span></h2>
+              <h2 className="card-title">{t("course.cadets")} <span className="font-normal text-subtle">{students.length}</span></h2>
               <ul className="max-h-96 space-y-1.5 overflow-y-auto text-sm">
                 {students.map((e) => (
                   <li key={e.id} className="flex gap-3">

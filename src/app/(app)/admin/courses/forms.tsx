@@ -1,61 +1,65 @@
 "use client";
 
+import { KeepForm } from "@/components/KeepForm";
 import { useActionState } from "react";
 import { createCourseAction, createOfferingAction, createTermAction } from "../actions";
 import { FormMessage } from "@/components/FormMessage";
 import { SubmitButton } from "@/components/SubmitButton";
+import { useI18n } from "@/lib/i18n/client";
 
 export function CreateTermForm() {
-  const [state, action] = useActionState(createTermAction, undefined);
+  const [state, action, pending] = useActionState(createTermAction, undefined);
+  const { t } = useI18n();
   return (
-    <form action={action} className="space-y-4">
+    <KeepForm action={action} pending={pending} state={state} resetOnSuccess className="space-y-4">
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="label" htmlFor="academicYear">Year (B.E.)</label>
+          <label className="label" htmlFor="academicYear">{t("tc.year")}</label>
           <input id="academicYear" name="academicYear" type="number" className="input" placeholder="2569" required />
         </div>
         <div>
-          <label className="label" htmlFor="semester">Semester</label>
+          <label className="label" htmlFor="semester">{t("tc.semester")}</label>
           <select id="semester" name="semester" className="input">
-            <option value="1">1</option><option value="2">2</option><option value="3">Summer</option>
+            <option value="1">1</option><option value="2">2</option><option value="3">{t("tc.summer")}</option>
           </select>
         </div>
       </div>
       <FormMessage state={state} />
-      <SubmitButton>Add term</SubmitButton>
-    </form>
+      <SubmitButton>{t("tc.addTerm")}</SubmitButton>
+    </KeepForm>
   );
 }
 
 export function CreateCourseForm() {
-  const [state, action] = useActionState(createCourseAction, undefined);
+  const [state, action, pending] = useActionState(createCourseAction, undefined);
+  const { t } = useI18n();
   return (
-    <form action={action} className="space-y-4">
+    <KeepForm action={action} pending={pending} state={state} resetOnSuccess className="space-y-4">
       <div className="grid grid-cols-[1fr_5rem] gap-3">
         <div>
-          <label className="label" htmlFor="code">Code</label>
+          <label className="label" htmlFor="code">{t("tc.code")}</label>
           <input id="code" name="code" className="input font-mono" placeholder="CS201" required />
         </div>
         <div>
-          <label className="label" htmlFor="credits">Credits</label>
+          <label className="label" htmlFor="credits">{t("tc.credits")}</label>
           <input id="credits" name="credits" type="number" min={0} max={12} className="input" />
         </div>
       </div>
       <div>
-        <label className="label" htmlFor="title">Title</label>
+        <label className="label" htmlFor="title">{t("tc.courseTitle")}</label>
         <input id="title" name="title" className="input" required />
       </div>
       <div>
-        <label className="label" htmlFor="titleTh">Thai title <span className="text-subtle">(optional)</span></label>
+        <label className="label" htmlFor="titleTh">{t("tc.thaiTitle")} <span className="text-subtle">{t("common.optional")}</span></label>
         <input id="titleTh" name="titleTh" className="input" />
       </div>
       <div>
-        <label className="label" htmlFor="description">Description <span className="text-subtle">(optional)</span></label>
+        <label className="label" htmlFor="description">{t("tc.description")} <span className="text-subtle">{t("common.optional")}</span></label>
         <textarea id="description" name="description" rows={2} className="input" />
       </div>
       <FormMessage state={state} />
-      <SubmitButton>Add course</SubmitButton>
-    </form>
+      <SubmitButton>{t("tc.addCourse")}</SubmitButton>
+    </KeepForm>
   );
 }
 
@@ -66,29 +70,30 @@ export function CreateOfferingForm({
   courses: { id: string; label: string }[];
   terms: { id: string; label: string; isCurrent: boolean }[];
 }) {
-  const [state, action] = useActionState(createOfferingAction, undefined);
+  const [state, action, pending] = useActionState(createOfferingAction, undefined);
+  const { t } = useI18n();
   return (
-    <form action={action} className="space-y-4">
+    <KeepForm action={action} pending={pending} state={state} resetOnSuccess className="space-y-4">
       <div>
-        <label className="label" htmlFor="courseId">Course</label>
+        <label className="label" htmlFor="courseId">{t("tc.course")}</label>
         <select id="courseId" name="courseId" className="input" required>
           {courses.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
         </select>
       </div>
       <div className="grid grid-cols-[1fr_5rem] gap-3">
         <div>
-          <label className="label" htmlFor="termId">Term</label>
-          <select id="termId" name="termId" className="input" defaultValue={terms.find((t) => t.isCurrent)?.id} required>
-            {terms.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
+          <label className="label" htmlFor="termId">{t("tc.term")}</label>
+          <select id="termId" name="termId" className="input" defaultValue={terms.find((x) => x.isCurrent)?.id} required>
+            {terms.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}
           </select>
         </div>
         <div>
-          <label className="label" htmlFor="section">Section</label>
+          <label className="label" htmlFor="section">{t("tc.section")}</label>
           <input id="section" name="section" className="input" defaultValue="1" />
         </div>
       </div>
       <FormMessage state={state} />
-      <SubmitButton>Offer course</SubmitButton>
-    </form>
+      <SubmitButton>{t("tc.offer")}</SubmitButton>
+    </KeepForm>
   );
 }

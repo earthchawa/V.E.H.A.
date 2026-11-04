@@ -24,3 +24,12 @@ export function readStoredFile(key: string): Promise<Buffer> {
 export async function deleteStoredFile(key: string): Promise<void> {
   await rm(resolveKey(key), { force: true });
 }
+
+/** Save raw bytes (used when the caller already read the file for text extraction). */
+export async function saveBuffer(data: Buffer): Promise<string> {
+  const key = randomUUID();
+  const target = resolveKey(key);
+  await mkdir(path.dirname(target), { recursive: true });
+  await writeFile(target, data);
+  return key;
+}

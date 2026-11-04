@@ -1,3 +1,4 @@
+import { msg, type Msg } from "../i18n";
 import bcrypt from "bcryptjs";
 import { randomInt } from "node:crypto";
 
@@ -15,13 +16,13 @@ export function verifyPassword(password: string, hash: string): Promise<boolean>
 }
 
 /** Returns an error message, or null when the password is acceptable. */
-export function checkPasswordPolicy(password: string, username: string): string | null {
-  if (password.length < PASSWORD_MIN) return `Password must be at least ${PASSWORD_MIN} characters.`;
-  if (Buffer.byteLength(password, "utf8") > PASSWORD_MAX) return "Password is too long.";
+export function checkPasswordPolicy(password: string, username: string): Msg | null {
+  if (password.length < PASSWORD_MIN) return msg("policy.min", { n: PASSWORD_MIN });
+  if (Buffer.byteLength(password, "utf8") > PASSWORD_MAX) return msg("policy.tooLong");
   if (!/[A-Za-z]/.test(password) || !/[0-9]/.test(password))
-    return "Password must contain both letters and numbers.";
+    return msg("policy.letterDigit");
   if (password.toLowerCase().includes(username.toLowerCase()))
-    return "Password must not contain your ID.";
+    return msg("policy.noId");
   return null;
 }
 

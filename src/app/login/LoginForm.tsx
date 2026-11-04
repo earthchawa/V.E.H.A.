@@ -1,24 +1,27 @@
 "use client";
 
+import { KeepForm } from "@/components/KeepForm";
 import { useActionState } from "react";
 import { loginAction } from "../auth-actions";
 import { FormMessage } from "@/components/FormMessage";
 import { SubmitButton } from "@/components/SubmitButton";
+import { useI18n } from "@/lib/i18n/client";
 
 export function LoginForm() {
-  const [state, action] = useActionState(loginAction, undefined);
+  const [state, action, pending] = useActionState(loginAction, undefined);
+  const { t } = useI18n();
   return (
-    <form action={action} className="space-y-4">
+    <KeepForm action={action} pending={pending} className="space-y-4">
       <div>
-        <label className="label" htmlFor="username">ID</label>
-        <input id="username" name="username" className="input" autoComplete="username" placeholder="e.g. 6601001" required autoFocus />
+        <label className="label" htmlFor="username">{t("login.id")}</label>
+        <input id="username" name="username" className="input" autoComplete="username" placeholder={t("login.idPlaceholder")} required autoFocus />
       </div>
       <div>
-        <label className="label" htmlFor="password">Password</label>
+        <label className="label" htmlFor="password">{t("login.password")}</label>
         <input id="password" name="password" type="password" className="input" autoComplete="current-password" required />
       </div>
       <FormMessage state={state} />
-      <SubmitButton className="btn w-full" pendingText="Signing in…">Sign in</SubmitButton>
-    </form>
+      <SubmitButton className="btn w-full" pendingText={t("login.pending")}>{t("login.submit")}</SubmitButton>
+    </KeepForm>
   );
 }

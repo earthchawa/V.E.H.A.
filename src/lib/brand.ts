@@ -1,6 +1,2 @@
-/** Product naming — change here to rename the whole portal. */
-export const brand = {
-  name: "AeroClass",
-  tagline: "NKRAFA Learning Portal",
-  org: "Navaminda Kasatriyadhiraj Royal Thai Air Force Academy",
-};
+/** Product name — change here to rename the whole portal. Tagline/org text live in the i18n dictionaries. */
+export const brand = { name: "AeroClass" };

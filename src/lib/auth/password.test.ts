@@ -6,17 +6,17 @@ describe("checkPasswordPolicy", () => {
     expect(checkPasswordPolicy("blue7Sky42", "6601001")).toBeNull();
   });
   it("rejects short passwords", () => {
-    expect(checkPasswordPolicy("ab1", "6601001")).toMatch(/at least/);
+    expect(checkPasswordPolicy("ab1", "6601001")).toMatchObject({ key: "policy.min" });
   });
   it("requires letters and digits", () => {
     expect(checkPasswordPolicy("abcdefghij", "x")).not.toBeNull();
     expect(checkPasswordPolicy("1234567890", "x")).not.toBeNull();
   });
   it("rejects passwords containing the username", () => {
-    expect(checkPasswordPolicy("pw6601001x", "6601001")).toMatch(/your ID/);
+    expect(checkPasswordPolicy("pw6601001x", "6601001")).toMatchObject({ key: "policy.noId" });
   });
   it("rejects passwords over bcrypt's 72-byte limit", () => {
-    expect(checkPasswordPolicy("ก".repeat(30) + "a1", "x")).toMatch(/too long/);
+    expect(checkPasswordPolicy("ก".repeat(30) + "a1", "x")).toMatchObject({ key: "policy.tooLong" });
   });
 });
 

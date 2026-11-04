@@ -1,8 +1,10 @@
 @import "tailwindcss";
 
-/* Dark-first design tokens. A light theme can later redefine these variables. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* Design tokens. Dark is the default; [data-theme="light"] redefines the same variables. */
 @theme {
-  --font-sans: var(--font-geist-sans), "Noto Sans Thai", "Leelawadee UI", "Tahoma", system-ui, sans-serif;
+  --font-sans: var(--font-geist-sans), "Noto Sans Thai Variable", "Noto Sans Thai", "Leelawadee UI", "Tahoma", system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 
   --color-bg: #0a0b0e;
@@ -17,11 +19,55 @@
   --color-accent: #5b8cff;
   --color-accent-hover: #7aa2ff;
   --color-accent-fg: #ffffff;
+  --color-success: #6ee7b7;
+  --color-warning: #fcd34d;
+  --color-danger: #fca5a5;
 }
 
 :root {
   color-scheme: dark;
+  --hl-alpha: 0.3;
 }
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --hl-alpha: 0.22;
+  --color-bg: #f6f7f9;
+  --color-surface: #ffffff;
+  --color-surface-2: #f3f4f7;
+  --color-surface-3: #e8eaef;
+  --color-border: rgb(15 23 42 / 0.09);
+  --color-border-strong: rgb(15 23 42 / 0.16);
+  --color-fg: #0f1319;
+  --color-muted: #586170;
+  --color-subtle: #8a919c;
+  --color-accent: #2f66f0;
+  --color-accent-hover: #1f52d6;
+  --color-success: #047857;
+  --color-warning: #a16207;
+  --color-danger: #b91c1c;
+}
+
+/* Thai text is taller; give it a little more line height. */
+:root[lang="th"] body {
+  line-height: 1.6;
+}
+
+/* Similarity highlights: one hue per matched source. */
+.hl {
+  border-radius: 2px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  cursor: help;
+}
+.hl-0 { background: rgb(239 68 68 / var(--hl-alpha)); box-shadow: inset 0 -2px rgb(239 68 68 / 0.8); }
+.hl-1 { background: rgb(245 158 11 / var(--hl-alpha)); box-shadow: inset 0 -2px rgb(245 158 11 / 0.8); }
+.hl-2 { background: rgb(168 85 247 / var(--hl-alpha)); box-shadow: inset 0 -2px rgb(168 85 247 / 0.8); }
+.hl-3 { background: rgb(14 165 233 / var(--hl-alpha)); box-shadow: inset 0 -2px rgb(14 165 233 / 0.8); }
+.hl-4 { background: rgb(236 72 153 / var(--hl-alpha)); box-shadow: inset 0 -2px rgb(236 72 153 / 0.8); }
+.hl-5 { background: rgb(34 197 94 / var(--hl-alpha)); box-shadow: inset 0 -2px rgb(34 197 94 / 0.8); }
+.sw-0 { background: rgb(239 68 68); } .sw-1 { background: rgb(245 158 11); } .sw-2 { background: rgb(168 85 247); }
+.sw-3 { background: rgb(14 165 233); } .sw-4 { background: rgb(236 72 153); } .sw-5 { background: rgb(34 197 94); }
 
 body {
   @apply bg-bg text-fg antialiased;

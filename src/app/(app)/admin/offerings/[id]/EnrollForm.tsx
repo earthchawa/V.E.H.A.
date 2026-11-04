@@ -1,27 +1,30 @@
 "use client";
 
+import { KeepForm } from "@/components/KeepForm";
 import { useActionState } from "react";
 import { enrollAction } from "../../actions";
 import { FormMessage } from "@/components/FormMessage";
 import { SubmitButton } from "@/components/SubmitButton";
+import { useI18n } from "@/lib/i18n/client";
 
 export function EnrollForm({ offeringId }: { offeringId: string }) {
-  const [state, action] = useActionState(enrollAction.bind(null, offeringId), undefined);
+  const [state, action, pending] = useActionState(enrollAction.bind(null, offeringId), undefined);
+  const { t } = useI18n();
   return (
-    <form action={action} className="space-y-4">
+    <KeepForm action={action} pending={pending} state={state} resetOnSuccess className="space-y-4">
       <div>
-        <label className="label" htmlFor="role">Add as</label>
+        <label className="label" htmlFor="role">{t("roster.addAs")}</label>
         <select id="role" name="role" className="input">
-          <option value="STUDENT">Cadet</option>
-          <option value="INSTRUCTOR">Instructor</option>
+          <option value="STUDENT">{t("role.STUDENT")}</option>
+          <option value="INSTRUCTOR">{t("role.INSTRUCTOR")}</option>
         </select>
       </div>
       <div>
-        <label className="label" htmlFor="usernames">IDs <span className="text-subtle">(separated by spaces, commas or new lines)</span></label>
+        <label className="label" htmlFor="usernames">{t("roster.ids")} <span className="text-subtle">{t("roster.idsHint")}</span></label>
         <textarea id="usernames" name="usernames" rows={6} className="input font-mono text-xs" required />
       </div>
       <FormMessage state={state} />
-      <SubmitButton>Add to roster</SubmitButton>
-    </form>
+      <SubmitButton>{t("roster.submit")}</SubmitButton>
+    </KeepForm>
   );
 }

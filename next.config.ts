@@ -6,6 +6,8 @@ const nextConfig: NextConfig = {
     serverActions: { bodySizeLimit: "50mb" },
   },
   poweredByHeader: false,
+  // Text extraction libraries run as plain Node modules on the server.
+  serverExternalPackages: ["unpdf", "mammoth"],
 };
 
 export default nextConfig;

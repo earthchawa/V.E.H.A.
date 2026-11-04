@@ -1,22 +1,26 @@
 import Link from "next/link";
 import { AuthShell } from "@/components/AuthShell";
 import { findValidResetToken } from "@/lib/auth/account";
+import { getI18n } from "@/lib/i18n/server";
 import { ResetPasswordForm } from "./ResetPasswordForm";
 
-export const metadata = { title: "Choose a new password" };
+export async function generateMetadata() {
+  return { title: (await getI18n()).t("reset.title") };
+}
 
 export default async function ResetPasswordPage({ searchParams }: { searchParams: Promise<{ token?: string }> }) {
   const { token = "" } = await searchParams;
+  const { t } = await getI18n();
   const record = await findValidResetToken(token);
   if (!record) {
     return (
-      <AuthShell title="Link expired" subtitle="This reset link is invalid, already used, or has expired.">
-        <Link href="/forgot-password" className="btn w-full">Request a new link</Link>
+      <AuthShell title={t("reset.expiredTitle")} subtitle={t("reset.expiredBody")}>
+        <Link href="/forgot-password" className="btn w-full">{t("reset.requestNew")}</Link>
       </AuthShell>
     );
   }
   return (
-    <AuthShell title="Choose a new password" subtitle={`Account ${record.user.username}`}>
+    <AuthShell title={t("reset.title")} subtitle={t("reset.account", { id: record.user.username })}>
       <ResetPasswordForm token={token} />
     </AuthShell>
   );

@@ -1,5 +1,6 @@
 // NKRAFA AI Classroom — data model
 // Phase 1: accounts, terms, courses, course offerings, enrollment, materials, audit log.
+// Phase 2: assignments, submissions, similarity checking.
 
 generator client {
   provider = "prisma-client-js"
@@ -24,6 +25,13 @@ enum EnrollmentRole {
 enum MaterialType {
   FILE
   LINK
+}
+
+/// When cadets may see the similarity report for their own submission.
+enum ReportVisibility {
+  IMMEDIATE
+  AFTER_DUE
+  HIDDEN
 }
 
 model User {
@@ -52,6 +60,8 @@ model User {
   enrollments Enrollment[]
   materials   Material[]
   auditLogs   AuditLog[]
+  assignments Assignment[]
+  submissions Submission[]
 }
 
 model Session {
@@ -121,6 +131,7 @@ model CourseOffering {
 
   enrollments Enrollment[]
   materials   Material[]
+  assignments Assignment[]
 
   @@unique([courseId, termId, section])
   @@index([termId])
@@ -177,4 +188,89 @@ model AuditLog {
 
   @@index([createdAt])
   @@index([actorId])
+}
+
+model Assignment {
+  id               String           @id @default(cuid())
+  offeringId       String
+  offering         CourseOffering   @relation(fields: [offeringId], references: [id], onDelete: Cascade)
+  title            String
+  instructions     String?
+  dueAt            DateTime?
+  allowLate        Boolean          @default(true)
+  isPublished      Boolean          @default(true)
+  checkSimilarity  Boolean          @default(true)
+  reportVisibility ReportVisibility @default(IMMEDIATE)
+  /// Question text / starter code every cadet is expected to include; ignored by the similarity check.
+  baseText         String?
+  createdById      String
+  createdBy        User             @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  submissions Submission[]
+  matches     SimilarityMatch[]
+
+  @@index([offeringId])
+}
+
+/// A cadet's current submission (resubmitting replaces it).
+model Submission {
+  id           String     @id @default(cuid())
+  assignmentId String
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  studentId    String
+  student      User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  textAnswer   String?
+  /// Analysed text: the answer plus text extracted from files.
+  content      String     @default("")
+  /// [{ s, e, kind: "text" | "code" | "meta" }] — character ranges of `content`.
+  segments     Json       @default("[]")
+  version      Int        @default(1)
+  isLate       Boolean    @default(false)
+  submittedAt  DateTime   @default(now())
+  /// Share (0–1) of this submission's tokens that also appear in any other submission. Null = not checked.
+  similarity   Float?
+  checkedAt    DateTime?
+
+  files    SubmissionFile[]
+  matchesA SimilarityMatch[] @relation("MatchA")
+  matchesB SimilarityMatch[] @relation("MatchB")
+
+  @@unique([assignmentId, studentId])
+}
+
+model SubmissionFile {
+  id           String     @id @default(cuid())
+  submissionId String
+  submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  fileName     String
+  storageKey   String
+  mimeType     String
+  sizeBytes    Int
+  /// Extracted [{ text, kind }]; null when the file type cannot be analysed.
+  extracted    Json?
+  createdAt    DateTime   @default(now())
+
+  @@index([submissionId])
+}
+
+/// Overlap between two submissions of the same assignment.
+model SimilarityMatch {
+  id           String     @id @default(cuid())
+  assignmentId String
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  aId          String
+  a            Submission @relation("MatchA", fields: [aId], references: [id], onDelete: Cascade)
+  bId          String
+  b            Submission @relation("MatchB", fields: [bId], references: [id], onDelete: Cascade)
+  /// Share of A covered by B, and of B covered by A.
+  scoreA       Float
+  scoreB       Float
+  /// [[start, end], …] character ranges in each submission's content.
+  spansA       Json
+  spansB       Json
+
+  @@unique([aId, bId])
+  @@index([assignmentId])
 }

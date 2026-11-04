@@ -1,3 +1,5 @@
+import { msg, type Msg } from "./i18n";
+
 /** Minimal CSV parser (RFC 4180 quoting) — enough for spreadsheet exports from Excel / Google Sheets. */
 export function parseCsv(text: string): string[][] {
   const rows: string[][] = [];
@@ -58,9 +60,9 @@ const USERNAME_RE = /^[A-Za-z0-9._-]{3,32}$/;
  * Columns: username, fullName, role (optional, default student), email (optional).
  * A header row is detected and skipped.
  */
-export function parseUserImport(text: string): { rows: UserImportRow[]; errors: string[] } {
+export function parseUserImport(text: string): { rows: UserImportRow[]; errors: Msg[] } {
   const rows: UserImportRow[] = [];
-  const errors: string[] = [];
+  const errors: Msg[] = [];
   const seen = new Set<string>();
 
   parseCsv(text).forEach((cols, idx) => {
@@ -69,18 +71,18 @@ export function parseUserImport(text: string): { rows: UserImportRow[]; errors: 
     if (idx === 0 && /^(username|id|student_?id|รหัส.*)$/i.test(username)) return;
 
     if (!USERNAME_RE.test(username)) {
-      errors.push(`Line ${line}: invalid ID "${username}" (use A-Z 0-9 . _ -, 3–32 characters)`);
+      errors.push(msg("csv.badId", { line, id: username }));
       return;
     }
-    if (!fullName) { errors.push(`Line ${line}: missing full name`); return; }
+    if (!fullName) { errors.push(msg("csv.noName", { line })); return; }
     const role = roleRaw ? ROLE_ALIASES[roleRaw.toLowerCase()] ?? (roleRaw.toUpperCase() as UserImportRow["role"]) : "STUDENT";
     if (!["ADMIN", "INSTRUCTOR", "STUDENT"].includes(role)) {
-      errors.push(`Line ${line}: unknown role "${roleRaw}"`);
+      errors.push(msg("csv.badRole", { line, role: roleRaw }));
       return;
     }
     const email = emailRaw ? emailRaw.toLowerCase() : null;
-    if (email && !EMAIL_RE.test(email)) { errors.push(`Line ${line}: invalid email "${emailRaw}"`); return; }
-    if (seen.has(username)) { errors.push(`Line ${line}: duplicate ID ${username}`); return; }
+    if (email && !EMAIL_RE.test(email)) { errors.push(msg("csv.badEmail", { line, email: emailRaw })); return; }
+    if (seen.has(username)) { errors.push(msg("csv.dupId", { line, id: username })); return; }
     seen.add(username);
     rows.push({ line, username, fullName, role, email });
   });
