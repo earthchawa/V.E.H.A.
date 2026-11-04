@@ -2,10 +2,11 @@ import type { Prisma, Role } from "@prisma/client";
 import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { ROLE_LABEL, formatDateTime } from "@/lib/format";
+import { PageHeader } from "@/components/PageHeader";
 import { toggleUserActiveAction } from "../actions";
 import { CreateUserForm, ImportUsersForm, ResetPasswordButton } from "./forms";
 
-export const metadata = { title: "จัดการผู้ใช้" };
+export const metadata = { title: "Users" };
 
 export default async function UsersPage({ searchParams }: { searchParams: Promise<{ q?: string; role?: string }> }) {
   const me = await requireRole("ADMIN");
@@ -18,71 +19,68 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
   const now = new Date();
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">จัดการผู้ใช้</h1>
+    <div>
+      <PageHeader title="Users" description="Create accounts, import a cohort, and reset passwords." />
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <section className="card">
-          <h2 className="mb-4 font-semibold">สร้างบัญชีทีละคน</h2>
-          <CreateUserForm />
-        </section>
-        <section className="card">
-          <h2 className="mb-4 font-semibold">นำเข้าจาก CSV (ทั้งชั้นปี)</h2>
-          <ImportUsersForm />
-        </section>
+        <section className="card"><h2 className="card-title">New account</h2><CreateUserForm /></section>
+        <section className="card"><h2 className="card-title">Import from CSV</h2><ImportUsersForm /></section>
       </div>
 
-      <section className="card overflow-x-auto">
-        <form className="mb-4 flex flex-wrap gap-2">
-          <input name="q" defaultValue={q} placeholder="ค้นหารหัสหรือชื่อ" className="input max-w-xs" />
-          <select name="role" defaultValue={role} className="input w-auto">
-            <option value="">ทุกบทบาท</option>
+      <section className="mt-6 overflow-hidden rounded-xl border border-border bg-surface">
+        <form className="flex flex-wrap items-center gap-2 border-b border-border p-3">
+          <input name="q" defaultValue={q} placeholder="Search ID or name" className="input h-9 max-w-xs" />
+          <select name="role" defaultValue={role} className="input h-9 w-auto py-0" aria-label="Role">
+            <option value="">All roles</option>
             {Object.entries(ROLE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
-          <button className="btn-secondary">ค้นหา</button>
+          <button className="btn-secondary h-9">Search</button>
+          <span className="ml-auto pr-1 text-xs text-subtle">{users.length} users</span>
         </form>
-        <table className="table">
-          <thead>
-            <tr><th>รหัส</th><th>ชื่อ</th><th>บทบาท</th><th>อีเมล</th><th>สถานะ</th><th>เข้าใช้ล่าสุด</th><th /></tr>
-          </thead>
-          <tbody>
-            {users.map((u) => {
-              const status = !u.isActive
-                ? { text: "ปิดใช้งาน", cls: "bg-slate-200 text-slate-700" }
-                : u.lockedUntil && u.lockedUntil > now
-                  ? { text: "ล็อกชั่วคราว", cls: "bg-red-100 text-red-800" }
-                  : u.mustChangePassword
-                    ? u.tempPasswordExpiresAt && u.tempPasswordExpiresAt < now
-                      ? { text: "รหัสชั่วคราวหมดอายุ", cls: "bg-red-100 text-red-800" }
-                      : { text: "รอตั้งรหัสผ่าน", cls: "bg-amber-100 text-amber-800" }
-                    : { text: "ใช้งาน", cls: "bg-green-100 text-green-800" };
-              return (
-                <tr key={u.id}>
-                  <td className="font-mono">{u.username}</td>
-                  <td>{u.fullName}</td>
-                  <td>{ROLE_LABEL[u.role]}</td>
-                  <td className="text-slate-500">{u.email ?? "—"}</td>
-                  <td><span className={`rounded px-1.5 py-0.5 text-xs ${status.cls}`}>{status.text}</span></td>
-                  <td className="text-xs text-slate-500">{u.lastLoginAt ? formatDateTime(u.lastLoginAt) : "—"}</td>
-                  <td>
-                    <div className="flex flex-wrap justify-end gap-2">
-                      <ResetPasswordButton userId={u.id} username={u.username} />
-                      {u.id !== me.id && (
-                        <form action={toggleUserActiveAction}>
-                          <input type="hidden" name="userId" value={u.id} />
-                          <button className={u.isActive ? "btn-danger" : "btn-secondary"}>
-                            {u.isActive ? "ปิดใช้งาน" : "เปิดใช้งาน"}
-                          </button>
-                        </form>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-        {users.length === 0 && <p className="py-6 text-center text-sm text-slate-500">ไม่พบผู้ใช้</p>}
+        <div className="overflow-x-auto">
+          <table className="table">
+            <thead>
+              <tr><th>ID</th><th>Name</th><th>Role</th><th>Email</th><th>Status</th><th>Last sign-in</th><th /></tr>
+            </thead>
+            <tbody>
+              {users.map((u) => {
+                const status = !u.isActive
+                  ? { text: "Disabled", cls: "bg-surface-3 text-muted" }
+                  : u.lockedUntil && u.lockedUntil > now
+                    ? { text: "Locked", cls: "bg-red-500/10 text-red-300" }
+                    : u.mustChangePassword
+                      ? u.tempPasswordExpiresAt && u.tempPasswordExpiresAt < now
+                        ? { text: "Temp expired", cls: "bg-red-500/10 text-red-300" }
+                        : { text: "Pending setup", cls: "bg-amber-500/10 text-amber-300" }
+                      : { text: "Active", cls: "bg-emerald-500/10 text-emerald-300" };
+                return (
+                  <tr key={u.id}>
+                    <td className="font-mono text-xs">{u.username}</td>
+                    <td>{u.fullName}</td>
+                    <td className="text-muted">{ROLE_LABEL[u.role]}</td>
+                    <td className="text-muted">{u.email ?? <span className="text-subtle">—</span>}</td>
+                    <td><span className={`badge ${status.cls}`}>{status.text}</span></td>
+                    <td className="whitespace-nowrap text-xs text-subtle">{u.lastLoginAt ? formatDateTime(u.lastLoginAt) : "—"}</td>
+                    <td>
+                      <div className="flex justify-end gap-2">
+                        <ResetPasswordButton userId={u.id} username={u.username} />
+                        {u.id !== me.id && (
+                          <form action={toggleUserActiveAction}>
+                            <input type="hidden" name="userId" value={u.id} />
+                            <button className={u.isActive ? "btn-danger" : "btn-secondary"}>
+                              {u.isActive ? "Disable" : "Enable"}
+                            </button>
+                          </form>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        {users.length === 0 && <p className="py-10 text-center text-sm text-muted">No users found.</p>}
       </section>
     </div>
   );

@@ -2,14 +2,14 @@ import Link from "next/link";
 import { AuthShell } from "@/components/AuthShell";
 import { ForgotPasswordForm } from "./ForgotPasswordForm";
 
-export const metadata = { title: "ลืมรหัสผ่าน" };
+export const metadata = { title: "Reset password" };
 
 export default function ForgotPasswordPage() {
   return (
-    <AuthShell title="ลืมรหัสผ่าน" subtitle="ระบบจะส่งลิงก์ตั้งรหัสผ่านใหม่ไปยังอีเมลที่ลงทะเบียนไว้">
+    <AuthShell title="Reset password" subtitle="We'll email a reset link to the address on your account.">
       <ForgotPasswordForm />
-      <div className="mt-4 text-center text-sm">
-        <Link href="/login" className="text-brand-600 hover:underline">กลับไปหน้าเข้าสู่ระบบ</Link>
+      <div className="mt-5 text-center text-sm">
+        <Link href="/login" className="text-muted transition hover:text-fg">← Back to sign in</Link>
       </div>
     </AuthShell>
   );

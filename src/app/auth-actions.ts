@@ -34,12 +34,12 @@ export async function logoutAction(): Promise<void> {
 export async function changePasswordAction(_: FormState, fd: FormData): Promise<FormState> {
   const user = await requireUser({ allowMustChange: true });
   const newPassword = str(fd, "newPassword");
-  if (newPassword !== str(fd, "confirmPassword")) return { error: "รหัสผ่านใหม่ทั้งสองช่องไม่ตรงกัน" };
+  if (newPassword !== str(fd, "confirmPassword")) return { error: "New passwords don't match." };
 
   let email: string | null | undefined;
   if (fd.has("email")) {
     const raw = str(fd, "email").trim().toLowerCase();
-    if (raw && !z.email().safeParse(raw).success) return { error: "รูปแบบอีเมลไม่ถูกต้อง" };
+    if (raw && !z.email().safeParse(raw).success) return { error: "Please enter a valid email address." };
     email = raw || null;
   }
 
@@ -48,21 +48,21 @@ export async function changePasswordAction(_: FormState, fd: FormData): Promise<
   // Sign out other devices; keep this one.
   await destroyUserSessions(user.id, true);
   if (user.mustChangePassword) redirect("/");
-  return { success: "เปลี่ยนรหัสผ่านเรียบร้อยแล้ว อุปกรณ์อื่นที่เคยเข้าสู่ระบบจะถูกออกจากระบบ" };
+  return { success: "Password updated. Other devices have been signed out." };
 }
 
 export async function forgotPasswordAction(_: FormState, fd: FormData): Promise<FormState> {
   await requestPasswordReset(str(fd, "username"));
   return {
     success:
-      "หากรหัสประจำตัวนี้มีอีเมลลงทะเบียนไว้ ระบบได้ส่งลิงก์ตั้งรหัสผ่านใหม่ไปแล้ว (ใช้ได้ 30 นาที) " +
-      "หากไม่ได้รับอีเมล กรุณาติดต่ออาจารย์ประจำวิชาหรือผู้ดูแลระบบ",
+      "If this ID has a recovery email on file, a reset link is on its way (valid for 30 minutes). " +
+      "No email? Ask your instructor or an administrator to reset your password.",
   };
 }
 
 export async function resetPasswordAction(_: FormState, fd: FormData): Promise<FormState> {
   const newPassword = str(fd, "newPassword");
-  if (newPassword !== str(fd, "confirmPassword")) return { error: "รหัสผ่านใหม่ทั้งสองช่องไม่ตรงกัน" };
+  if (newPassword !== str(fd, "confirmPassword")) return { error: "New passwords don't match." };
   const error = await resetPasswordWithToken(str(fd, "token"), newPassword);
   if (error) return { error };
   redirect("/login?reset=1");
@@ -71,8 +71,8 @@ export async function resetPasswordAction(_: FormState, fd: FormData): Promise<F
 export async function updateEmailAction(_: FormState, fd: FormData): Promise<FormState> {
   const user = await requireUser();
   const raw = str(fd, "email").trim().toLowerCase();
-  if (raw && !z.email().safeParse(raw).success) return { error: "รูปแบบอีเมลไม่ถูกต้อง" };
+  if (raw && !z.email().safeParse(raw).success) return { error: "Please enter a valid email address." };
   const error = await updateOwnEmail(user.id, str(fd, "currentPassword"), raw || null);
   if (error) return { error };
-  return { success: raw ? "บันทึกอีเมลแล้ว" : "ลบอีเมลแล้ว" };
+  return { success: raw ? "Email saved." : "Email removed." };
 }

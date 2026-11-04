@@ -46,7 +46,7 @@ export type UserImportRow = {
 };
 
 const ROLE_ALIASES: Record<string, UserImportRow["role"]> = {
-  student: "STUDENT", นักเรียน: "STUDENT", นนอ: "STUDENT", "นนอ.": "STUDENT",
+  student: "STUDENT", cadet: "STUDENT", นักเรียน: "STUDENT", นนอ: "STUDENT", "นนอ.": "STUDENT",
   instructor: "INSTRUCTOR", teacher: "INSTRUCTOR", อาจารย์: "INSTRUCTOR",
   admin: "ADMIN", ผู้ดูแลระบบ: "ADMIN",
 };
@@ -69,18 +69,18 @@ export function parseUserImport(text: string): { rows: UserImportRow[]; errors: 
     if (idx === 0 && /^(username|id|student_?id|รหัส.*)$/i.test(username)) return;
 
     if (!USERNAME_RE.test(username)) {
-      errors.push(`บรรทัด ${line}: รหัสประจำตัว "${username}" ไม่ถูกต้อง (ใช้ A-Z 0-9 . _ - ยาว 3–32 ตัว)`);
+      errors.push(`Line ${line}: invalid ID "${username}" (use A-Z 0-9 . _ -, 3–32 characters)`);
       return;
     }
-    if (!fullName) { errors.push(`บรรทัด ${line}: ไม่มีชื่อ-นามสกุล`); return; }
+    if (!fullName) { errors.push(`Line ${line}: missing full name`); return; }
     const role = roleRaw ? ROLE_ALIASES[roleRaw.toLowerCase()] ?? (roleRaw.toUpperCase() as UserImportRow["role"]) : "STUDENT";
     if (!["ADMIN", "INSTRUCTOR", "STUDENT"].includes(role)) {
-      errors.push(`บรรทัด ${line}: บทบาท "${roleRaw}" ไม่ถูกต้อง`);
+      errors.push(`Line ${line}: unknown role "${roleRaw}"`);
       return;
     }
     const email = emailRaw ? emailRaw.toLowerCase() : null;
-    if (email && !EMAIL_RE.test(email)) { errors.push(`บรรทัด ${line}: อีเมล "${emailRaw}" ไม่ถูกต้อง`); return; }
-    if (seen.has(username)) { errors.push(`บรรทัด ${line}: รหัส ${username} ซ้ำในไฟล์`); return; }
+    if (email && !EMAIL_RE.test(email)) { errors.push(`Line ${line}: invalid email "${emailRaw}"`); return; }
+    if (seen.has(username)) { errors.push(`Line ${line}: duplicate ID ${username}`); return; }
     seen.add(username);
     rows.push({ line, username, fullName, role, email });
   });

@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { termLabel } from "@/lib/format";
+import { PageHeader } from "@/components/PageHeader";
 import { setCurrentTermAction } from "../actions";
 import { CreateCourseForm, CreateOfferingForm, CreateTermForm } from "./forms";
 
-export const metadata = { title: "ภาคเรียน & วิชา" };
+export const metadata = { title: "Terms & courses" };
 
 export default async function AdminCoursesPage() {
   const [terms, courses] = await Promise.all([
@@ -20,60 +21,69 @@ export default async function AdminCoursesPage() {
     db.course.findMany({ orderBy: { code: "asc" } }),
   ]);
 
+  const Step = ({ n, title }: { n: number; title: string }) => (
+    <h2 className="card-title flex items-center gap-2">
+      <span className="grid h-5 w-5 place-items-center rounded-full bg-surface-3 font-mono text-[11px] text-muted">{n}</span>
+      {title}
+    </h2>
+  );
+
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">ภาคเรียน & วิชา</h1>
+    <div>
+      <PageHeader title="Terms & courses" description="Set up a term, add courses to the catalogue, then offer them in a term." />
       <div className="grid gap-6 lg:grid-cols-3">
-        <section className="card"><h2 className="mb-4 font-semibold">1. เพิ่มภาคเรียน</h2><CreateTermForm /></section>
-        <section className="card"><h2 className="mb-4 font-semibold">2. เพิ่มรายวิชา</h2><CreateCourseForm /></section>
+        <section className="card"><Step n={1} title="Add term" /><CreateTermForm /></section>
+        <section className="card"><Step n={2} title="Add course" /><CreateCourseForm /></section>
         <section className="card">
-          <h2 className="mb-4 font-semibold">3. เปิดวิชาในภาคเรียน</h2>
+          <Step n={3} title="Offer in a term" />
           {terms.length && courses.length ? (
             <CreateOfferingForm
-              courses={courses.map((c) => ({ id: c.id, label: `${c.code} ${c.titleTh || c.title}` }))}
+              courses={courses.map((c) => ({ id: c.id, label: `${c.code} — ${c.title}` }))}
               terms={terms.map((t) => ({ id: t.id, label: termLabel(t), isCurrent: t.isCurrent }))}
             />
           ) : (
-            <p className="text-sm text-slate-500">เพิ่มภาคเรียนและรายวิชาก่อน</p>
+            <p className="text-sm text-muted">Add a term and a course first.</p>
           )}
         </section>
       </div>
 
-      {terms.map((t) => (
-        <section key={t.id} className="card">
-          <div className="mb-3 flex items-center gap-3">
-            <h2 className="font-semibold">{termLabel(t)}</h2>
-            {t.isCurrent ? (
-              <span className="rounded bg-green-100 px-2 py-0.5 text-xs text-green-800">ภาคเรียนปัจจุบัน</span>
+      <div className="mt-10 space-y-6">
+        {terms.map((t) => (
+          <section key={t.id} className="overflow-hidden rounded-xl border border-border bg-surface">
+            <div className="flex items-center gap-3 border-b border-border px-5 py-3">
+              <h2 className="text-sm font-semibold">{termLabel(t)}</h2>
+              {t.isCurrent ? (
+                <span className="badge bg-emerald-500/10 text-emerald-300">Current</span>
+              ) : (
+                <form action={setCurrentTermAction} className="ml-auto">
+                  <input type="hidden" name="termId" value={t.id} />
+                  <button className="btn-secondary">Make current</button>
+                </form>
+              )}
+            </div>
+            {t.offerings.length === 0 ? (
+              <p className="px-5 py-6 text-sm text-muted">No courses offered yet.</p>
             ) : (
-              <form action={setCurrentTermAction}>
-                <input type="hidden" name="termId" value={t.id} />
-                <button className="btn-secondary text-xs">ตั้งเป็นภาคเรียนปัจจุบัน</button>
-              </form>
+              <table className="table">
+                <thead><tr><th className="pl-5">Code</th><th>Course</th><th>Section</th><th>Cadets</th><th /></tr></thead>
+                <tbody>
+                  {t.offerings.map((o) => (
+                    <tr key={o.id}>
+                      <td className="pl-5 font-mono text-xs text-accent">{o.course.code}</td>
+                      <td>{o.course.title}</td>
+                      <td className="text-muted">{o.section}</td>
+                      <td className="text-muted">{o._count.enrollments}</td>
+                      <td className="pr-5 text-right">
+                        <Link href={`/admin/offerings/${o.id}`} className="btn-secondary">Manage roster</Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             )}
-          </div>
-          {t.offerings.length === 0 ? (
-            <p className="text-sm text-slate-500">ยังไม่มีวิชาเปิด</p>
-          ) : (
-            <table className="table">
-              <thead><tr><th>รหัส</th><th>วิชา</th><th>กลุ่ม</th><th>นักเรียน</th><th /></tr></thead>
-              <tbody>
-                {t.offerings.map((o) => (
-                  <tr key={o.id}>
-                    <td className="font-mono">{o.course.code}</td>
-                    <td>{o.course.titleTh || o.course.title}</td>
-                    <td>{o.section}</td>
-                    <td>{o._count.enrollments}</td>
-                    <td className="text-right">
-                      <Link href={`/admin/offerings/${o.id}`} className="btn-secondary">จัดการอาจารย์/นักเรียน</Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </section>
-      ))}
+          </section>
+        ))}
+      </div>
     </div>
   );
 }

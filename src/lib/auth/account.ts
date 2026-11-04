@@ -2,6 +2,7 @@ import { db } from "../db";
 import { config } from "../config";
 import { audit } from "../audit";
 import { sendMail } from "../mail";
+import { brand } from "../brand";
 import {
   checkPasswordPolicy,
   generateTempPassword,
@@ -19,7 +20,7 @@ export type LoginResult =
   | { ok: true; userId: string; mustChangePassword: boolean }
   | { ok: false; error: string };
 
-const GENERIC_LOGIN_ERROR = "รหัสประจำตัวหรือรหัสผ่านไม่ถูกต้อง";
+const GENERIC_LOGIN_ERROR = "Incorrect ID or password.";
 
 export async function authenticate(usernameRaw: string, password: string): Promise<LoginResult> {
   const username = usernameRaw.trim();
@@ -36,7 +37,7 @@ export async function authenticate(usernameRaw: string, password: string): Promi
   if (block === "locked") {
     return {
       ok: false,
-      error: `เข้าสู่ระบบผิดหลายครั้ง บัญชีถูกล็อกชั่วคราว ${config.lockoutMinutes} นาที`,
+      error: `Too many failed attempts. Your account is locked for ${config.lockoutMinutes} minutes.`,
     };
   }
 
@@ -51,7 +52,7 @@ export async function authenticate(usernameRaw: string, password: string): Promi
   if (block === "temp-expired") {
     return {
       ok: false,
-      error: "รหัสผ่านชั่วคราวหมดอายุแล้ว กรุณาติดต่ออาจารย์หรือผู้ดูแลระบบเพื่อออกรหัสใหม่",
+      error: "Your temporary password has expired. Ask your instructor or an administrator for a new one.",
     };
   }
 
@@ -71,14 +72,14 @@ export async function changeOwnPassword(
   email?: string | null,
 ): Promise<string | null> {
   const user = await db.user.findUniqueOrThrow({ where: { id: userId } });
-  if (!(await verifyPassword(currentPassword, user.passwordHash))) return "รหัสผ่านปัจจุบันไม่ถูกต้อง";
+  if (!(await verifyPassword(currentPassword, user.passwordHash))) return "Current password is incorrect.";
   const policy = checkPasswordPolicy(newPassword, user.username);
   if (policy) return policy;
-  if (await verifyPassword(newPassword, user.passwordHash)) return "รหัสผ่านใหม่ต้องไม่ซ้ำกับรหัสเดิม";
+  if (await verifyPassword(newPassword, user.passwordHash)) return "New password must be different from the current one.";
 
   if (email !== undefined && email !== null && email !== user.email) {
     const taken = await db.user.findFirst({ where: { email, NOT: { id: userId } } });
-    if (taken) return "อีเมลนี้ถูกใช้กับบัญชีอื่นแล้ว";
+    if (taken) return "That email is already used by another account.";
   }
 
   await db.user.update({
@@ -141,10 +142,10 @@ export async function requestPasswordReset(usernameRaw: string): Promise<void> {
   const link = `${config.appUrl}/reset-password?token=${token}`;
   await sendMail(
     user.email,
-    "ตั้งรหัสผ่านใหม่ — NKRAFA Classroom",
-    `สวัสดี ${user.fullName}\n\nมีการขอตั้งรหัสผ่านใหม่สำหรับบัญชี ${user.username}\n` +
-      `เปิดลิงก์นี้ภายใน ${config.resetTokenMinutes} นาทีเพื่อตั้งรหัสผ่านใหม่:\n${link}\n\n` +
-      `หากคุณไม่ได้เป็นผู้ขอ ไม่ต้องทำอะไร รหัสผ่านเดิมยังใช้ได้ตามปกติ`,
+    `Reset your ${brand.name} password`,
+    `Hello ${user.fullName},\n\nA password reset was requested for account ${user.username}.\n` +
+      `Open this link within ${config.resetTokenMinutes} minutes to choose a new password:\n${link}\n\n` +
+      `If you didn't request this, ignore this email — your current password still works.\n\n— ${brand.name} · ${brand.tagline}`,
   );
   await audit({ actorId: user.id, action: "password.reset_requested" });
 }
@@ -161,7 +162,7 @@ export async function findValidResetToken(token: string) {
 
 export async function resetPasswordWithToken(token: string, newPassword: string): Promise<string | null> {
   const record = await findValidResetToken(token);
-  if (!record) return "ลิงก์ไม่ถูกต้องหรือหมดอายุแล้ว กรุณาขอลิงก์ใหม่";
+  if (!record) return "This link is invalid or has expired. Please request a new one.";
   const policy = checkPasswordPolicy(newPassword, record.user.username);
   if (policy) return policy;
 
@@ -171,7 +172,7 @@ export async function resetPasswordWithToken(token: string, newPassword: string)
     where: { id: record.id, usedAt: null },
     data: { usedAt: now },
   });
-  if (claimed.count === 0) return "ลิงก์นี้ถูกใช้ไปแล้ว";
+  if (claimed.count === 0) return "This link has already been used.";
 
   await db.$transaction([
     db.user.update({
@@ -198,10 +199,10 @@ export async function resetPasswordWithToken(token: string, newPassword: string)
 
 export async function updateOwnEmail(userId: string, currentPassword: string, email: string | null): Promise<string | null> {
   const user = await db.user.findUniqueOrThrow({ where: { id: userId } });
-  if (!(await verifyPassword(currentPassword, user.passwordHash))) return "รหัสผ่านปัจจุบันไม่ถูกต้อง";
+  if (!(await verifyPassword(currentPassword, user.passwordHash))) return "Current password is incorrect.";
   if (email) {
     const taken = await db.user.findFirst({ where: { email, NOT: { id: userId } } });
-    if (taken) return "อีเมลนี้ถูกใช้กับบัญชีอื่นแล้ว";
+    if (taken) return "That email is already used by another account.";
   }
   await db.user.update({ where: { id: userId }, data: { email } });
   await audit({ actorId: userId, action: "email.changed" });

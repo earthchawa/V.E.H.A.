@@ -10,15 +10,15 @@ export function UpdateEmailForm({ currentEmail }: { currentEmail: string | null 
   return (
     <form action={action} className="space-y-4">
       <div>
-        <label className="label" htmlFor="email">อีเมล</label>
+        <label className="label" htmlFor="email">Email</label>
         <input id="email" name="email" type="email" className="input" defaultValue={currentEmail ?? ""} autoComplete="email" />
       </div>
       <div>
-        <label className="label" htmlFor="emailPassword">ยืนยันด้วยรหัสผ่านปัจจุบัน</label>
+        <label className="label" htmlFor="emailPassword">Confirm with current password</label>
         <input id="emailPassword" name="currentPassword" type="password" className="input" autoComplete="current-password" required />
       </div>
       <FormMessage state={state} />
-      <SubmitButton className="btn-secondary">บันทึกอีเมล</SubmitButton>
+      <SubmitButton className="btn-secondary">Save email</SubmitButton>
     </form>
   );
 }

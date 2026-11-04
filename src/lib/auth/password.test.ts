@@ -6,17 +6,17 @@ describe("checkPasswordPolicy", () => {
     expect(checkPasswordPolicy("blue7Sky42", "6601001")).toBeNull();
   });
   it("rejects short passwords", () => {
-    expect(checkPasswordPolicy("ab1", "6601001")).toMatch(/อย่างน้อย/);
+    expect(checkPasswordPolicy("ab1", "6601001")).toMatch(/at least/);
   });
   it("requires letters and digits", () => {
     expect(checkPasswordPolicy("abcdefghij", "x")).not.toBeNull();
     expect(checkPasswordPolicy("1234567890", "x")).not.toBeNull();
   });
   it("rejects passwords containing the username", () => {
-    expect(checkPasswordPolicy("pw6601001x", "6601001")).toMatch(/รหัสประจำตัว/);
+    expect(checkPasswordPolicy("pw6601001x", "6601001")).toMatch(/your ID/);
   });
   it("rejects passwords over bcrypt's 72-byte limit", () => {
-    expect(checkPasswordPolicy("ก".repeat(30) + "a1", "x")).toMatch(/ยาวเกินไป/);
+    expect(checkPasswordPolicy("ก".repeat(30) + "a1", "x")).toMatch(/too long/);
   });
 });
 

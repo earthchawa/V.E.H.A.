@@ -15,21 +15,20 @@ export function IssuedPasswords({ items }: { items: Issued[] }) {
     URL.revokeObjectURL(url);
   };
   return (
-    <div className="mt-3 rounded-md border border-amber-300 bg-amber-50 p-3">
-      <p className="text-sm font-medium text-amber-900">
-        รหัสผ่านชั่วคราว — แสดงครั้งเดียวเท่านั้น ดาวน์โหลดหรือจดไว้ก่อนออกจากหน้านี้
-      </p>
-      <table className="table mt-2">
-        <thead><tr><th>รหัสประจำตัว</th><th>ชื่อ</th><th>รหัสผ่านชั่วคราว</th></tr></thead>
+    <div className="mt-4 rounded-lg border border-amber-500/25 bg-amber-500/5 p-4">
+      <p className="text-sm font-medium text-amber-300">Temporary passwords — shown only once</p>
+      <p className="mt-0.5 text-xs text-muted">Download or copy them before leaving this page.</p>
+      <table className="table mt-3">
+        <thead><tr><th>ID</th><th>Name</th><th>Temporary password</th></tr></thead>
         <tbody>
           {items.map((i) => (
             <tr key={i.username}>
-              <td>{i.username}</td><td>{i.fullName}</td><td className="font-mono">{i.password}</td>
+              <td className="font-mono">{i.username}</td><td>{i.fullName}</td><td className="font-mono text-amber-200">{i.password}</td>
             </tr>
           ))}
         </tbody>
       </table>
-      <button type="button" onClick={download} className="btn-secondary mt-2">ดาวน์โหลด CSV</button>
+      <button type="button" onClick={download} className="btn-secondary mt-3">Download CSV</button>
     </div>
   );
 }

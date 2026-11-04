@@ -10,27 +10,27 @@ export function ChangePasswordForm({ askEmail, currentEmail }: { askEmail?: bool
   return (
     <form action={action} className="space-y-4">
       <div>
-        <label className="label" htmlFor="currentPassword">รหัสผ่านปัจจุบัน</label>
+        <label className="label" htmlFor="currentPassword">Current password</label>
         <input id="currentPassword" name="currentPassword" type="password" className="input" autoComplete="current-password" required />
       </div>
       <div>
-        <label className="label" htmlFor="newPassword">รหัสผ่านใหม่</label>
+        <label className="label" htmlFor="newPassword">New password</label>
         <input id="newPassword" name="newPassword" type="password" className="input" autoComplete="new-password" required minLength={8} />
-        <p className="mt-1 text-xs text-slate-500">อย่างน้อย 8 ตัว มีทั้งตัวอักษรภาษาอังกฤษและตัวเลข และไม่มีรหัสประจำตัวอยู่ในรหัสผ่าน</p>
+        <p className="mt-1.5 text-xs text-subtle">At least 8 characters with letters and numbers. Must not contain your ID.</p>
       </div>
       <div>
-        <label className="label" htmlFor="confirmPassword">ยืนยันรหัสผ่านใหม่</label>
+        <label className="label" htmlFor="confirmPassword">Confirm new password</label>
         <input id="confirmPassword" name="confirmPassword" type="password" className="input" autoComplete="new-password" required />
       </div>
       {askEmail && (
         <div>
-          <label className="label" htmlFor="email">อีเมลสำหรับกู้รหัสผ่าน</label>
+          <label className="label" htmlFor="email">Recovery email <span className="text-subtle">(optional)</span></label>
           <input id="email" name="email" type="email" className="input" defaultValue={currentEmail ?? ""} autoComplete="email" />
-          <p className="mt-1 text-xs text-slate-500">ถ้าใส่อีเมลไว้ เมื่อลืมรหัสผ่านจะรีเซ็ตเองได้ทางอีเมล โดยไม่ต้องติดต่อผู้ดูแลระบบ</p>
+          <p className="mt-1.5 text-xs text-subtle">Lets you reset a forgotten password yourself.</p>
         </div>
       )}
       <FormMessage state={state} />
-      <SubmitButton>บันทึกรหัสผ่าน</SubmitButton>
+      <SubmitButton className="btn w-full">Save password</SubmitButton>
     </form>
   );
 }

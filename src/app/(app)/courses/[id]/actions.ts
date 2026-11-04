@@ -17,7 +17,7 @@ async function requireManage(offeringId: string) {
 }
 
 const materialSchema = z.object({
-  title: z.string().trim().min(1, "กรุณาใส่ชื่อเอกสาร").max(200),
+  title: z.string().trim().min(1, "Title is required.").max(200),
   description: z.string().trim().max(2000).optional(),
   week: z.coerce.number().int().min(0).max(30).optional(),
   type: z.enum(["FILE", "LINK"]),
@@ -35,7 +35,7 @@ export async function addMaterialAction(offeringId: string, _: FormState, fd: Fo
     url: fd.get("url") || undefined,
     isPublished: fd.get("isPublished") === "on",
   });
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "ข้อมูลไม่ถูกต้อง" };
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
   const m = parsed.data;
 
   let fileData: { fileName: string; storageKey: string; mimeType: string; sizeBytes: number } | undefined;
@@ -43,12 +43,12 @@ export async function addMaterialAction(offeringId: string, _: FormState, fd: Fo
 
   if (m.type === "LINK") {
     if (!m.url || !z.url({ protocol: /^https?$/ }).safeParse(m.url).success)
-      return { error: "ลิงก์ต้องขึ้นต้นด้วย http:// หรือ https://" };
+      return { error: "Link must start with http:// or https://" };
     url = m.url;
   } else {
     const file = fd.get("file");
-    if (!(file instanceof File) || file.size === 0) return { error: "กรุณาเลือกไฟล์" };
-    if (file.size > config.maxUploadBytes) return { error: "ไฟล์ใหญ่เกิน 50 MB" };
+    if (!(file instanceof File) || file.size === 0) return { error: "Please choose a file." };
+    if (file.size > config.maxUploadBytes) return { error: "File is larger than 50 MB." };
     fileData = {
       fileName: file.name.slice(0, 255),
       storageKey: await saveFile(file),
@@ -72,7 +72,7 @@ export async function addMaterialAction(offeringId: string, _: FormState, fd: Fo
   });
   await audit({ actorId: user.id, action: "material.created", targetType: "Material", targetId: material.id });
   revalidatePath(`/courses/${offeringId}`);
-  return { success: "เพิ่มเอกสารแล้ว" };
+  return { success: "Material added." };
 }
 
 async function loadOwnMaterial(fd: FormData) {

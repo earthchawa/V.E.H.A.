@@ -15,45 +15,52 @@ export function AddMaterialForm({ offeringId }: { offeringId: string }) {
   }, [state]);
 
   return (
-    <form ref={formRef} action={action} className="space-y-3">
-      <div className="flex gap-4 text-sm">
+    <form ref={formRef} action={action} className="space-y-4">
+      <input type="hidden" name="type" value={type} />
+      <div className="grid grid-cols-2 gap-1 rounded-lg bg-surface-2 p-1 text-xs" role="tablist">
         {(["FILE", "LINK"] as const).map((t) => (
-          <label key={t} className="flex items-center gap-1">
-            <input type="radio" name="type" value={t} checked={type === t} onChange={() => setType(t)} />
-            {t === "FILE" ? "อัปโหลดไฟล์" : "ลิงก์ (YouTube, Google Drive ฯลฯ)"}
-          </label>
+          <button
+            key={t}
+            type="button"
+            role="tab"
+            aria-selected={type === t}
+            onClick={() => setType(t)}
+            className={`rounded-md py-1.5 transition ${type === t ? "bg-surface-3 text-fg" : "text-muted hover:text-fg"}`}
+          >
+            {t === "FILE" ? "Upload file" : "Add link"}
+          </button>
         ))}
       </div>
-      <div className="grid gap-3 sm:grid-cols-[1fr_6rem]">
+      <div className="grid grid-cols-[1fr_4.5rem] gap-3">
         <div>
-          <label className="label" htmlFor="title">ชื่อเอกสาร</label>
+          <label className="label" htmlFor="title">Title</label>
           <input id="title" name="title" className="input" required maxLength={200} />
         </div>
         <div>
-          <label className="label" htmlFor="week">สัปดาห์</label>
+          <label className="label" htmlFor="week">Week</label>
           <input id="week" name="week" type="number" min={0} max={30} className="input" />
         </div>
       </div>
       {type === "FILE" ? (
         <div>
-          <label className="label" htmlFor="file">ไฟล์ (ไม่เกิน 50 MB)</label>
+          <label className="label" htmlFor="file">File <span className="text-subtle">(max 50 MB)</span></label>
           <input id="file" name="file" type="file" className="input" required />
         </div>
       ) : (
         <div>
-          <label className="label" htmlFor="url">ลิงก์</label>
+          <label className="label" htmlFor="url">URL</label>
           <input id="url" name="url" type="url" className="input" placeholder="https://" required />
         </div>
       )}
       <div>
-        <label className="label" htmlFor="description">คำอธิบาย (ไม่บังคับ)</label>
+        <label className="label" htmlFor="description">Description <span className="text-subtle">(optional)</span></label>
         <textarea id="description" name="description" rows={2} className="input" maxLength={2000} />
       </div>
-      <label className="flex items-center gap-2 text-sm">
-        <input type="checkbox" name="isPublished" defaultChecked /> เผยแพร่ให้นักเรียนเห็นทันที
+      <label className="flex items-center gap-2 text-sm text-muted">
+        <input type="checkbox" name="isPublished" defaultChecked className="accent-accent" /> Visible to cadets
       </label>
       <FormMessage state={state} />
-      <SubmitButton pendingText="กำลังอัปโหลด…">เพิ่มเอกสาร</SubmitButton>
+      <SubmitButton className="btn w-full" pendingText="Uploading…">Add material</SubmitButton>
     </form>
   );
 }

@@ -1,7 +1,8 @@
-export const ROLE_LABEL = { ADMIN: "ผู้ดูแลระบบ", INSTRUCTOR: "อาจารย์", STUDENT: "นักเรียน" } as const;
+export const ROLE_LABEL = { ADMIN: "Admin", INSTRUCTOR: "Instructor", STUDENT: "Cadet" } as const;
 
+/** Academic years are Buddhist-era (e.g. 2569), as used by the academy. */
 export function termLabel(t: { academicYear: number; semester: number }): string {
-  return t.semester === 3 ? `ภาคฤดูร้อน ${t.academicYear}` : `ภาคเรียนที่ ${t.semester}/${t.academicYear}`;
+  return t.semester === 3 ? `Summer ${t.academicYear}` : `Semester ${t.semester}/${t.academicYear}`;
 }
 
 export function formatBytes(n: number | null | undefined): string {
@@ -12,5 +13,5 @@ export function formatBytes(n: number | null | undefined): string {
 }
 
 export function formatDateTime(d: Date): string {
-  return d.toLocaleString("th-TH", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Bangkok" });
+  return d.toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Bangkok" });
 }

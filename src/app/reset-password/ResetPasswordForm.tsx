@@ -11,16 +11,16 @@ export function ResetPasswordForm({ token }: { token: string }) {
     <form action={action} className="space-y-4">
       <input type="hidden" name="token" value={token} />
       <div>
-        <label className="label" htmlFor="newPassword">รหัสผ่านใหม่</label>
+        <label className="label" htmlFor="newPassword">New password</label>
         <input id="newPassword" name="newPassword" type="password" className="input" autoComplete="new-password" required minLength={8} />
-        <p className="mt-1 text-xs text-slate-500">อย่างน้อย 8 ตัว มีทั้งตัวอักษรภาษาอังกฤษและตัวเลข</p>
+        <p className="mt-1.5 text-xs text-subtle">At least 8 characters with letters and numbers.</p>
       </div>
       <div>
-        <label className="label" htmlFor="confirmPassword">ยืนยันรหัสผ่านใหม่</label>
+        <label className="label" htmlFor="confirmPassword">Confirm new password</label>
         <input id="confirmPassword" name="confirmPassword" type="password" className="input" autoComplete="new-password" required />
       </div>
       <FormMessage state={state} />
-      <SubmitButton>ตั้งรหัสผ่านใหม่</SubmitButton>
+      <SubmitButton className="btn w-full">Update password</SubmitButton>
     </form>
   );
 }

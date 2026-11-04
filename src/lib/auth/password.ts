@@ -14,14 +14,14 @@ export function verifyPassword(password: string, hash: string): Promise<boolean>
   return bcrypt.compare(password, hash);
 }
 
-/** Returns a Thai error message, or null when the password is acceptable. */
+/** Returns an error message, or null when the password is acceptable. */
 export function checkPasswordPolicy(password: string, username: string): string | null {
-  if (password.length < PASSWORD_MIN) return `รหัสผ่านต้องมีอย่างน้อย ${PASSWORD_MIN} ตัวอักษร`;
-  if (Buffer.byteLength(password, "utf8") > PASSWORD_MAX) return "รหัสผ่านยาวเกินไป";
+  if (password.length < PASSWORD_MIN) return `Password must be at least ${PASSWORD_MIN} characters.`;
+  if (Buffer.byteLength(password, "utf8") > PASSWORD_MAX) return "Password is too long.";
   if (!/[A-Za-z]/.test(password) || !/[0-9]/.test(password))
-    return "รหัสผ่านต้องมีทั้งตัวอักษรภาษาอังกฤษและตัวเลข";
+    return "Password must contain both letters and numbers.";
   if (password.toLowerCase().includes(username.toLowerCase()))
-    return "รหัสผ่านต้องไม่มีรหัสประจำตัวอยู่ในนั้น";
+    return "Password must not contain your ID.";
   return null;
 }
 

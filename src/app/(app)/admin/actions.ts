@@ -30,8 +30,8 @@ async function createUsers(actorId: string, rows: UserImportRow[]) {
   const issued: IssuedPassword[] = [];
   const skipped: string[] = [];
   for (const r of rows) {
-    if (existing.has(r.username)) { skipped.push(`${r.username} (มีอยู่แล้ว)`); continue; }
-    if (r.email && takenEmails.has(r.email)) { skipped.push(`${r.username} (อีเมลซ้ำ)`); continue; }
+    if (existing.has(r.username)) { skipped.push(`${r.username} (already exists)`); continue; }
+    if (r.email && takenEmails.has(r.email)) { skipped.push(`${r.username} (email in use)`); continue; }
     const password = generateTempPassword();
     await db.user.create({
       data: {
@@ -57,24 +57,24 @@ export async function createUserAction(_: FormState, fd: FormData): Promise<Form
     .map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`)
     .join(",");
   const { rows, errors } = parseUserImport(line);
-  if (errors.length) return { error: errors[0].replace(/^บรรทัด 1: /, "") };
+  if (errors.length) return { error: errors[0].replace(/^Line 1: /, "") };
   const { issued, skipped } = await createUsers(me.id, rows);
   revalidatePath("/admin/users");
-  if (skipped.length) return { error: `สร้างไม่ได้: ${skipped.join(", ")}` };
-  return { success: "สร้างบัญชีแล้ว", data: issued };
+  if (skipped.length) return { error: `Not created: ${skipped.join(", ")}` };
+  return { success: "Account created.", data: issued };
 }
 
 export async function importUsersAction(_: FormState, fd: FormData): Promise<FormState> {
   const me = await admin();
   const file = fd.get("file");
   const text = file instanceof File && file.size > 0 ? await file.text() : String(fd.get("csv") ?? "");
-  if (!text.trim()) return { error: "กรุณาเลือกไฟล์ CSV หรือวางข้อมูล" };
+  if (!text.trim()) return { error: "Choose a CSV file or paste rows." };
   const { rows, errors } = parseUserImport(text);
-  if (errors.length) return { error: `พบข้อผิดพลาด ไม่ได้นำเข้า:\n${errors.slice(0, 10).join("\n")}` };
+  if (errors.length) return { error: `Nothing imported — fix these rows first:\n${errors.slice(0, 10).join("\n")}` };
   const { issued, skipped } = await createUsers(me.id, rows);
   revalidatePath("/admin/users");
   return {
-    success: `สร้างบัญชีใหม่ ${issued.length} บัญชี` + (skipped.length ? ` · ข้าม ${skipped.length}: ${skipped.join(", ")}` : ""),
+    success: `Created ${issued.length} account${issued.length === 1 ? "" : "s"}` + (skipped.length ? ` · skipped ${skipped.length}: ${skipped.join(", ")}` : ""),
     data: issued,
   };
 }
@@ -85,7 +85,7 @@ export async function resetUserPasswordAction(_: FormState, fd: FormData): Promi
   const password = await issueTempPassword(me.id, user.id);
   revalidatePath("/admin/users");
   return {
-    success: `ออกรหัสผ่านชั่วคราวให้ ${user.username} แล้ว`,
+    success: `Issued a temporary password for ${user.username}.`,
     data: [{ username: user.username, fullName: user.fullName, password }] satisfies IssuedPassword[],
   };
 }
@@ -111,14 +111,14 @@ const termSchema = z.object({
 export async function createTermAction(_: FormState, fd: FormData): Promise<FormState> {
   const me = await admin();
   const parsed = termSchema.safeParse({ academicYear: fd.get("academicYear"), semester: fd.get("semester") });
-  if (!parsed.success) return { error: "ปีการศึกษา (พ.ศ.) หรือภาคเรียนไม่ถูกต้อง" };
+  if (!parsed.success) return { error: "Invalid academic year (B.E.) or semester." };
   const exists = await db.term.findUnique({ where: { academicYear_semester: parsed.data } });
-  if (exists) return { error: "มีภาคเรียนนี้แล้ว" };
+  if (exists) return { error: "That term already exists." };
   const hasCurrent = await db.term.count({ where: { isCurrent: true } });
   const term = await db.term.create({ data: { ...parsed.data, isCurrent: hasCurrent === 0 } });
   await audit({ actorId: me.id, action: "term.created", targetType: "Term", targetId: term.id });
   revalidatePath("/admin/courses");
-  return { success: "เพิ่มภาคเรียนแล้ว" };
+  return { success: "Term added." };
 }
 
 export async function setCurrentTermAction(fd: FormData): Promise<void> {
@@ -133,8 +133,8 @@ export async function setCurrentTermAction(fd: FormData): Promise<void> {
 }
 
 const courseSchema = z.object({
-  code: z.string().trim().toUpperCase().regex(/^[A-Z0-9-]{2,16}$/, "รหัสวิชาใช้ A-Z, 0-9, - ยาวไม่เกิน 16 ตัว"),
-  title: z.string().trim().min(1, "กรุณาใส่ชื่อวิชา (อังกฤษ)").max(200),
+  code: z.string().trim().toUpperCase().regex(/^[A-Z0-9-]{2,16}$/, "Course code: A-Z, 0-9 and -, up to 16 characters."),
+  title: z.string().trim().min(1, "Course title is required.").max(200),
   titleTh: z.string().trim().max(200).optional(),
   credits: z.coerce.number().int().min(0).max(12).optional(),
   description: z.string().trim().max(4000).optional(),
@@ -149,12 +149,12 @@ export async function createCourseAction(_: FormState, fd: FormData): Promise<Fo
     credits: fd.get("credits") || undefined,
     description: fd.get("description") || undefined,
   });
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "ข้อมูลไม่ถูกต้อง" };
-  if (await db.course.findUnique({ where: { code: parsed.data.code } })) return { error: "มีรหัสวิชานี้แล้ว" };
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
+  if (await db.course.findUnique({ where: { code: parsed.data.code } })) return { error: "That course code already exists." };
   const course = await db.course.create({ data: parsed.data });
   await audit({ actorId: me.id, action: "course.created", targetType: "Course", targetId: course.id });
   revalidatePath("/admin/courses");
-  return { success: `เพิ่มวิชา ${course.code} แล้ว` };
+  return { success: `Added ${course.code}.` };
 }
 
 export async function createOfferingAction(_: FormState, fd: FormData): Promise<FormState> {
@@ -162,14 +162,14 @@ export async function createOfferingAction(_: FormState, fd: FormData): Promise<
   const courseId = String(fd.get("courseId") ?? "");
   const termId = String(fd.get("termId") ?? "");
   const section = String(fd.get("section") ?? "").trim() || "1";
-  if (!courseId || !termId) return { error: "กรุณาเลือกวิชาและภาคเรียน" };
-  if (!/^[A-Za-z0-9-]{1,8}$/.test(section)) return { error: "กลุ่มเรียนไม่ถูกต้อง" };
+  if (!courseId || !termId) return { error: "Choose a course and a term." };
+  if (!/^[A-Za-z0-9-]{1,8}$/.test(section)) return { error: "Invalid section." };
   const exists = await db.courseOffering.findUnique({ where: { courseId_termId_section: { courseId, termId, section } } });
-  if (exists) return { error: "วิชานี้เปิดในภาคเรียนและกลุ่มนี้แล้ว" };
+  if (exists) return { error: "This course is already offered in that term and section." };
   const o = await db.courseOffering.create({ data: { courseId, termId, section } });
   await audit({ actorId: me.id, action: "offering.created", targetType: "CourseOffering", targetId: o.id });
   revalidatePath("/admin/courses");
-  return { success: "เปิดวิชาในภาคเรียนแล้ว" };
+  return { success: "Course offered." };
 }
 
 // ---------- Enrollment ----------
@@ -178,7 +178,7 @@ export async function enrollAction(offeringId: string, _: FormState, fd: FormDat
   const me = await admin();
   const role = fd.get("role") === "INSTRUCTOR" ? "INSTRUCTOR" : "STUDENT";
   const usernames = [...new Set(String(fd.get("usernames") ?? "").split(/[\s,;]+/).map((s) => s.trim()).filter(Boolean))];
-  if (!usernames.length) return { error: "กรุณาใส่รหัสประจำตัวอย่างน้อย 1 รหัส" };
+  if (!usernames.length) return { error: "Enter at least one ID." };
 
   const users = await db.user.findMany({ where: { username: { in: usernames } } });
   const found = new Set(users.map((u) => u.username));
@@ -202,12 +202,12 @@ export async function enrollAction(offeringId: string, _: FormState, fd: FormDat
   });
   revalidatePath(`/admin/offerings/${offeringId}`);
   const notes = [
-    missing.length ? `ไม่พบรหัส: ${missing.join(", ")}` : "",
-    wrongRole.length ? `เป็นบัญชีนักเรียน จึงไม่ได้เพิ่มเป็นอาจารย์: ${wrongRole.join(", ")}` : "",
+    missing.length ? `Not found: ${missing.join(", ")}` : "",
+    wrongRole.length ? `Cadet accounts can't be added as instructors: ${wrongRole.join(", ")}` : "",
   ].filter(Boolean);
   return notes.length
-    ? { error: `เพิ่มแล้ว ${toEnroll.length} คน · ${notes.join(" · ")}` }
-    : { success: `เพิ่มแล้ว ${toEnroll.length} คน` };
+    ? { error: `Added ${toEnroll.length} · ${notes.join(" · ")}` }
+    : { success: `Added ${toEnroll.length}.` };
 }
 
 export async function unenrollAction(fd: FormData): Promise<void> {

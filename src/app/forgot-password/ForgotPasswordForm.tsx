@@ -11,11 +11,11 @@ export function ForgotPasswordForm() {
   return (
     <form action={action} className="space-y-4">
       <div>
-        <label className="label" htmlFor="username">รหัสประจำตัว</label>
+        <label className="label" htmlFor="username">ID</label>
         <input id="username" name="username" className="input" required autoFocus />
       </div>
       <FormMessage state={state} />
-      <SubmitButton>ส่งลิงก์ตั้งรหัสผ่านใหม่</SubmitButton>
+      <SubmitButton className="btn w-full">Send reset link</SubmitButton>
     </form>
   );
 }

@@ -3,8 +3,9 @@ import type { Prisma } from "@prisma/client";
 import { requireUser } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { termLabel } from "@/lib/format";
+import { PageHeader } from "@/components/PageHeader";
 
-export const metadata = { title: "วิชาของฉัน" };
+export const metadata = { title: "Courses" };
 
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ term?: string }> }) {
   const user = await requireUser();
@@ -29,45 +30,49 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
   return (
     <div>
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">วิชาของฉัน</h1>
-          <p className="text-sm text-slate-500">{term ? termLabel(term) : "ยังไม่มีภาคเรียนในระบบ"}</p>
-        </div>
-        {terms.length > 1 && (
-          <form className="flex items-center gap-2 text-sm">
-            <label htmlFor="term" className="text-slate-500">ภาคเรียน</label>
-            <select id="term" name="term" defaultValue={term?.id} className="input w-auto">
-              {terms.map((t) => (
-                <option key={t.id} value={t.id}>{termLabel(t)}{t.isCurrent ? " (ปัจจุบัน)" : ""}</option>
-              ))}
-            </select>
-            <button className="btn-secondary">ดู</button>
-          </form>
-        )}
-      </div>
+      <PageHeader
+        eyebrow={term ? termLabel(term) : undefined}
+        title="Your courses"
+        description={term ? `${offerings.length} course${offerings.length === 1 ? "" : "s"} this term` : "No terms have been set up yet."}
+        actions={
+          terms.length > 1 && (
+            <form className="flex items-center gap-2">
+              <select name="term" defaultValue={term?.id} className="input h-9 w-auto py-0" aria-label="Term">
+                {terms.map((t) => (
+                  <option key={t.id} value={t.id}>{termLabel(t)}{t.isCurrent ? " (current)" : ""}</option>
+                ))}
+              </select>
+              <button className="btn-secondary h-9">View</button>
+            </form>
+          )
+        }
+      />
 
       {offerings.length === 0 ? (
-        <div className="card mt-6 text-center text-slate-500">
-          ยังไม่มีวิชาในภาคเรียนนี้
+        <div className="rounded-xl border border-dashed border-border-strong px-6 py-16 text-center">
+          <p className="text-sm text-muted">No courses in this term yet.</p>
           {user.role === "ADMIN" && (
-            <> — <Link href="/admin/courses" className="text-brand-600 hover:underline">เพิ่มวิชา</Link></>
+            <Link href="/admin/courses" className="btn mt-4">Set up courses</Link>
           )}
         </div>
       ) : (
-        <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {offerings.map((o) => (
             <li key={o.id}>
-              <Link href={`/courses/${o.id}`} className="card block h-full transition hover:border-brand-600 hover:shadow">
-                <div className="text-xs font-semibold text-brand-600">
-                  {o.course.code}{o.section !== "1" ? ` · กลุ่ม ${o.section}` : ""}
+              <Link
+                href={`/courses/${o.id}`}
+                className="group flex h-full flex-col rounded-xl border border-border bg-surface p-5 transition hover:border-accent/40 hover:bg-surface-2"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-xs text-accent">{o.course.code}</span>
+                  {o.section !== "1" && <span className="badge bg-surface-3 text-muted">Sec {o.section}</span>}
                 </div>
-                <div className="mt-1 font-medium">{o.course.titleTh || o.course.title}</div>
-                {o.course.titleTh && <div className="text-sm text-slate-500">{o.course.title}</div>}
-                <div className="mt-3 text-xs text-slate-500">
-                  {o.enrollments.map((e) => e.user.fullName).join(", ") || "ยังไม่ระบุอาจารย์"}
+                <div className="mt-3 font-medium leading-snug">{o.course.title}</div>
+                {o.course.titleTh && <div className="mt-0.5 text-sm text-muted">{o.course.titleTh}</div>}
+                <div className="mt-auto flex items-center justify-between pt-6 text-xs text-subtle">
+                  <span className="truncate">{o.enrollments.map((e) => e.user.fullName).join(", ") || "No instructor"}</span>
+                  <span className="shrink-0 pl-2">{o._count.materials} material{o._count.materials === 1 ? "" : "s"}</span>
                 </div>
-                <div className="mt-1 text-xs text-slate-400">เอกสาร {o._count.materials} รายการ</div>
               </Link>
             </li>
           ))}

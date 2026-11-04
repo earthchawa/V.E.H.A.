@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth/session";
 import { offeringAccess } from "@/lib/access";
 import { db } from "@/lib/db";
 import { formatBytes, formatDateTime, termLabel } from "@/lib/format";
+import { PageHeader } from "@/components/PageHeader";
 import { AddMaterialForm } from "./AddMaterialForm";
 import { deleteMaterialAction, toggleMaterialAction } from "./actions";
 
@@ -35,56 +36,59 @@ export default async function CoursePage({ params }: { params: Promise<{ id: str
   const students = offering.enrollments.filter((e) => e.role === "STUDENT");
 
   const byWeek = new Map<number | null, Material[]>();
-  for (const m of offering.materials) {
-    byWeek.set(m.week, [...(byWeek.get(m.week) ?? []), m]);
-  }
+  for (const m of offering.materials) byWeek.set(m.week, [...(byWeek.get(m.week) ?? []), m]);
   const groups = [...byWeek.entries()].sort(([a], [b]) => (a ?? -1) - (b ?? -1));
 
   return (
-    <div className="space-y-6">
-      <div>
-        <div className="text-sm font-semibold text-brand-600">
-          {offering.course.code} · {termLabel(offering.term)}
-          {offering.section !== "1" ? ` · กลุ่ม ${offering.section}` : ""}
-        </div>
-        <h1 className="text-2xl font-semibold">{offering.course.titleTh || offering.course.title}</h1>
-        {offering.course.titleTh && <div className="text-slate-500">{offering.course.title}</div>}
-        <div className="mt-1 text-sm text-slate-500">
-          อาจารย์: {instructors.map((e) => e.user.fullName).join(", ") || "—"}
-        </div>
-        {offering.course.description && <p className="mt-3 max-w-3xl text-sm text-slate-700">{offering.course.description}</p>}
-      </div>
+    <div>
+      <PageHeader
+        eyebrow={`${offering.course.code} · ${termLabel(offering.term)}${offering.section !== "1" ? ` · Sec ${offering.section}` : ""}`}
+        title={offering.course.title}
+        description={
+          <>
+            {offering.course.titleTh && <div>{offering.course.titleTh}</div>}
+            <div className="mt-1 text-subtle">
+              {instructors.map((e) => e.user.fullName).join(", ") || "No instructor assigned"}
+            </div>
+          </>
+        }
+      />
+      {offering.course.description && <p className="-mt-4 mb-8 max-w-3xl text-sm text-muted">{offering.course.description}</p>}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
-        <section className="card">
-          <h2 className="mb-4 font-semibold">เอกสารประกอบการสอน</h2>
-          {groups.length === 0 && <p className="text-sm text-slate-500">ยังไม่มีเอกสาร</p>}
-          <div className="space-y-6">
+        <section>
+          <h2 className="mb-4 text-sm font-semibold">Materials</h2>
+          {groups.length === 0 && (
+            <div className="rounded-xl border border-dashed border-border-strong px-6 py-12 text-center text-sm text-muted">
+              No materials yet.
+            </div>
+          )}
+          <div className="space-y-8">
             {groups.map(([week, items]) => (
               <div key={week ?? "none"}>
-                <h3 className="mb-2 text-sm font-semibold text-slate-500">
-                  {week == null ? "ทั่วไป" : week === 0 ? "ก่อนเริ่มเรียน" : `สัปดาห์ที่ ${week}`}
+                <h3 className="mb-2 text-xs font-medium uppercase tracking-wider text-subtle">
+                  {week == null ? "General" : week === 0 ? "Before class" : `Week ${week}`}
                 </h3>
-                <ul className="divide-y divide-slate-100 rounded-md border border-slate-200">
+                <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface">
                   {items.map((m) => (
-                    <li key={m.id} className="flex flex-wrap items-start gap-3 p-3">
-                      <span className="mt-0.5 rounded bg-brand-50 px-1.5 py-0.5 text-[10px] font-semibold text-brand-700">
-                        {m.type === "FILE" ? "ไฟล์" : "ลิงก์"}
+                    <li key={m.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
+                      <span className="badge w-10 justify-center bg-surface-3 font-mono text-muted">
+                        {m.type === "FILE" ? (m.fileName?.split(".").pop()?.slice(0, 4).toUpperCase() ?? "FILE") : "LINK"}
                       </span>
                       <div className="min-w-0 flex-1">
-                        <a
-                          href={m.type === "FILE" ? `/api/materials/${m.id}/download` : m.url!}
-                          target={m.type === "LINK" ? "_blank" : undefined}
-                          rel="noopener noreferrer"
-                          className="font-medium text-brand-700 hover:underline"
-                        >
-                          {m.title}
-                        </a>
-                        {!m.isPublished && (
-                          <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-800">ยังไม่เผยแพร่</span>
-                        )}
-                        {m.description && <p className="text-sm text-slate-600">{m.description}</p>}
-                        <p className="text-xs text-slate-400">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <a
+                            href={m.type === "FILE" ? `/api/materials/${m.id}/download` : m.url!}
+                            target={m.type === "LINK" ? "_blank" : undefined}
+                            rel="noopener noreferrer"
+                            className="font-medium transition hover:text-accent"
+                          >
+                            {m.title}
+                          </a>
+                          {!m.isPublished && <span className="badge bg-amber-500/10 text-amber-300">Hidden</span>}
+                        </div>
+                        {m.description && <p className="mt-0.5 text-sm text-muted">{m.description}</p>}
+                        <p className="mt-0.5 text-xs text-subtle">
                           {m.fileName && `${m.fileName} · ${formatBytes(m.sizeBytes)} · `}
                           {formatDateTime(m.createdAt)}
                         </p>
@@ -93,11 +97,11 @@ export default async function CoursePage({ params }: { params: Promise<{ id: str
                         <div className="flex gap-2">
                           <form action={toggleMaterialAction}>
                             <input type="hidden" name="materialId" value={m.id} />
-                            <button className="btn-secondary">{m.isPublished ? "ซ่อน" : "เผยแพร่"}</button>
+                            <button className="btn-secondary">{m.isPublished ? "Hide" : "Publish"}</button>
                           </form>
                           <form action={deleteMaterialAction}>
                             <input type="hidden" name="materialId" value={m.id} />
-                            <button className="btn-danger">ลบ</button>
+                            <button className="btn-danger">Delete</button>
                           </form>
                         </div>
                       )}
@@ -109,26 +113,25 @@ export default async function CoursePage({ params }: { params: Promise<{ id: str
           </div>
         </section>
 
-        <aside className="space-y-6">
-          {canManage && (
+        {canManage && (
+          <aside className="space-y-6">
             <section className="card">
-              <h2 className="mb-4 font-semibold">เพิ่มเอกสาร</h2>
+              <h2 className="card-title">Add material</h2>
               <AddMaterialForm offeringId={offering.id} />
             </section>
-          )}
-          {canManage && (
             <section className="card">
-              <h2 className="mb-3 font-semibold">นักเรียน ({students.length})</h2>
-              <ul className="max-h-96 space-y-1 overflow-y-auto text-sm">
+              <h2 className="card-title">Cadets <span className="font-normal text-subtle">{students.length}</span></h2>
+              <ul className="max-h-96 space-y-1.5 overflow-y-auto text-sm">
                 {students.map((e) => (
-                  <li key={e.id}>
-                    <span className="text-slate-400">{e.user.username}</span> {e.user.fullName}
+                  <li key={e.id} className="flex gap-3">
+                    <span className="font-mono text-xs leading-5 text-subtle">{e.user.username}</span>
+                    <span>{e.user.fullName}</span>
                   </li>
                 ))}
               </ul>
             </section>
-          )}
-        </aside>
+          </aside>
+        )}
       </div>
     </div>
   );

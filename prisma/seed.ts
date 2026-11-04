@@ -28,7 +28,7 @@ async function ensureUser(username: string, fullName: string, role: Role) {
 }
 
 async function main() {
-  await ensureUser(process.env.SEED_ADMIN_USERNAME || "admin", "ผู้ดูแลระบบ", "ADMIN");
+  await ensureUser(process.env.SEED_ADMIN_USERNAME || "admin", "System Administrator", "ADMIN");
 
   if (process.argv.includes("--demo")) {
     const term = await db.term.upsert({
@@ -40,10 +40,10 @@ async function main() {
       { code: "CS201", title: "Data Structures and Algorithms", titleTh: "โครงสร้างข้อมูลและอัลกอริทึม", credits: 3 },
       { code: "CS202", title: "Database Systems", titleTh: "ระบบฐานข้อมูล", credits: 3 },
     ];
-    const teacher = await ensureUser("T0001", "น.ท.ตัวอย่าง สอนดี", "INSTRUCTOR");
+    const teacher = await ensureUser("T0001", "Sqn Ldr Demo Instructor", "INSTRUCTOR");
     const students = [];
     for (let i = 1; i <= 5; i++) {
-      students.push(await ensureUser(`66010${String(i).padStart(2, "0")}`, `นนอ.ทดสอบ คนที่${i}`, "STUDENT"));
+      students.push(await ensureUser(`66010${String(i).padStart(2, "0")}`, `Cadet Demo ${i}`, "STUDENT"));
     }
     for (const c of courses) {
       const course = await db.course.upsert({ where: { code: c.code }, create: c, update: {} });
@@ -67,10 +67,10 @@ async function main() {
   }
 
   if (issued.length) {
-    console.log("\nบัญชีที่สร้างใหม่ (รหัสผ่านชั่วคราว — ต้องเปลี่ยนเมื่อเข้าสู่ระบบครั้งแรก):");
+    console.log("\nNew accounts (temporary passwords — must be changed at first sign-in):");
     console.table(issued.map(([username, fullName, password]) => ({ username, fullName, password })));
   } else {
-    console.log("ไม่มีบัญชีใหม่ (มีอยู่แล้วทั้งหมด)");
+    console.log("No new accounts (all already exist).");
   }
 }
 
