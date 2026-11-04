@@ -17,6 +17,8 @@ export type AssignmentDefaults = {
   ignoreCommon: boolean;
   reportVisibility: "IMMEDIATE" | "AFTER_DUE" | "HIDDEN";
   baseText: string;
+  points: string;
+  categoryId: string;
 };
 
 const EMPTY: AssignmentDefaults = {
@@ -29,16 +31,20 @@ const EMPTY: AssignmentDefaults = {
   ignoreCommon: true,
   reportVisibility: "IMMEDIATE",
   baseText: "",
+  points: "",
+  categoryId: "",
 };
 
 export function AssignmentForm({
   offeringId,
   assignmentId = null,
   defaults = EMPTY,
+  categories = [],
 }: {
   offeringId: string;
   assignmentId?: string | null;
   defaults?: AssignmentDefaults;
+  categories?: { id: string; name: string }[];
 }) {
   const [state, action, pending] = useActionState(saveAssignmentAction.bind(null, offeringId, assignmentId), undefined);
   const { t } = useI18n();
@@ -57,6 +63,20 @@ export function AssignmentForm({
         <label className="label" htmlFor="a-due">{t("asg.f.due")}</label>
         <input id="a-due" name="dueAt" type="datetime-local" className="input" defaultValue={d.dueAt} />
         <p className="mt-1.5 text-xs text-subtle">{t("asg.f.dueHint")}</p>
+      </div>
+      <div className="grid grid-cols-[6rem_1fr] gap-3">
+        <div>
+          <label className="label" htmlFor="a-points">{t("asg.f.points")}</label>
+          <input id="a-points" name="points" inputMode="decimal" className="input" defaultValue={d.points} />
+        </div>
+        <div>
+          <label className="label" htmlFor="a-cat">{t("asg.f.category")}</label>
+          <select id="a-cat" name="categoryId" className="input" defaultValue={d.categoryId}>
+            <option value="">{t("gr.noCategory")}</option>
+            {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </div>
+        <p className="col-span-2 -mt-1.5 text-xs text-subtle">{t("asg.f.pointsHint")}</p>
       </div>
       <div className="space-y-2 text-sm text-muted">
         <label className="flex items-center gap-2"><input type="checkbox" name="allowLate" defaultChecked={d.allowLate} className="accent-accent" /> {t("asg.f.allowLate")}</label>

@@ -111,4 +111,40 @@ async function seedDemoAssignments() {
     }
     await recheckAssignment(assignment.id);
   }
+  await seedDemoGrades(offering.id, teacher.id);
+}
+
+/** Gradebook demo: weighted categories, linked + standalone items, some released scores. */
+async function seedDemoGrades(offeringId: string, teacherId: string) {
+  if (await db.gradeCategory.count({ where: { offeringId } })) return;
+  const [hw, mid, fin] = await Promise.all(
+    [["Assignments", 40], ["Midterm", 25], ["Final", 35]].map(([name, weight], position) =>
+      db.gradeCategory.create({ data: { offeringId, name: name as string, weight: weight as number, position } }),
+    ),
+  );
+  const lab = await db.assignment.findFirstOrThrow({ where: { offeringId, title: { startsWith: "Lab 3" } } });
+  const essay = await db.assignment.findFirstOrThrow({ where: { offeringId, title: { startsWith: "Essay" } } });
+  const items = {
+    lab: await db.gradeItem.create({ data: { offeringId, assignmentId: lab.id, title: lab.title, maxPoints: 10, categoryId: hw.id, isReleased: true, position: 0 } }),
+    essay: await db.gradeItem.create({ data: { offeringId, assignmentId: essay.id, title: essay.title, maxPoints: 20, categoryId: hw.id, position: 1 } }),
+    midterm: await db.gradeItem.create({ data: { offeringId, title: "Midterm exam", maxPoints: 50, categoryId: mid.id, isReleased: true, position: 2 } }),
+    final: await db.gradeItem.create({ data: { offeringId, title: "Final exam", maxPoints: 100, categoryId: fin.id, position: 3 } }),
+  };
+  const scores: [keyof typeof items, string, number, string?][] = [
+    ["lab", "6601001", 9, "Clean implementation. Good use of the prev pointer in remove()."],
+    ["lab", "6601002", 4, "Your submission is almost identical to another cadet's (see the similarity report). Please come and see me."],
+    ["lab", "6601003", 8, "Nice idea using a generator in find(). to_list() makes find O(n) extra memory though."],
+    ["essay", "6601001", 14],
+    ["essay", "6601004", 13],
+    ["essay", "6601005", 18],
+    ["midterm", "6601001", 42],
+    ["midterm", "6601002", 35],
+    ["midterm", "6601003", 38],
+    ["midterm", "6601004", 30],
+    ["midterm", "6601005", 45],
+  ];
+  for (const [item, username, points, feedback] of scores) {
+    const student = await db.user.findUniqueOrThrow({ where: { username } });
+    await db.grade.create({ data: { itemId: items[item].id, studentId: student.id, points, feedback, gradedById: teacherId } });
+  }
 }

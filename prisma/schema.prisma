@@ -1,6 +1,7 @@
 // NKRAFA AI Classroom — data model
 // Phase 1: accounts, terms, courses, course offerings, enrollment, materials, audit log.
 // Phase 2: assignments, submissions, similarity checking.
+// Phase 3: gradebook (categories, items, grades, grade scale).
 
 generator client {
   provider = "prisma-client-js"
@@ -62,6 +63,7 @@ model User {
   auditLogs   AuditLog[]
   assignments Assignment[]
   submissions Submission[]
+  grades      Grade[]
 }
 
 model Session {
@@ -132,6 +134,12 @@ model CourseOffering {
   enrollments Enrollment[]
   materials   Material[]
   assignments Assignment[]
+  gradeCategories GradeCategory[]
+  gradeItems      GradeItem[]
+  /// [{ letter, min }] sorted by min, high → low. Null = academy default (A ≥ 80 … F).
+  gradeScale          Json?
+  /// Whether cadets see their running total and letter grade (from released items).
+  showTotalToStudents Boolean @default(true)
 
   @@unique([courseId, termId, section])
   @@index([termId])
@@ -212,6 +220,7 @@ model Assignment {
 
   submissions Submission[]
   matches     SimilarityMatch[]
+  gradeItem   GradeItem?
 
   @@index([offeringId])
 }
@@ -283,4 +292,56 @@ model StoredFile {
   data      Bytes
   sizeBytes Int
   createdAt DateTime @default(now())
+}
+
+/// A weighted part of the final grade, e.g. "Assignments 40%".
+model GradeCategory {
+  id         String         @id @default(cuid())
+  offeringId String
+  offering   CourseOffering @relation(fields: [offeringId], references: [id], onDelete: Cascade)
+  name       String
+  /// Percent of the final grade.
+  weight     Float
+  position   Int            @default(0)
+  createdAt  DateTime       @default(now())
+
+  items GradeItem[]
+
+  @@index([offeringId])
+}
+
+/// One column of the gradebook: an assignment or a standalone item (exam, participation…).
+model GradeItem {
+  id           String         @id @default(cuid())
+  offeringId   String
+  offering     CourseOffering @relation(fields: [offeringId], references: [id], onDelete: Cascade)
+  categoryId   String?
+  category     GradeCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  assignmentId String?        @unique
+  assignment   Assignment?    @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  title        String
+  maxPoints    Float
+  /// Cadets only see released items.
+  isReleased   Boolean        @default(false)
+  position     Int            @default(0)
+  createdAt    DateTime       @default(now())
+
+  grades Grade[]
+
+  @@index([offeringId])
+}
+
+model Grade {
+  id         String    @id @default(cuid())
+  itemId     String
+  item       GradeItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  studentId  String
+  student    User      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  /// Null = not graded yet (doesn't count towards the total).
+  points     Float?
+  feedback   String?
+  gradedById String?
+  updatedAt  DateTime  @updatedAt
+
+  @@unique([itemId, studentId])
 }

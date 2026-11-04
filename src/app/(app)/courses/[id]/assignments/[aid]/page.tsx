@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { loadCourse } from "@/lib/course";
 import { db } from "@/lib/db";
 import { formatBytes } from "@/lib/format";
+import { formatPoints } from "@/lib/grades";
 import { getI18n } from "@/lib/i18n/server";
 import { acceptsSubmissions, studentCanSeeReport, submissionStatus, toBangkokLocal, uploadLimits } from "@/lib/assignments";
 import { config } from "@/lib/config";
@@ -17,7 +18,7 @@ export default async function AssignmentPage({ params }: { params: Promise<{ id:
   const { user, offering, canManage, students } = await loadCourse(id);
   const { t, date, pct } = await getI18n();
 
-  const assignment = await db.assignment.findUnique({ where: { id: aid } });
+  const assignment = await db.assignment.findUnique({ where: { id: aid }, include: { gradeItem: true } });
   if (!assignment || assignment.offeringId !== offering.id || (!canManage && !assignment.isPublished)) notFound();
   const base = `/courses/${offering.id}/assignments/${assignment.id}`;
 
@@ -40,6 +41,11 @@ export default async function AssignmentPage({ params }: { params: Promise<{ id:
 
   // ---------- Instructor view ----------
   if (canManage) {
+    const [categories, itemGrades] = await Promise.all([
+      db.gradeCategory.findMany({ where: { offeringId: offering.id }, orderBy: { position: "asc" }, select: { id: true, name: true } }),
+      assignment.gradeItem ? db.grade.findMany({ where: { itemId: assignment.gradeItem.id } }) : Promise.resolve([]),
+    ]);
+    const scoreOf = new Map(itemGrades.map((g) => [g.studentId, g.points]));
     const [submissions, matches] = await Promise.all([
       db.submission.findMany({
         where: { assignmentId: assignment.id },
@@ -75,7 +81,7 @@ export default async function AssignmentPage({ params }: { params: Promise<{ id:
               <div className="overflow-x-auto">
                 <table className="table">
                   <thead>
-                    <tr><th className="pl-5">{t("asg.cadet")}</th><th>{t("users.status")}</th><th>{t("asg.submitted")}</th><th>{t("asg.similarity")}</th><th /></tr>
+                    <tr><th className="pl-5">{t("asg.cadet")}</th><th>{t("users.status")}</th><th>{t("asg.submitted")}</th><th>{t("asg.similarity")}</th>{assignment.gradeItem && <th>{t("asg.score")}</th>}<th /></tr>
                   </thead>
                   <tbody>
                     {rows.map(({ student, sub }) => (
@@ -86,6 +92,11 @@ export default async function AssignmentPage({ params }: { params: Promise<{ id:
                           {sub ? <>{date(sub.submittedAt)} <span className="text-subtle">· {t("asg.version", { n: sub.version })}</span></> : "—"}
                         </td>
                         <td>{sub && assignment.checkSimilarity ? <SimilarityBadge score={sub.similarity} /> : <span className="text-subtle">—</span>}</td>
+                        {assignment.gradeItem && (
+                          <td className="font-mono text-xs">
+                            {scoreOf.get(student.id) != null ? `${formatPoints(scoreOf.get(student.id))} / ${formatPoints(assignment.gradeItem.maxPoints)}` : <span className="text-subtle">—</span>}
+                          </td>
+                        )}
                         <td className="pr-5 text-right">
                           {sub && <Link href={`${base}/report/${sub.id}`} className="btn-secondary">{t("asg.report")}</Link>}
                         </td>
@@ -135,7 +146,10 @@ export default async function AssignmentPage({ params }: { params: Promise<{ id:
                     ignoreCommon: assignment.ignoreCommon,
                     reportVisibility: assignment.reportVisibility,
                     baseText: assignment.baseText ?? "",
+                    points: assignment.gradeItem ? String(assignment.gradeItem.maxPoints) : "",
+                    categoryId: assignment.gradeItem?.categoryId ?? "",
                   }}
+                  categories={categories}
                 />
                 <div className="mt-6 border-t border-border pt-4"><DeleteAssignmentButton assignmentId={assignment.id} /></div>
               </div>
@@ -151,6 +165,10 @@ export default async function AssignmentPage({ params }: { params: Promise<{ id:
     where: { assignmentId_studentId: { assignmentId: assignment.id, studentId: user.id } },
     include: { files: { orderBy: { createdAt: "asc" } } },
   });
+  const myGrade =
+    assignment.gradeItem?.isReleased
+      ? await db.grade.findUnique({ where: { itemId_studentId: { itemId: assignment.gradeItem.id, studentId: user.id } } })
+      : null;
   const open = acceptsSubmissions(assignment);
   const canSeeReport = studentCanSeeReport(assignment);
 
@@ -175,6 +193,17 @@ export default async function AssignmentPage({ params }: { params: Promise<{ id:
               <span className="text-sm text-muted">{t("users.status")}</span>
               <StatusBadge status={submissionStatus(assignment, mine)} />
             </div>
+            {myGrade?.points != null && assignment.gradeItem && (
+              <div className="rounded-lg bg-surface-2 px-3 py-2.5">
+                <div className="flex items-baseline justify-between">
+                  <span className="text-xs text-muted">{t("gr.yourScore")}</span>
+                  <span className="font-mono text-lg font-semibold" data-testid="assignment-score">
+                    {formatPoints(myGrade.points)} <span className="text-sm font-normal text-subtle">/ {formatPoints(assignment.gradeItem.maxPoints)}</span>
+                  </span>
+                </div>
+                {myGrade.feedback && <p className="mt-2 whitespace-pre-wrap border-t border-border pt-2 text-sm text-muted">{myGrade.feedback}</p>}
+              </div>
+            )}
             {mine && (
               <>
                 <p className="text-xs text-subtle">{t("asg.submittedAt", { date: date(mine.submittedAt) })} · {t("asg.version", { n: mine.version })}</p>

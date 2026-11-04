@@ -42,7 +42,8 @@ export function KeepForm({
         ref={ref}
         onSubmit={(e) => {
           e.preventDefault();
-          const fd = new FormData(e.currentTarget);
+          // Include the clicked button (name/value), like a native submit.
+          const fd = new FormData(e.currentTarget, (e.nativeEvent as SubmitEvent).submitter);
           if (beforeSubmit && !beforeSubmit(fd)) return;
           startTransition(() => action(fd));
         }}

@@ -12,6 +12,9 @@ export default async function AssignmentsPage({ params }: { params: Promise<{ id
   const { user, offering, canManage, students } = await loadCourse(id);
   const { t, date } = await getI18n();
 
+  const categories = canManage
+    ? await db.gradeCategory.findMany({ where: { offeringId: offering.id }, orderBy: { position: "asc" }, select: { id: true, name: true } })
+    : [];
   const assignments = await db.assignment.findMany({
     where: { offeringId: offering.id, ...(canManage ? {} : { isPublished: true }) },
     orderBy: [{ dueAt: { sort: "asc", nulls: "last" } }, { createdAt: "asc" }],
@@ -59,7 +62,7 @@ export default async function AssignmentsPage({ params }: { params: Promise<{ id
         <aside>
           <section className="card">
             <h2 className="card-title">{t("asg.new")}</h2>
-            <AssignmentForm offeringId={offering.id} />
+            <AssignmentForm offeringId={offering.id} categories={categories} />
           </section>
         </aside>
       )}

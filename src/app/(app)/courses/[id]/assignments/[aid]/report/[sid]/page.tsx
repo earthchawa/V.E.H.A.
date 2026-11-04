@@ -8,6 +8,7 @@ import { K, type Segment, type Span } from "@/lib/similarity/engine";
 import { level } from "@/lib/similarity/level";
 import { buildPieces } from "@/lib/similarity/highlight";
 import { ReportView, type ReportSource } from "@/components/ReportView";
+import { GradePanel } from "./GradePanel";
 
 const RING = { low: "text-success", medium: "text-warning", high: "text-danger" } as const;
 
@@ -20,7 +21,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
   const { user, offering, canManage } = await loadCourse(id);
   const { t, date, pct } = await getI18n();
 
-  const assignment = await db.assignment.findUnique({ where: { id: aid } });
+  const assignment = await db.assignment.findUnique({ where: { id: aid }, include: { gradeItem: true } });
   const submission = await db.submission.findUnique({
     where: { id: sid },
     include: { student: { select: { username: true, fullName: true } } },
@@ -54,6 +55,10 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
   const pieces = submission.content
     ? buildPieces(submission.content, submission.segments as Segment[], sides.map((s) => s.spans))
     : [];
+  const grade =
+    canManage && assignment.gradeItem
+      ? await db.grade.findUnique({ where: { itemId_studentId: { itemId: assignment.gradeItem.id, studentId: submission.studentId } } })
+      : null;
   const score = submission.similarity ?? 0;
   const lv = level(score);
 
@@ -76,6 +81,16 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
           </div>
         </div>
       </div>
+      {canManage && assignment.gradeItem && (
+        <GradePanel
+          itemId={assignment.gradeItem.id}
+          studentId={submission.studentId}
+          maxPoints={assignment.gradeItem.maxPoints}
+          points={grade?.points ?? null}
+          feedback={grade?.feedback ?? null}
+          released={assignment.gradeItem.isReleased}
+        />
+      )}
       <ReportView pieces={pieces} sources={sources} />
       <p className="mt-6 max-w-3xl text-xs leading-relaxed text-subtle">{t("rep.method", { k: K.text, kc: K.code })}</p>
     </div>

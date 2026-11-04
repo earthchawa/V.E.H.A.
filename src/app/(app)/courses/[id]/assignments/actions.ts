@@ -53,10 +53,29 @@ export async function saveAssignmentAction(
     baseText: String(fd.get("baseText") ?? "").trim().slice(0, 100000) || null,
   };
 
+  const pointsRaw = String(fd.get("points") ?? "").trim();
+  const points = pointsRaw ? Number(pointsRaw) : null;
+  if (points != null && (!Number.isFinite(points) || points <= 0)) return { error: t("err.maxPoints") };
+  const catRaw = String(fd.get("categoryId") ?? "");
+  const category = catRaw ? await db.gradeCategory.findUnique({ where: { id: catRaw } }) : null;
+  const categoryId = category && category.offeringId === offeringId ? category.id : null;
+
+  /** Keep the linked gradebook column in step. Clearing the points leaves an existing column (and its scores) alone. */
+  const syncGradeItem = async (id: string) => {
+    if (points == null) return;
+    const position = await db.gradeItem.count({ where: { offeringId } });
+    await db.gradeItem.upsert({
+      where: { assignmentId: id },
+      create: { offeringId, assignmentId: id, title, maxPoints: points, categoryId, position },
+      update: { title, maxPoints: points, categoryId },
+    });
+  };
+
   if (assignmentId) {
     const existing = await db.assignment.findUniqueOrThrow({ where: { id: assignmentId } });
     if (existing.offeringId !== offeringId) throw new Error("forbidden");
     await db.assignment.update({ where: { id: assignmentId }, data });
+    await syncGradeItem(assignmentId);
     // Starter text or the on/off switch changes the results.
     if (
       existing.baseText !== data.baseText ||
@@ -71,6 +90,7 @@ export async function saveAssignmentAction(
   }
 
   const created = await db.assignment.create({ data: { ...data, offeringId, createdById: user.id } });
+  await syncGradeItem(created.id);
   await audit({ actorId: user.id, action: "assignment.created", targetType: "Assignment", targetId: created.id });
   redirect(`/courses/${offeringId}/assignments/${created.id}`);
 }
