@@ -130,7 +130,7 @@ docker compose exec app npx tsx prisma/seed.ts     # สร้างบัญช
 สิ่งที่ระบบปรับให้อัตโนมัติเมื่อรันบน Vercel:
 - ไฟล์อัปโหลดเก็บใน Postgres (`STORAGE_DRIVER=db`) เพราะ Vercel ไม่มีดิสก์ถาวร
 - จำกัดอัปโหลดไม่เกิน 4 MB ต่อครั้ง เพราะ Vercel รับ request ได้สูงสุด 4.5 MB ระบบเช็กในเบราว์เซอร์ก่อนส่ง
-- `scripts/vercel-build.sh` รัน migration ผ่าน connection ตรง (unpooled) แล้ว seed ข้อมูล demo (รันซ้ำได้โดยไม่สร้างข้อมูลซ้ำ) แล้วจึง build
+- `scripts/vercel-build.ts` รัน migration ผ่าน connection ตรง (unpooled) แล้ว seed ข้อมูล demo (รันซ้ำได้โดยไม่สร้างข้อมูลซ้ำ) แล้วจึง build
 - `vercel.json` ตั้ง region เป็น `sin1` (สิงคโปร์) ให้ใกล้ประเทศไทย
 
 ## โครงสร้างโค้ด
