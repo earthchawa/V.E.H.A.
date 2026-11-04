@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { KeepForm } from "@/components/KeepForm";
 import { FormMessage } from "@/components/FormMessage";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -18,8 +18,7 @@ export type QuizDefaults = {
   isPublished: boolean;
   results: "HIDDEN" | "SCORE" | "FULL";
   requireSeb: boolean;
-  sebConfigKeys: string;
-  allowedIps: string;
+  networkIds: string[];
   categoryId: string;
 };
 
@@ -34,8 +33,7 @@ export const EMPTY_QUIZ: QuizDefaults = {
   isPublished: false,
   results: "SCORE",
   requireSeb: false,
-  sebConfigKeys: "",
-  allowedIps: "",
+  networkIds: [],
   categoryId: "",
 };
 
@@ -44,24 +42,40 @@ export function QuizForm({
   quizId = null,
   defaults = EMPTY_QUIZ,
   categories = [],
-  startUrl,
+  networks = [],
+  closeOnSuccess = false,
 }: {
   offeringId: string;
   quizId?: string | null;
   defaults?: QuizDefaults;
   categories?: { id: string; name: string }[];
-  startUrl?: string;
+  /** Exam rooms defined by the admin. */
+  networks?: { id: string; name: string }[];
+  closeOnSuccess?: boolean;
 }) {
   const [state, action, pending] = useActionState(saveQuizAction.bind(null, offeringId, quizId), undefined);
   const { t } = useI18n();
   const d = defaults;
+  const [roomsOnly, setRoomsOnly] = useState(d.networkIds.length > 0);
+  const [seb, setSeb] = useState(d.requireSeb);
+  const choice = (checked: boolean, onSelect: () => void, title: string, hint: string, name: string, value: string) => (
+    <label
+      className={`flex cursor-pointer gap-3 rounded-lg border p-3 transition ${checked ? "border-accent/60 bg-accent/5" : "border-border hover:bg-surface-2"}`}
+    >
+      <input type="radio" name={name} value={value} checked={checked} onChange={onSelect} className="mt-1 accent-accent" />
+      <span>
+        <span className="block text-sm font-medium text-fg">{title}</span>
+        {hint && <span className="mt-0.5 block text-xs leading-relaxed text-muted">{hint}</span>}
+      </span>
+    </label>
+  );
   const check = (name: keyof QuizDefaults, label: string) => (
     <label className="flex items-center gap-2">
       <input type="checkbox" name={name} defaultChecked={d[name] as boolean} className="accent-accent" /> {label}
     </label>
   );
   return (
-    <KeepForm action={action} pending={pending} className="space-y-4">
+    <KeepForm action={action} pending={pending} state={state} closeOnSuccess={closeOnSuccess} className="space-y-4">
       <div>
         <label className="label" htmlFor="qz-title">{t("qz.f.title")}</label>
         <input id="qz-title" name="title" className="input" defaultValue={d.title} required maxLength={200} />
@@ -108,24 +122,31 @@ export function QuizForm({
           <option value="FULL">{t("qz.res.FULL")}</option>
         </select>
       </div>
-      <fieldset className="space-y-3 rounded-lg border border-border p-3">
-        <legend className="px-1 text-xs font-medium text-muted">{t("qz.f.security")}</legend>
-        <div className="text-sm text-muted">{check("requireSeb", t("qz.f.requireSeb"))}</div>
-        <div>
-          <label className="label" htmlFor="qz-seb">{t("qz.f.sebKeys")}</label>
-          <textarea id="qz-seb" name="sebConfigKeys" rows={2} className="input font-mono text-xs" defaultValue={d.sebConfigKeys} />
-          <p className="mt-1.5 text-xs text-subtle">{t("qz.f.sebHint")}</p>
-          {startUrl && (
-            <p className="mt-1.5 text-xs text-subtle">
-              {t("qz.f.startUrl")}: <code className="select-all font-mono text-fg">{startUrl}</code>
-            </p>
-          )}
-        </div>
-        <div>
-          <label className="label" htmlFor="qz-ips">{t("qz.f.allowedIps")}</label>
-          <textarea id="qz-ips" name="allowedIps" rows={2} className="input font-mono text-xs" defaultValue={d.allowedIps} placeholder="10.20.0.0/16" />
-          <p className="mt-1.5 text-xs text-subtle">{t("qz.f.ipHint")}</p>
-        </div>
+      <fieldset className="space-y-2">
+        <legend className="label">{t("qz.f.mode")}</legend>
+        {choice(!seb, () => setSeb(false), t("qz.mode.browser"), t("qz.mode.browserHint"), "requireSeb", "")}
+        {choice(seb, () => setSeb(true), t("qz.mode.seb"), t("qz.mode.sebHint"), "requireSeb", "on")}
+      </fieldset>
+      <fieldset className="space-y-2">
+        <legend className="label">{t("qz.f.where")}</legend>
+        {choice(!roomsOnly, () => setRoomsOnly(false), t("qz.where.anywhere"), "", "where", "anywhere")}
+        {networks.length > 0 ? (
+          <>
+            {choice(roomsOnly, () => setRoomsOnly(true), t("qz.where.rooms"), t("qz.where.hint"), "where", "rooms")}
+            {roomsOnly && (
+              <div className="ml-7 space-y-1.5">
+                {networks.map((n) => (
+                  <label key={n.id} className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" name="networkId" value={n.id} defaultChecked={d.networkIds.includes(n.id)} className="accent-accent" />
+                    {n.name}
+                  </label>
+                ))}
+              </div>
+            )}
+          </>
+        ) : (
+          <p className="text-xs text-subtle">{t("qz.where.none")}</p>
+        )}
       </fieldset>
       <FormMessage state={state} />
       <SubmitButton>{t(quizId ? "qz.f.save" : "qz.f.create")}</SubmitButton>

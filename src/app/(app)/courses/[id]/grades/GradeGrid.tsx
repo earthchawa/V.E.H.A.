@@ -27,6 +27,7 @@ export function GradeGrid({
   students,
   initial,
   scale,
+  readOnly = false,
 }: {
   offeringId: string;
   categories: GCategory[];
@@ -34,6 +35,8 @@ export function GradeGrid({
   students: Student[];
   initial: Record<string, number | null>;
   scale: ScaleRow[];
+  /** Admins: view only. */
+  readOnly?: boolean;
 }) {
   const { t } = useI18n();
   const router = useRouter();
@@ -143,6 +146,8 @@ export function GradeGrid({
                           data-cell={`${row}-${col}`}
                           aria-label={`${s.fullName} — ${i.title}`}
                           value={c.raw}
+                          readOnly={readOnly}
+                          disabled={readOnly}
                           onChange={(e) => setValues((v) => ({ ...v, [key(i.id, s.id)]: e.target.value }))}
                           onKeyDown={(e) => move(e, row, col)}
                           className={`input h-8 w-20 px-2 py-0 text-right font-mono text-[13px] ${
@@ -160,14 +165,14 @@ export function GradeGrid({
           </tbody>
         </table>
       </div>
-      <div className="mt-3 flex flex-wrap items-center gap-3">
+      {!readOnly && <div className="mt-3 flex flex-wrap items-center gap-3">
         <button type="button" className="btn" onClick={save} disabled={pending || changes.out.length === 0 || changes.invalid > 0}>
           {pending ? t("gr.saving") : t("gr.save")}
         </button>
         {changes.out.length > 0 && <span className="text-xs text-accent">{t("gr.unsaved", { n: changes.out.length })}</span>}
         <span className="text-xs text-subtle">{t("gr.blankHint")}</span>
         <div className="w-full sm:w-auto"><FormMessage state={state} /></div>
-      </div>
+      </div>}
     </div>
   );
 }

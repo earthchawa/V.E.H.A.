@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { KeepForm } from "@/components/KeepForm";
 import { SectionCheckboxes, type SectionRef } from "@/components/SectionCheckboxes";
+import { FileDropzone } from "@/components/FileDropzone";
 import { addMaterialAction } from "./actions";
 import { FormMessage } from "@/components/FormMessage";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -21,7 +22,7 @@ export function AddMaterialForm({ offeringId, maxMb, sections = [] }: { offering
   };
 
   return (
-    <KeepForm action={action} pending={pending} state={state} resetOnSuccess beforeSubmit={check} className="space-y-4">
+    <KeepForm action={action} pending={pending} state={state} resetOnSuccess closeOnSuccess beforeSubmit={check} className="space-y-4">
       <input type="hidden" name="type" value={type} />
       <div className="grid grid-cols-2 gap-1 rounded-lg bg-surface-2 p-1 text-xs" role="tablist">
         {(["FILE", "LINK"] as const).map((k) => (
@@ -50,7 +51,7 @@ export function AddMaterialForm({ offeringId, maxMb, sections = [] }: { offering
       {type === "FILE" ? (
         <div>
           <label className="label" htmlFor="file">{t("mat.file")} <span className="text-subtle">{t("mat.max", { mb: maxMb })}</span></label>
-          <input id="file" name="file" type="file" className="input" required />
+          <FileDropzone id="file" name="file" required />
         </div>
       ) : (
         <div>

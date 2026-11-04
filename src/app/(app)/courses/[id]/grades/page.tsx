@@ -15,7 +15,7 @@ export async function generateMetadata() {
 
 export default async function GradesPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { user, offering, canManage, students } = await loadCourse(id);
+  const { user, offering, canManage, canGrade, students } = await loadCourse(id);
   const { t } = await getI18n();
 
   const [categories, items] = await Promise.all([
@@ -111,7 +111,7 @@ export default async function GradesPage({ params }: { params: Promise<{ id: str
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold">{t("gr.title")}</h2>
         <div className="flex items-center gap-2">
-          <CopyToSections action={copyGradebookSetupAction} itemId={offering.id} sections={siblings} label={t("sec.copySetup")} hint={t("sec.copySetupHint")} />
+          {canGrade && <CopyToSections action={copyGradebookSetupAction} itemId={offering.id} sections={siblings} label={t("sec.copySetup")} hint={t("sec.copySetupHint")} />}
           <a href={`/api/offerings/${offering.id}/grades`} className="btn-secondary h-9">{t("gr.export")}</a>
         </div>
       </div>
@@ -123,9 +123,13 @@ export default async function GradesPage({ params }: { params: Promise<{ id: str
         students={students.map((e) => e.user)}
         initial={initial}
         scale={scale}
+        readOnly={!canGrade}
       />
+      {!canGrade && (
+        <p className="rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm text-muted" data-testid="grades-readonly">{t("gr.readOnly")}</p>
+      )}
 
-      <details className="group rounded-xl border border-border bg-surface" open={items.length === 0}>
+      {canGrade && <details className="group rounded-xl border border-border bg-surface" open={items.length === 0}>
         <summary className="cursor-pointer list-none px-5 py-3 text-sm font-semibold">
           {t("gr.setup")} <span className="inline-block text-subtle transition group-open:rotate-90">›</span>
         </summary>
@@ -193,7 +197,7 @@ export default async function GradesPage({ params }: { params: Promise<{ id: str
             <AddItemForm offeringId={offering.id} categories={cats} />
           </section>
         </div>
-      </details>
+      </details>}
     </div>
   );
 }

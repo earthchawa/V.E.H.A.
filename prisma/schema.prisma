@@ -3,6 +3,7 @@
 // Phase 2: assignments, submissions, similarity checking.
 // Phase 3: gradebook (categories, items, grades, grade scale).
 // Phase 4: online quizzes (questions, attempts, answers, integrity events).
+// Organisation: divisions (กองวิชา) → departments (ภาควิชา) → courses; academy-wide exam settings.
 
 generator client {
   provider = "prisma-client-js"
@@ -52,6 +53,9 @@ model User {
   failedLoginCount      Int       @default(0)
   lockedUntil           DateTime?
   isActive              Boolean   @default(true)
+  /// Home department (cadets: programme; staff: affiliation). Optional.
+  departmentId          String?
+  department            Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   lastLoginAt           DateTime?
   passwordChangedAt     DateTime?
   createdAt             DateTime  @default(now())
@@ -119,6 +123,8 @@ model Course {
   titleTh     String?
   credits     Int?
   description String?
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   createdAt   DateTime @default(now())
 
   offerings CourseOffering[]
@@ -391,10 +397,8 @@ model Quiz {
   results          QuizResults    @default(SCORE)
   /// Only allow attempts from Safe Exam Browser.
   requireSeb       Boolean        @default(false)
-  /// SEB Config Keys (one per line); empty = accept any SEB (User-Agent check only).
-  sebConfigKeys    String?
-  /// Allowed client IPs/CIDRs (one per line), e.g. the exam room network; empty = anywhere.
-  allowedIps       String?
+  /// Exam rooms (academy networks) cadets must be on; none = anywhere.
+  networks         ExamNetwork[]
   createdById      String
   createdBy        User           @relation(fields: [createdById], references: [id], onDelete: Restrict)
   createdAt        DateTime       @default(now())
@@ -482,4 +486,38 @@ model QuizEvent {
   details   Json?
 
   @@index([attemptId])
+}
+
+/// Academic unit. Divisions (กองวิชา) have no parent; departments (ภาควิชา) belong to a division.
+model Department {
+  id        String       @id @default(cuid())
+  code      String       @unique
+  name      String
+  nameTh    String?
+  parentId  String?
+  parent    Department?  @relation("DeptTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children  Department[] @relation("DeptTree")
+  position  Int          @default(0)
+  createdAt DateTime     @default(now())
+
+  courses Course[]
+  users   User[]
+}
+
+/// A named exam room / network the admin defines once, e.g. "CS Lab 301: 10.20.3.0/24".
+model ExamNetwork {
+  id        String   @id @default(cuid())
+  name      String
+  /// IPs/CIDRs, one per line.
+  cidrs     String
+  createdAt DateTime @default(now())
+
+  quizzes Quiz[]
+}
+
+/// Academy-wide key/value settings (e.g. Safe Exam Browser config keys).
+model AppSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
 }

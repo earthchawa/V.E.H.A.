@@ -5,6 +5,7 @@ import { formatBytes } from "@/lib/format";
 import { config } from "@/lib/config";
 import { siblingSections } from "@/lib/sections";
 import { CopyToSections } from "@/components/CopyToSections";
+import { Modal } from "@/components/Modal";
 import { getI18n } from "@/lib/i18n/server";
 import { AddMaterialForm } from "./AddMaterialForm";
 import { copyMaterialAction, deleteMaterialAction, toggleMaterialAction } from "./actions";
@@ -25,7 +26,14 @@ export default async function CourseMaterialsPage({ params }: { params: Promise<
 
   return (
     <div>
-      {offering.course.description && <p className="-mt-2 mb-8 max-w-3xl text-sm text-muted">{offering.course.description}</p>}
+      {offering.course.description && <p className="-mt-2 mb-6 max-w-3xl text-sm text-muted">{offering.course.description}</p>}
+      {canManage && (
+        <div className="mb-6">
+          <Modal label={`+ ${t("course.addMaterial")}`} title={t("course.addMaterial")} testId="add-material">
+            <AddMaterialForm offeringId={offering.id} maxMb={config.maxUploadMb} sections={siblings} />
+          </Modal>
+        </div>
+      )}
       <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
         <section>
           {groups.length === 0 && (
@@ -86,10 +94,6 @@ export default async function CourseMaterialsPage({ params }: { params: Promise<
 
         {canManage && (
           <aside className="space-y-6">
-            <section className="card">
-              <h2 className="card-title">{t("course.addMaterial")}</h2>
-              <AddMaterialForm offeringId={offering.id} maxMb={config.maxUploadMb} sections={siblings} />
-            </section>
             <section className="card">
               <h2 className="card-title">{t("course.cadets")} <span className="font-normal text-subtle">{students.length}</span></h2>
               <ul className="max-h-96 space-y-1.5 overflow-y-auto text-sm">

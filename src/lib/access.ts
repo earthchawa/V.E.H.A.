@@ -13,3 +13,14 @@ export async function offeringAccess(
   if (!enrollment) return null;
   return enrollment.role === "INSTRUCTOR" ? "manage" : "view";
 }
+
+/**
+ * Grading (scores, gradebook setup, quiz marking) is for the course's own instructors only.
+ * Admins manage courses but can only view and export grades.
+ */
+export async function canGrade(user: SessionUser, offeringId: string): Promise<boolean> {
+  const enrollment = await db.enrollment.findUnique({
+    where: { userId_offeringId: { userId: user.id, offeringId } },
+  });
+  return enrollment?.role === "INSTRUCTOR";
+}

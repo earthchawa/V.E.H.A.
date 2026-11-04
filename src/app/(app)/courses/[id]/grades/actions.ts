@@ -4,16 +4,17 @@ import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
 import type { FormState } from "@/lib/form";
 import { requireUser } from "@/lib/auth/session";
-import { offeringAccess } from "@/lib/access";
+import { canGrade } from "@/lib/access";
 import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { getI18n } from "@/lib/i18n/server";
 import { normaliseScale } from "@/lib/grades";
 import { copyGradebookSetup, validTargets } from "@/lib/sections";
 
+/** Gradebook changes are for the course's own instructors (not admins, not cadets). */
 async function requireManage(offeringId: string) {
   const user = await requireUser();
-  if ((await offeringAccess(user, offeringId)) !== "manage") throw new Error("forbidden");
+  if (!(await canGrade(user, offeringId))) throw new Error("forbidden");
   return user;
 }
 

@@ -4,13 +4,15 @@ import { getI18n } from "@/lib/i18n/server";
 import { PageHeader } from "@/components/PageHeader";
 import { setCurrentTermAction } from "../actions";
 import { CreateCourseForm, CreateOfferingForm, CreateTermForm } from "./forms";
+import { Modal } from "@/components/Modal";
+import { CourseDepartmentSelect } from "./CourseDepartmentSelect";
 
 export async function generateMetadata() {
   return { title: (await getI18n()).t("tc.title") };
 }
 
 export default async function AdminCoursesPage() {
-  const { t, term: termLabel } = await getI18n();
+  const { t, term: termLabel, lang } = await getI18n();
   const [terms, courses] = await Promise.all([
     db.term.findMany({
       orderBy: [{ academicYear: "desc" }, { semester: "desc" }],
@@ -21,8 +23,11 @@ export default async function AdminCoursesPage() {
         },
       },
     }),
-    db.course.findMany({ orderBy: { code: "asc" } }),
+    db.course.findMany({ orderBy: { code: "asc" }, include: { department: true } }),
   ]);
+  const departments = await db.department.findMany({ orderBy: [{ parentId: { sort: "asc", nulls: "first" } }, { code: "asc" }], include: { parent: true } });
+  const dName = (d: { name: string; nameTh: string | null }) => (lang === "th" && d.nameTh ? d.nameTh : d.name);
+  const deptOptions = departments.map((d) => ({ id: d.id, label: `${d.parent ? "— " : ""}${d.code} ${dName(d)}` }));
 
   const Step = ({ n, title }: { n: number; title: string }) => (
     <h2 className="card-title flex items-center gap-2">
@@ -34,23 +39,43 @@ export default async function AdminCoursesPage() {
   return (
     <div>
       <PageHeader title={t("tc.title")} description={t("tc.desc")} />
-      <div className="grid gap-6 lg:grid-cols-3">
-        <section className="card"><Step n={1} title={t("tc.addTerm")} /><CreateTermForm /></section>
-        <section className="card"><Step n={2} title={t("tc.addCourse")} /><CreateCourseForm /></section>
-        <section className="card">
-          <Step n={3} title={t("tc.offer")} />
-          {terms.length && courses.length ? (
+      <div className="-mt-3 mb-8 flex flex-wrap gap-2">
+        <Modal label={`+ ${t("tc.addTerm")}`} title={t("tc.addTerm")} buttonClassName="btn-secondary h-9" testId="add-term"><CreateTermForm /></Modal>
+        <Modal label={`+ ${t("tc.addCourse")}`} title={t("tc.addCourse")} buttonClassName="btn-secondary h-9" testId="add-course"><CreateCourseForm departments={deptOptions} /></Modal>
+        {terms.length && courses.length ? (
+          <Modal label={`+ ${t("tc.offer")}`} title={t("tc.offer")} testId="offer-course">
             <CreateOfferingForm
               courses={courses.map((c) => ({ id: c.id, label: `${c.code} — ${c.title}` }))}
               terms={terms.map((x) => ({ id: x.id, label: termLabel(x), isCurrent: x.isCurrent }))}
             />
-          ) : (
-            <p className="text-sm text-muted">{t("tc.needFirst")}</p>
-          )}
-        </section>
+          </Modal>
+        ) : (
+          <span className="self-center text-xs text-subtle">{t("tc.needFirst")}</span>
+        )}
       </div>
 
-      <div className="mt-10 space-y-6">
+      {courses.length > 0 && (
+        <section className="mb-8 overflow-hidden rounded-xl border border-border bg-surface" data-testid="course-catalog">
+          <h2 className="border-b border-border px-5 py-3 text-sm font-semibold">{t("tc.course")}</h2>
+          <table className="table">
+            <tbody>
+              {courses.map((c) => (
+                <tr key={c.id}>
+                  <td className="w-24 pl-5 font-mono text-xs text-accent">{c.code}</td>
+                  <td>{c.title}{c.titleTh && <span className="ml-2 text-xs text-subtle">{c.titleTh}</span>}</td>
+                  <td className="pr-5 text-right">
+                    {departments.length > 0 ? (
+                      <CourseDepartmentSelect courseId={c.id} value={c.departmentId ?? ""} options={deptOptions} noneLabel={t("dep.unassigned")} ariaLabel={`${t("dep.field")} ${c.code}`} />
+                    ) : null}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
+
+      <div className="space-y-6">
         {terms.map((tm) => (
           <section key={tm.id} className="overflow-hidden rounded-xl border border-border bg-surface">
             <div className="flex items-center gap-3 border-b border-border px-5 py-3">

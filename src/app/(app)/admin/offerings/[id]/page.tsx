@@ -5,6 +5,7 @@ import { getI18n } from "@/lib/i18n/server";
 import { PageHeader } from "@/components/PageHeader";
 import { unenrollAction } from "../../actions";
 import { EnrollForm } from "./EnrollForm";
+import { Modal } from "@/components/Modal";
 
 export default async function OfferingAdminPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -29,11 +30,17 @@ export default async function OfferingAdminPage({ params }: { params: Promise<{ 
         <PageHeader
           eyebrow={`${offering.course.code} · ${termLabel(offering.term)} · ${t("dash.section", { s: offering.section })}`}
           title={offering.course.title}
-          actions={<Link href={`/courses/${offering.id}`} className="btn-secondary h-9">{t("roster.open")}</Link>}
+          actions={
+            <div className="flex gap-2">
+              <Modal label={`+ ${t("roster.add")}`} title={t("roster.add")} testId="add-people">
+                <EnrollForm offeringId={offering.id} />
+              </Modal>
+              <Link href={`/courses/${offering.id}`} className="btn-secondary h-9">{t("roster.open")}</Link>
+            </div>
+          }
         />
       </div>
-      <div className="grid gap-6 lg:grid-cols-[20rem_1fr]">
-        <section className="card"><h2 className="card-title">{t("roster.add")}</h2><EnrollForm offeringId={offering.id} /></section>
+      <div>
         <section className="overflow-hidden rounded-xl border border-border bg-surface">
           <h2 className="border-b border-border px-5 py-3 text-sm font-semibold">
             {t("roster.title")} <span className="font-normal text-subtle">{offering.enrollments.length}</span>

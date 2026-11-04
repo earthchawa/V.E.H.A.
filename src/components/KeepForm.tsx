@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useRef, useTransition, type FormHTMLAttributes } from "react";
 import type { FormState } from "@/lib/form";
+import { useModal } from "./Modal";
 
 const PendingContext = createContext<boolean | null>(null);
 export const useKeepFormPending = () => useContext(PendingContext);
@@ -17,6 +18,7 @@ export function KeepForm({
   pending,
   state,
   resetOnSuccess = false,
+  closeOnSuccess = false,
   beforeSubmit,
   children,
   ...rest
@@ -25,15 +27,20 @@ export function KeepForm({
   pending: boolean;
   state?: FormState;
   resetOnSuccess?: boolean;
+  /** Inside a <Modal>: close it when the action succeeds. */
+  closeOnSuccess?: boolean;
   /** Client-side check; return false to cancel the submit (e.g. a file over the upload cap). */
   beforeSubmit?: (fd: FormData) => boolean;
 } & Omit<FormHTMLAttributes<HTMLFormElement>, "action" | "onSubmit">) {
   const [, startTransition] = useTransition();
   const ref = useRef<HTMLFormElement>(null);
 
+  const modal = useModal();
   useEffect(() => {
-    if (resetOnSuccess && state?.success) ref.current?.reset();
-  }, [state, resetOnSuccess]);
+    if (!state?.success) return;
+    if (resetOnSuccess) ref.current?.reset();
+    if (closeOnSuccess) modal?.close();
+  }, [state, resetOnSuccess, closeOnSuccess, modal]);
 
   return (
     <PendingContext.Provider value={pending}>

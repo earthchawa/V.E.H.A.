@@ -34,7 +34,7 @@ export const NEW_QUESTION: QuestionDraft = {
 };
 
 /** Add / edit one question. Option rows are local state; the server re-validates everything. */
-export function QuestionEditor({ quizId, draft = NEW_QUESTION, onDone }: { quizId: string; draft?: QuestionDraft; onDone?: () => void }) {
+export function QuestionEditor({ quizId, draft = NEW_QUESTION, onDone, closeOnSuccess = false }: { quizId: string; draft?: QuestionDraft; onDone?: () => void; closeOnSuccess?: boolean }) {
   const [state, action, pending] = useActionState(saveQuestionAction.bind(null, quizId, draft.id), undefined);
   const { t } = useI18n();
   const [type, setType] = useState<QType>(draft.type);
@@ -68,6 +68,7 @@ export function QuestionEditor({ quizId, draft = NEW_QUESTION, onDone }: { quizI
       pending={pending}
       state={state}
       resetOnSuccess={!draft.id}
+      closeOnSuccess={closeOnSuccess}
       className="space-y-4"
       key={draft.id ?? "new"}
     >

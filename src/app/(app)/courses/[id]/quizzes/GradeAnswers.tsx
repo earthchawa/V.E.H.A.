@@ -18,7 +18,7 @@ export type GradeRow = {
 };
 
 /** Points + feedback inputs for a list of answers; only changed rows are saved. */
-export function GradeAnswers({ quizId, rows }: { quizId: string; rows: GradeRow[] }) {
+export function GradeAnswers({ quizId, rows, readOnly = false }: { quizId: string; rows: GradeRow[]; readOnly?: boolean }) {
   const { t } = useI18n();
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -56,6 +56,7 @@ export function GradeAnswers({ quizId, rows }: { quizId: string; rows: GradeRow[
                 inputMode="decimal"
                 aria-label={t("gr.score")}
                 value={vals[r.answerId].points}
+                disabled={readOnly}
                 onChange={(e) => setVals((v) => ({ ...v, [r.answerId]: { ...v[r.answerId], points: e.target.value } }))}
                 className={`input h-9 w-20 text-right font-mono ${invalid ? "border-red-500/60" : dirty ? "border-accent/60 bg-accent/5" : ""}`}
               />
@@ -66,20 +67,21 @@ export function GradeAnswers({ quizId, rows }: { quizId: string; rows: GradeRow[
               aria-label={t("gr.feedback")}
               placeholder={t("gr.feedback")}
               value={vals[r.answerId].feedback}
+              disabled={readOnly}
               onChange={(e) => setVals((v) => ({ ...v, [r.answerId]: { ...v[r.answerId], feedback: e.target.value } }))}
               className="input h-9"
             />
           </div>
         </div>
       ))}
-      <div className="sticky bottom-0 flex flex-wrap items-center gap-3 border-t border-border bg-bg/90 py-3 backdrop-blur">
+      {!readOnly && <div className="sticky bottom-0 flex flex-wrap items-center gap-3 border-t border-border bg-bg/90 py-3 backdrop-blur">
         <button type="button" className="btn" onClick={save} disabled={pending || !changes.length || anyInvalid}>
           {pending ? t("gr.saving") : t("gr.save")}
         </button>
         {changes.length > 0 && <span className="text-xs text-accent">{t("gr.unsaved", { n: changes.length })}</span>}
         <span className="text-xs text-subtle">{t("qz.gradeHint")}</span>
         <FormMessage state={state} />
-      </div>
+      </div>}
     </div>
   );
 }

@@ -119,3 +119,14 @@ body {
     @apply border-b-0;
   }
 }
+
+/* Course colours: .cc-N sets --cc; helpers use it. Light theme gets deeper shades for contrast. */
+.cc-0 { --cc: #5b8cff; } .cc-1 { --cc: #34d399; } .cc-2 { --cc: #f59e0b; } .cc-3 { --cc: #f472b6; }
+.cc-4 { --cc: #a78bfa; } .cc-5 { --cc: #22d3ee; } .cc-6 { --cc: #fb923c; } .cc-7 { --cc: #a3e635; }
+:root[data-theme="light"] .cc-0 { --cc: #2f66f0; } :root[data-theme="light"] .cc-1 { --cc: #059669; }
+:root[data-theme="light"] .cc-2 { --cc: #b45309; } :root[data-theme="light"] .cc-3 { --cc: #db2777; }
+:root[data-theme="light"] .cc-4 { --cc: #7c3aed; } :root[data-theme="light"] .cc-5 { --cc: #0891b2; }
+:root[data-theme="light"] .cc-6 { --cc: #c2410c; } :root[data-theme="light"] .cc-7 { --cc: #4d7c0f; }
+.cc-bar { background: var(--cc); }
+.cc-text { color: var(--cc); }
+.cc-tint { background: color-mix(in srgb, var(--cc) 16%, transparent); color: var(--cc); }

@@ -6,7 +6,7 @@ import { randomUUID } from "node:crypto";
 import type { Prisma, QuestionType } from "@prisma/client";
 import type { FormState } from "@/lib/form";
 import { requireUser } from "@/lib/auth/session";
-import { offeringAccess } from "@/lib/access";
+import { canGrade, offeringAccess } from "@/lib/access";
 import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { getI18n } from "@/lib/i18n/server";
@@ -18,6 +18,14 @@ async function requireManage(offeringId: string) {
   const user = await requireUser();
   if ((await offeringAccess(user, offeringId)) !== "manage") throw new Error("forbidden");
   return user;
+}
+
+/** Marking answers and resetting attempts: the course's instructors only. */
+async function quizForGrading(quizId: string) {
+  const quiz = await db.quiz.findUniqueOrThrow({ where: { id: quizId } });
+  const user = await requireUser();
+  if (!(await canGrade(user, quiz.offeringId))) throw new Error("forbidden");
+  return { quiz, user };
 }
 
 async function quizFor(quizId: string) {
@@ -60,9 +68,10 @@ export async function saveQuizAction(offeringId: string, quizId: string | null, 
     isPublished,
     results: (RESULTS as readonly string[]).includes(results) ? (results as (typeof RESULTS)[number]) : "SCORE",
     requireSeb: fd.get("requireSeb") === "on",
-    sebConfigKeys: String(fd.get("sebConfigKeys") ?? "").trim().slice(0, 5000) || null,
-    allowedIps: String(fd.get("allowedIps") ?? "").trim().slice(0, 5000) || null,
   };
+  // Exam rooms: only when "only in these rooms" is chosen, and only rooms that exist.
+  const wanted = fd.get("where") === "rooms" ? fd.getAll("networkId").map(String) : [];
+  const networks = wanted.length ? await db.examNetwork.findMany({ where: { id: { in: wanted } }, select: { id: true } }) : [];
   const catRaw = String(fd.get("categoryId") ?? "");
   const cat = catRaw ? await db.gradeCategory.findUnique({ where: { id: catRaw } }) : null;
   const categoryId = cat && cat.offeringId === offeringId ? cat.id : null;
@@ -71,7 +80,7 @@ export async function saveQuizAction(offeringId: string, quizId: string | null, 
     const existing = await db.quiz.findUniqueOrThrow({ where: { id: quizId }, include: { _count: { select: { questions: true } } } });
     if (existing.offeringId !== offeringId) throw new Error("forbidden");
     if (isPublished && existing._count.questions === 0) return { error: t("err.noQuestionsToPublish") };
-    await db.quiz.update({ where: { id: quizId }, data });
+    await db.quiz.update({ where: { id: quizId }, data: { ...data, networks: { set: networks } } });
     await syncQuizGradeItem(quizId, categoryId);
     await audit({ actorId: user.id, action: "quiz.updated", targetType: "Quiz", targetId: quizId });
     refresh(offeringId);
@@ -79,7 +88,9 @@ export async function saveQuizAction(offeringId: string, quizId: string | null, 
   }
 
   // New quizzes start as drafts until they have questions.
-  const created = await db.quiz.create({ data: { ...data, isPublished: false, offeringId, createdById: user.id } });
+  const created = await db.quiz.create({
+    data: { ...data, isPublished: false, offeringId, createdById: user.id, networks: { connect: networks } },
+  });
   await audit({ actorId: user.id, action: "quiz.created", targetType: "Quiz", targetId: created.id });
   redirect(`/courses/${offeringId}/quizzes/${created.id}`);
 }
@@ -182,7 +193,7 @@ export async function moveQuestionAction(fd: FormData): Promise<void> {
 export type AnswerGrade = { answerId: string; points: number | null; feedback: string | null };
 
 export async function gradeAnswersAction(quizId: string, changes: AnswerGrade[]): Promise<FormState> {
-  const { quiz, user } = await quizFor(quizId);
+  const { quiz, user } = await quizForGrading(quizId);
   const { t } = await getI18n();
   if (!changes.length) return { success: t("ok.gradesSaved", { n: 0 }) };
 
@@ -221,11 +232,21 @@ export async function gradeAnswersAction(quizId: string, changes: AnswerGrade[])
 /** Delete an attempt so the cadet can start over (e.g. their laptop failed). */
 export async function resetAttemptAction(fd: FormData): Promise<void> {
   const attempt = await db.quizAttempt.findUniqueOrThrow({ where: { id: String(fd.get("attemptId")) }, include: { quiz: { include: { gradeItem: true } } } });
-  const { user } = await quizFor(attempt.quizId);
+  const { user } = await quizForGrading(attempt.quizId);
   await db.quizAttempt.delete({ where: { id: attempt.id } });
   if (attempt.quiz.gradeItem)
     await db.grade.deleteMany({ where: { itemId: attempt.quiz.gradeItem.id, studentId: attempt.studentId } });
   await audit({ actorId: user.id, action: "quiz.attempt_reset", targetType: "QuizAttempt", targetId: attempt.id, details: { student: attempt.studentId } });
   refresh(attempt.quiz.offeringId);
   redirect(`/courses/${attempt.quiz.offeringId}/quizzes/${attempt.quizId}/results`);
+}
+
+/** Drag-and-drop reorder: the full list of question ids in their new order. */
+export async function reorderQuestionsAction(quizId: string, ids: string[]): Promise<void> {
+  const { quiz } = await quizFor(quizId);
+  const existing = await db.quizQuestion.findMany({ where: { quizId }, select: { id: true } });
+  const valid = new Set(existing.map((q) => q.id));
+  if (ids.length !== valid.size || !ids.every((id) => valid.has(id))) return;
+  await db.$transaction(ids.map((id, position) => db.quizQuestion.update({ where: { id }, data: { position } })));
+  refresh(quiz.offeringId);
 }

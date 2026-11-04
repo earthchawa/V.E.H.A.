@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { loadCourse } from "@/lib/course";
 import { db } from "@/lib/db";
@@ -15,6 +14,7 @@ import { QuestionEditor } from "../QuestionEditor";
 import { StartButton } from "../StartButton";
 import { deleteQuizAction } from "../actions";
 import { ConfirmButton } from "../../grades/ConfirmButton";
+import { Modal } from "@/components/Modal";
 
 export default async function QuizPage({
   params,
@@ -30,7 +30,12 @@ export default async function QuizPage({
 
   const quiz = await db.quiz.findUnique({
     where: { id: qid },
-    include: { questions: { orderBy: { position: "asc" } }, gradeItem: true, _count: { select: { attempts: true } } },
+    include: {
+      questions: { orderBy: { position: "asc" } },
+      gradeItem: true,
+      networks: { select: { id: true, name: true } },
+      _count: { select: { attempts: true } },
+    },
   });
   if (!quiz || quiz.offeringId !== offering.id || (!canManage && !quiz.isPublished)) notFound();
   await closeExpiredAttempts(quiz.id);
@@ -46,9 +51,6 @@ export default async function QuizPage({
         <span className="badge bg-surface-3 text-muted">
           {phase === "upcoming" && quiz.opensAt ? t("qz.phase.upcoming", { date: date(quiz.opensAt) }) : t(`qz.phase.${phase}`)}
         </span>
-        {canManage && (
-          <Link href={`${base}/results`} className="btn-secondary ml-auto h-9">{t("qz.results")}</Link>
-        )}
       </div>
       <p className="mt-1 text-sm text-muted">
         {tn("qz.questions", quiz.questions.length)} · {t("qz.total", { n: formatPoints(total) })}
@@ -60,18 +62,56 @@ export default async function QuizPage({
 
   // ---------- Instructor: builder ----------
   if (canManage) {
-    const h = await headers();
-    const startUrl = `${h.get("x-forwarded-proto") ?? "http"}://${h.get("x-forwarded-host") ?? h.get("host")}${base}`;
-    const categories = await db.gradeCategory.findMany({ where: { offeringId: offering.id }, orderBy: { position: "asc" }, select: { id: true, name: true } });
+    const [categories, networks] = await Promise.all([
+      db.gradeCategory.findMany({ where: { offeringId: offering.id }, orderBy: { position: "asc" }, select: { id: true, name: true } }),
+      db.examNetwork.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
+    ]);
+    const settingsForm = (
+      <QuizForm
+        offeringId={offering.id}
+        quizId={quiz.id}
+        categories={categories}
+        networks={networks}
+        closeOnSuccess
+        defaults={{
+          title: quiz.title,
+          instructions: quiz.instructions ?? "",
+          opensAt: toBangkokLocal(quiz.opensAt),
+          closesAt: toBangkokLocal(quiz.closesAt),
+          timeLimitMin: quiz.timeLimitMin ? String(quiz.timeLimitMin) : "",
+          shuffleQuestions: quiz.shuffleQuestions,
+          shuffleOptions: quiz.shuffleOptions,
+          isPublished: quiz.isPublished,
+          results: quiz.results,
+          requireSeb: quiz.requireSeb,
+          networkIds: quiz.networks.map((n) => n.id),
+          categoryId: quiz.gradeItem?.categoryId ?? "",
+        }}
+      />
+    );
+    const row = (label: string, value: React.ReactNode) => (
+      <div className="flex justify-between gap-3 py-1.5">
+        <dt className="text-muted">{label}</dt>
+        <dd className="text-right">{value}</dd>
+      </div>
+    );
     return (
       <div>
         {header}
+        <div className="-mt-3 mb-6 flex flex-wrap gap-2">
+          <Modal label={`+ ${t("qz.addQuestion")}`} title={t("qz.addQuestion")} size="lg" testId="add-question">
+            <QuestionEditor quizId={quiz.id} closeOnSuccess />
+          </Modal>
+          <Modal label={t("qz.f.settings")} title={t("qz.f.settings")} buttonClassName="btn-secondary h-9" size="lg" testId="quiz-settings">
+            {settingsForm}
+          </Modal>
+          <Link href={`${base}/results`} className="btn-secondary h-9">{t("qz.results")}</Link>
+        </div>
         {quiz._count.attempts > 0 && (
           <p className="mb-4 rounded-lg border border-amber-500/25 bg-amber-500/5 px-3 py-2 text-sm text-warning">{t("qz.startedWarning")}</p>
         )}
-        <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
-          <section className="min-w-0 space-y-4">
-            <h3 className="text-sm font-semibold">{t("qz.builder")}</h3>
+        <div className="grid gap-6 lg:grid-cols-[1fr_18rem]">
+          <section className="min-w-0">
             <QuestionList
               quizId={quiz.id}
               questions={quiz.questions.map((q) => ({
@@ -84,39 +124,21 @@ export default async function QuizPage({
                 codeAnswer: q.codeAnswer,
               }))}
             />
-            <div className="card">
-              <h3 className="card-title">{t("qz.addQuestion")}</h3>
-              <QuestionEditor quizId={quiz.id} />
-            </div>
           </section>
-          <aside className="space-y-6">
-            <section className="card">
+          <aside className="space-y-4">
+            <section className="card text-sm" data-testid="settings-summary">
               <h3 className="card-title">{t("qz.f.settings")}</h3>
-              <QuizForm
-                offeringId={offering.id}
-                quizId={quiz.id}
-                categories={categories}
-                startUrl={startUrl}
-                defaults={{
-                  title: quiz.title,
-                  instructions: quiz.instructions ?? "",
-                  opensAt: toBangkokLocal(quiz.opensAt),
-                  closesAt: toBangkokLocal(quiz.closesAt),
-                  timeLimitMin: quiz.timeLimitMin ? String(quiz.timeLimitMin) : "",
-                  shuffleQuestions: quiz.shuffleQuestions,
-                  shuffleOptions: quiz.shuffleOptions,
-                  isPublished: quiz.isPublished,
-                  results: quiz.results,
-                  requireSeb: quiz.requireSeb,
-                  sebConfigKeys: quiz.sebConfigKeys ?? "",
-                  allowedIps: quiz.allowedIps ?? "",
-                  categoryId: quiz.gradeItem?.categoryId ?? "",
-                }}
-              />
-              <div className="mt-6 border-t border-border pt-4">
-                <ConfirmButton action={deleteQuizAction} name="quizId" value={quiz.id} message={t("qz.deleteQuizConfirm")} label={t("qz.deleteQuiz")} />
-              </div>
+              <dl className="divide-y divide-border">
+                {row(t("qz.f.published"), quiz.isPublished ? "✓" : "—")}
+                {row(t("qz.f.opensAt"), quiz.opensAt ? date(quiz.opensAt) : "—")}
+                {row(t("qz.f.closesAt"), quiz.closesAt ? date(quiz.closesAt) : "—")}
+                {row(t("qz.f.timeLimit"), quiz.timeLimitMin ?? "—")}
+                {row(t("qz.f.mode"), t(quiz.requireSeb ? "qz.mode.seb" : "qz.mode.browser"))}
+                {row(t("qz.f.where"), quiz.networks.length ? quiz.networks.map((n) => n.name).join(", ") : t("qz.where.anywhere"))}
+                {row(t("qz.f.results"), t(`qz.res.${quiz.results}`))}
+              </dl>
             </section>
+            <ConfirmButton action={deleteQuizAction} name="quizId" value={quiz.id} message={t("qz.deleteQuizConfirm")} label={t("qz.deleteQuiz")} />
           </aside>
         </div>
       </div>

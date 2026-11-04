@@ -11,7 +11,7 @@ export function CreateTermForm() {
   const [state, action, pending] = useActionState(createTermAction, undefined);
   const { t } = useI18n();
   return (
-    <KeepForm action={action} pending={pending} state={state} resetOnSuccess className="space-y-4">
+    <KeepForm action={action} pending={pending} state={state} resetOnSuccess closeOnSuccess className="space-y-4">
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="label" htmlFor="academicYear">{t("tc.year")}</label>
@@ -30,11 +30,11 @@ export function CreateTermForm() {
   );
 }
 
-export function CreateCourseForm() {
+export function CreateCourseForm({ departments = [] }: { departments?: { id: string; label: string }[] }) {
   const [state, action, pending] = useActionState(createCourseAction, undefined);
   const { t } = useI18n();
   return (
-    <KeepForm action={action} pending={pending} state={state} resetOnSuccess className="space-y-4">
+    <KeepForm action={action} pending={pending} state={state} resetOnSuccess closeOnSuccess className="space-y-4">
       <div className="grid grid-cols-[1fr_5rem] gap-3">
         <div>
           <label className="label" htmlFor="code">{t("tc.code")}</label>
@@ -45,6 +45,15 @@ export function CreateCourseForm() {
           <input id="credits" name="credits" type="number" min={0} max={12} className="input" />
         </div>
       </div>
+      {departments.length > 0 && (
+        <div>
+          <label className="label" htmlFor="c-dept">{t("dep.field")}</label>
+          <select id="c-dept" name="departmentId" className="input" defaultValue="">
+            <option value="">{t("dep.unassigned")}</option>
+            {departments.map((d) => <option key={d.id} value={d.id}>{d.label}</option>)}
+          </select>
+        </div>
+      )}
       <div>
         <label className="label" htmlFor="title">{t("tc.courseTitle")}</label>
         <input id="title" name="title" className="input" required />
@@ -73,7 +82,7 @@ export function CreateOfferingForm({
   const [state, action, pending] = useActionState(createOfferingAction, undefined);
   const { t } = useI18n();
   return (
-    <KeepForm action={action} pending={pending} state={state} resetOnSuccess className="space-y-4">
+    <KeepForm action={action} pending={pending} state={state} resetOnSuccess closeOnSuccess className="space-y-4">
       <div>
         <label className="label" htmlFor="courseId">{t("tc.course")}</label>
         <select id="courseId" name="courseId" className="input" required>

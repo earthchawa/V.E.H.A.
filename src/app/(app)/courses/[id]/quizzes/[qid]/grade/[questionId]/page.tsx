@@ -11,7 +11,7 @@ import { GradeAnswers } from "../../../GradeAnswers";
 /** Grade one question for the whole class — like marking question 3 on every paper. */
 export default async function GradeQuestionPage({ params }: { params: Promise<{ id: string; qid: string; questionId: string }> }) {
   const { id, qid, questionId } = await params;
-  const { offering, canManage } = await loadCourse(id);
+  const { offering, canManage, canGrade } = await loadCourse(id);
   if (!canManage) notFound();
   const { t } = await getI18n();
   await closeExpiredAttempts(qid);
@@ -61,6 +61,7 @@ export default async function GradeQuestionPage({ params }: { params: Promise<{ 
       ) : (
         <GradeAnswers
           quizId={qid}
+          readOnly={!canGrade}
           rows={answers.map((a) => ({
             answerId: a.id,
             heading: (

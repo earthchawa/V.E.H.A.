@@ -5,6 +5,7 @@ import { getI18n } from "@/lib/i18n/server";
 import { PageHeader } from "@/components/PageHeader";
 import { toggleUserActiveAction } from "../actions";
 import { CreateUserForm, ImportUsersForm, ResetPasswordButton } from "./forms";
+import { Modal } from "@/components/Modal";
 
 export async function generateMetadata() {
   return { title: (await getI18n()).t("users.title") };
@@ -12,33 +13,51 @@ export async function generateMetadata() {
 
 const ROLES = ["ADMIN", "INSTRUCTOR", "STUDENT"] as const;
 
-export default async function UsersPage({ searchParams }: { searchParams: Promise<{ q?: string; role?: string }> }) {
+export default async function UsersPage({ searchParams }: { searchParams: Promise<{ q?: string; role?: string; dept?: string }> }) {
   const me = await requireRole("ADMIN");
-  const { q = "", role = "" } = await searchParams;
-  const { t, date, role: roleLabel } = await getI18n();
+  const { q = "", role = "", dept = "" } = await searchParams;
+  const { t, date, role: roleLabel, lang } = await getI18n();
+  const departments = await db.department.findMany({ orderBy: [{ parentId: { sort: "asc", nulls: "first" } }, { code: "asc" }] });
+  const deptLabel = (d: { code: string; name: string; nameTh: string | null }) => `${d.code} — ${lang === "th" && d.nameTh ? d.nameTh : d.name}`;
   const where: Prisma.UserWhereInput = {
     ...(q ? { OR: [{ username: { contains: q } }, { fullName: { contains: q, mode: "insensitive" } }] } : {}),
     ...((ROLES as readonly string[]).includes(role) ? { role: role as Role } : {}),
+    ...(dept === "none" ? { departmentId: null } : dept ? { departmentId: dept } : {}),
   };
-  const users = await db.user.findMany({ where, orderBy: [{ role: "asc" }, { username: "asc" }], take: 500 });
+  const users = await db.user.findMany({ where, orderBy: [{ role: "asc" }, { username: "asc" }], take: 500, include: { department: { select: { code: true } } } });
   const now = new Date();
 
   return (
     <div>
-      <PageHeader title={t("users.title")} description={t("users.desc")} />
+      <PageHeader
+        title={t("users.title")}
+        description={t("users.desc")}
+        actions={
+          <div className="flex gap-2">
+            <Modal label={`+ ${t("users.new")}`} title={t("users.new")} testId="new-user">
+              <CreateUserForm departments={departments.map((d) => ({ code: d.code, label: deptLabel(d) }))} />
+            </Modal>
+            <Modal label={t("users.import")} title={t("users.import")} buttonClassName="btn-secondary h-9" size="lg" testId="import-users">
+              <ImportUsersForm />
+            </Modal>
+          </div>
+        }
+      />
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <section className="card"><h2 className="card-title">{t("users.new")}</h2><CreateUserForm /></section>
-        <section className="card"><h2 className="card-title">{t("users.import")}</h2><ImportUsersForm /></section>
-      </div>
-
-      <section className="mt-6 overflow-hidden rounded-xl border border-border bg-surface">
+      <section className="overflow-hidden rounded-xl border border-border bg-surface">
         <form className="flex flex-wrap items-center gap-2 border-b border-border p-3">
           <input name="q" defaultValue={q} placeholder={t("users.search")} className="input h-9 max-w-xs" />
           <select name="role" defaultValue={role} className="input h-9 w-auto py-0" aria-label={t("account.role")}>
             <option value="">{t("users.allRoles")}</option>
             {ROLES.map((k) => <option key={k} value={k}>{roleLabel(k)}</option>)}
           </select>
+          {departments.length > 0 && (
+            <select name="dept" defaultValue={dept} className="input h-9 w-auto py-0" aria-label={t("dep.field")}>
+              <option value="">{t("dep.all")}</option>
+              {departments.map((d) => <option key={d.id} value={d.id}>{deptLabel(d)}</option>)}
+              <option value="none">{t("dep.unassigned")}</option>
+            </select>
+          )}
           <button className="btn-secondary h-9">{t("users.searchBtn")}</button>
           <span className="ml-auto pr-1 text-xs text-subtle">{t("users.count", { n: users.length })}</span>
         </form>
@@ -62,7 +81,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
                   <tr key={u.id}>
                     <td className="font-mono text-xs">{u.username}</td>
                     <td>{u.fullName}</td>
-                    <td className="text-muted">{roleLabel(u.role)}</td>
+                    <td className="text-muted">{roleLabel(u.role)}{u.department && <span className="ml-1.5 font-mono text-xs text-subtle">{u.department.code}</span>}</td>
                     <td className="text-muted">{u.email ?? <span className="text-subtle">—</span>}</td>
                     <td><span className={`badge ${status.cls}`}>{status.text}</span></td>
                     <td className="whitespace-nowrap text-xs text-subtle">{u.lastLoginAt ? date(u.lastLoginAt) : "—"}</td>

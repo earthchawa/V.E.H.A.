@@ -21,6 +21,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               <>
                 <NavLink href="/admin/users">{t("nav.users")}</NavLink>
                 <NavLink href="/admin/courses">{t("nav.terms")}</NavLink>
+                <NavLink href="/admin/departments">{t("nav.departments")}</NavLink>
+                <NavLink href="/admin/exam-settings">{t("nav.examSettings")}</NavLink>
                 <NavLink href="/admin/audit">{t("nav.activity")}</NavLink>
               </>
             )}

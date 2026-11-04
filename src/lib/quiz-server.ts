@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import type { Prisma, Quiz, QuizAttempt, QuizQuestion } from "@prisma/client";
 import { db } from "./db";
 import { requestMeta } from "./request";
+import { SETTING, getSetting } from "./settings";
 import {
   GRACE_MS,
   attemptDeadline,
@@ -134,12 +135,19 @@ export async function refreshMaxScores(quizId: string): Promise<void> {
 // ---------- access checks ----------
 
 export type Block = "seb" | "ip" | null;
+type QuizAccess = Pick<Quiz, "id" | "requireSeb">;
 
-/** SEB + network restrictions for a request to `path` (the page the cadet is on). */
-export async function examBlock(quiz: Pick<Quiz, "requireSeb" | "sebConfigKeys" | "allowedIps">, path: string): Promise<Block> {
+/** Allowed CIDRs for a quiz = all exam rooms it is restricted to (empty = anywhere). */
+async function allowList(quizId: string): Promise<string> {
+  const networks = await db.examNetwork.findMany({ where: { quizzes: { some: { id: quizId } } }, select: { cidrs: true } });
+  return networks.map((n) => n.cidrs).join("\n");
+}
+
+/** SEB + exam-room restrictions for a request to `path` (the page the cadet is on). */
+export async function examBlock(quiz: QuizAccess, path: string): Promise<Block> {
   const h = await headers();
   const { ip, userAgent } = await requestMeta();
-  if (!ipAllowed(ip, quiz.allowedIps)) return "ip";
+  if (!ipAllowed(ip, await allowList(quiz.id))) return "ip";
   if (quiz.requireSeb) {
     const proto = h.get("x-forwarded-proto") ?? "http";
     const host = h.get("x-forwarded-host") ?? h.get("host") ?? "";
@@ -147,7 +155,7 @@ export async function examBlock(quiz: Pick<Quiz, "requireSeb" | "sebConfigKeys" 
       url: `${proto}://${host}${path}`,
       userAgent,
       configKeyHash: h.get("x-safeexambrowser-configkeyhash"),
-      keys: quiz.sebConfigKeys,
+      keys: await getSetting(SETTING.sebConfigKeys),
     });
     if (!ok) return "seb";
   }
@@ -155,10 +163,10 @@ export async function examBlock(quiz: Pick<Quiz, "requireSeb" | "sebConfigKeys" 
 }
 
 /** Lighter check for server actions (no reliable page URL): SEB header or user-agent must be present. */
-export async function examBlockForAction(quiz: Pick<Quiz, "requireSeb" | "allowedIps">): Promise<Block> {
+export async function examBlockForAction(quiz: QuizAccess): Promise<Block> {
   const h = await headers();
   const { ip, userAgent } = await requestMeta();
-  if (!ipAllowed(ip, quiz.allowedIps)) return "ip";
+  if (!ipAllowed(ip, await allowList(quiz.id))) return "ip";
   if (quiz.requireSeb && !h.get("x-safeexambrowser-configkeyhash") && !/\bSEB\b|SafeExamBrowser/i.test(userAgent ?? "")) return "seb";
   return null;
 }

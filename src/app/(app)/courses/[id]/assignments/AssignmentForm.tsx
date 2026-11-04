@@ -42,6 +42,7 @@ export function AssignmentForm({
   defaults = EMPTY,
   categories = [],
   sections = [],
+  closeOnSuccess = false,
 }: {
   offeringId: string;
   assignmentId?: string | null;
@@ -49,12 +50,13 @@ export function AssignmentForm({
   categories?: { id: string; name: string }[];
   /** Other sections to optionally create the assignment in too (create mode only). */
   sections?: SectionRef[];
+  closeOnSuccess?: boolean;
 }) {
   const [state, action, pending] = useActionState(saveAssignmentAction.bind(null, offeringId, assignmentId), undefined);
   const { t } = useI18n();
   const d = defaults;
   return (
-    <KeepForm action={action} pending={pending} className="space-y-4">
+    <KeepForm action={action} pending={pending} state={state} closeOnSuccess={closeOnSuccess} className="space-y-4">
       <div>
         <label className="label" htmlFor="a-title">{t("asg.f.title")}</label>
         <input id="a-title" name="title" className="input" defaultValue={d.title} required maxLength={200} />

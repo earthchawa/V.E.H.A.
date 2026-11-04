@@ -53,6 +53,7 @@ export async function instructorTodo(userId: string, termId: string, now = new D
 
 export type CadetTodo = {
   offeringId: string;
+  courseId: string;
   courseCode: string;
   assignmentId: string;
   title: string;
@@ -68,7 +69,7 @@ export async function cadetTodo(userId: string, termId: string, now = new Date()
       offering: { termId, enrollments: { some: { userId, role: "STUDENT" } } },
       submissions: { none: { studentId: userId } },
     },
-    include: { offering: { select: { id: true, course: { select: { code: true } } } } },
+    include: { offering: { select: { id: true, courseId: true, course: { select: { code: true } } } } },
     orderBy: [{ dueAt: { sort: "asc", nulls: "last" } }],
   });
   return assignments
@@ -76,6 +77,7 @@ export async function cadetTodo(userId: string, termId: string, now = new Date()
     .slice(0, 8)
     .map((a) => ({
       offeringId: a.offering.id,
+      courseId: a.offering.courseId,
       courseCode: a.offering.course.code,
       assignmentId: a.id,
       title: a.title,

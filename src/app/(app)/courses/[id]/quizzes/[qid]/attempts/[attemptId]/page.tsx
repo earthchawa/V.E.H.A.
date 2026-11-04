@@ -14,7 +14,7 @@ import { ConfirmButton } from "../../../../grades/ConfirmButton";
 
 export default async function AttemptPage({ params }: { params: Promise<{ id: string; qid: string; attemptId: string }> }) {
   const { id, qid, attemptId } = await params;
-  const { offering, canManage } = await loadCourse(id);
+  const { offering, canManage, canGrade } = await loadCourse(id);
   if (!canManage) notFound();
   const { t, date } = await getI18n();
   await closeExpiredAttempts(qid);
@@ -60,6 +60,7 @@ export default async function AttemptPage({ params }: { params: Promise<{ id: st
           {attempt.status === "SUBMITTED" ? (
             <GradeAnswers
               quizId={qid}
+          readOnly={!canGrade}
               rows={layout.questions
                 .map((qId, i) => ({ q: qById.get(qId), a: aById.get(qId), i }))
                 .filter((x): x is { q: NonNullable<typeof x.q>; a: NonNullable<typeof x.a>; i: number } => !!x.q && !!x.a)
@@ -103,7 +104,7 @@ export default async function AttemptPage({ params }: { params: Promise<{ id: st
               </ol>
             )}
           </section>
-          <ConfirmButton action={resetAttemptAction} name="attemptId" value={attempt.id} message={t("qz.resetConfirm")} label={t("qz.resetAttempt")} />
+          {canGrade && <ConfirmButton action={resetAttemptAction} name="attemptId" value={attempt.id} message={t("qz.resetConfirm")} label={t("qz.resetAttempt")} />}
         </aside>
       </div>
     </div>

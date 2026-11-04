@@ -18,7 +18,7 @@ export async function generateMetadata() {
 
 export default async function ReportPage({ params }: { params: Promise<{ id: string; aid: string; sid: string }> }) {
   const { id, aid, sid } = await params;
-  const { user, offering, canManage } = await loadCourse(id);
+  const { user, offering, canManage, canGrade } = await loadCourse(id);
   const { t, date, pct } = await getI18n();
 
   const assignment = await db.assignment.findUnique({ where: { id: aid }, include: { gradeItem: true } });
@@ -56,7 +56,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
     ? buildPieces(submission.content, submission.segments as Segment[], sides.map((s) => s.spans))
     : [];
   const grade =
-    canManage && assignment.gradeItem
+    canGrade && assignment.gradeItem
       ? await db.grade.findUnique({ where: { itemId_studentId: { itemId: assignment.gradeItem.id, studentId: submission.studentId } } })
       : null;
   const score = submission.similarity ?? 0;
@@ -81,7 +81,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
           </div>
         </div>
       </div>
-      {canManage && assignment.gradeItem && (
+      {canGrade && assignment.gradeItem && (
         <GradePanel
           itemId={assignment.gradeItem.id}
           studentId={submission.studentId}

@@ -15,6 +15,7 @@ import { DeleteAssignmentButton, RecheckButton } from "../ManageButtons";
 import { copyAssignmentAction } from "../actions";
 import { siblingSections } from "@/lib/sections";
 import { CopyToSections } from "@/components/CopyToSections";
+import { Modal } from "@/components/Modal";
 
 export default async function AssignmentPage({ params }: { params: Promise<{ id: string; aid: string }> }) {
   const { id, aid } = await params;
@@ -137,11 +138,8 @@ export default async function AssignmentPage({ params }: { params: Promise<{ id:
                 )}
               </section>
             )}
-            <details className="card group">
-              <summary className="cursor-pointer list-none text-sm font-semibold">
-                {t("asg.edit")} <span className="text-subtle transition group-open:rotate-90">›</span>
-              </summary>
-              <div className="mt-4">
+            <div className="flex flex-wrap gap-2">
+              <Modal label={t("asg.edit")} title={t("asg.edit")} buttonClassName="btn-secondary h-9" size="lg" testId="edit-assignment">
                 <AssignmentForm
                   offeringId={offering.id}
                   assignmentId={assignment.id}
@@ -159,10 +157,11 @@ export default async function AssignmentPage({ params }: { params: Promise<{ id:
                     categoryId: assignment.gradeItem?.categoryId ?? "",
                   }}
                   categories={categories}
+                  closeOnSuccess
                 />
-                <div className="mt-6 border-t border-border pt-4"><DeleteAssignmentButton assignmentId={assignment.id} /></div>
-              </div>
-            </details>
+              </Modal>
+              <DeleteAssignmentButton assignmentId={assignment.id} />
+            </div>
           </aside>
         </div>
       </div>

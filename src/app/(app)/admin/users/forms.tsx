@@ -6,9 +6,10 @@ import { createUserAction, importUsersAction, resetUserPasswordAction } from "..
 import { FormMessage } from "@/components/FormMessage";
 import { SubmitButton } from "@/components/SubmitButton";
 import { IssuedPasswords, type Issued } from "@/components/IssuedPasswords";
+import { FileDropzone } from "@/components/FileDropzone";
 import { useI18n } from "@/lib/i18n/client";
 
-export function CreateUserForm() {
+export function CreateUserForm({ departments = [] }: { departments?: { code: string; label: string }[] }) {
   const [state, action, pending] = useActionState(createUserAction, undefined);
   const { t } = useI18n();
   return (
@@ -31,6 +32,15 @@ export function CreateUserForm() {
         <label className="label" htmlFor="cu-fullName">{t("users.fullName")}</label>
         <input id="cu-fullName" name="fullName" className="input" required />
       </div>
+      {departments.length > 0 && (
+        <div>
+          <label className="label" htmlFor="cu-dept">{t("dep.field")} <span className="text-subtle">{t("common.optional")}</span></label>
+          <select id="cu-dept" name="department" className="input" defaultValue="">
+            <option value="">{t("dep.unassigned")}</option>
+            {departments.map((d) => <option key={d.code} value={d.code}>{d.label}</option>)}
+          </select>
+        </div>
+      )}
       <div>
         <label className="label" htmlFor="cu-email">{t("users.email")} <span className="text-subtle">{t("common.optional")}</span></label>
         <input id="cu-email" name="email" type="email" className="input" />
@@ -48,7 +58,7 @@ export function ImportUsersForm() {
   return (
     <KeepForm action={action} pending={pending} state={state} resetOnSuccess className="space-y-4">
       <p className="text-xs leading-relaxed text-muted">{t("users.importHelp")}</p>
-      <input name="file" type="file" accept=".csv,text/csv" className="input" aria-label="CSV file" />
+      <FileDropzone id="csv-file" name="file" accept=".csv,text/csv" />
       <textarea
         name="csv"
         rows={4}

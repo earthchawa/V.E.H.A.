@@ -5,6 +5,7 @@ import { getI18n } from "@/lib/i18n/server";
 import { studentCanSeeReport, submissionStatus } from "@/lib/assignments";
 import { SimilarityBadge } from "@/components/SimilarityBadge";
 import { AssignmentForm } from "./AssignmentForm";
+import { Modal } from "@/components/Modal";
 import { siblingSections } from "@/lib/sections";
 import { StatusBadge } from "./StatusBadge";
 
@@ -27,7 +28,14 @@ export default async function AssignmentsPage({ params }: { params: Promise<{ id
   });
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
+    <div>
+      {canManage && (
+        <div className="mb-6">
+          <Modal label={`+ ${t("asg.new")}`} title={t("asg.new")} size="lg" testId="new-assignment">
+            <AssignmentForm offeringId={offering.id} categories={categories} sections={siblings} />
+          </Modal>
+        </div>
+      )}
       <section>
         {assignments.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border-strong px-6 py-12 text-center text-sm text-muted">{t("asg.none")}</div>
@@ -60,14 +68,6 @@ export default async function AssignmentsPage({ params }: { params: Promise<{ id
           </ul>
         )}
       </section>
-      {canManage && (
-        <aside>
-          <section className="card">
-            <h2 className="card-title">{t("asg.new")}</h2>
-            <AssignmentForm offeringId={offering.id} categories={categories} sections={siblings} />
-          </section>
-        </aside>
-      )}
     </div>
   );
 }

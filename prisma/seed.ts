@@ -92,7 +92,10 @@ async function main() {
     }
   }
 
-  if (process.argv.includes("--demo")) await seedDemoAssignments();
+  if (process.argv.includes("--demo")) {
+    await seedDemoOrg();
+    await seedDemoAssignments();
+  }
 
   if (issued.length) {
     console.log("\nNew accounts (temporary passwords — must be changed at first sign-in):");
@@ -215,4 +218,51 @@ async function seedDemoQuiz(offeringId: string, teacherId: string) {
   await db.gradeItem.create({
     data: { offeringId, quizId: quiz.id, title, maxPoints: questions.reduce((n, q) => n + q.points, 0), categoryId: assignments?.id ?? null, position },
   });
+}
+
+/** Organisation demo: one division with two departments, an extra maths course, and an exam room. */
+async function seedDemoOrg() {
+  const division = await db.department.upsert({
+    where: { code: "MC" },
+    create: { code: "MC", name: "Division of Mathematics and Computer", nameTh: "กองวิชาคณิตศาสตร์และคอมพิวเตอร์" },
+    update: {},
+  });
+  const cs = await db.department.upsert({
+    where: { code: "CS" },
+    create: { code: "CS", name: "Department of Computer Science", nameTh: "ภาควิชาวิทยาการคอมพิวเตอร์", parentId: division.id, position: 0 },
+    update: {},
+  });
+  const math = await db.department.upsert({
+    where: { code: "MATH" },
+    create: { code: "MATH", name: "Department of Mathematics", nameTh: "ภาควิชาคณิตศาสตร์", parentId: division.id, position: 1 },
+    update: {},
+  });
+  await db.course.updateMany({ where: { code: { in: ["CS201", "CS202"] }, departmentId: null }, data: { departmentId: cs.id } });
+  await db.user.updateMany({ where: { username: { startsWith: "66010" }, departmentId: null }, data: { departmentId: cs.id } });
+  await db.user.updateMany({ where: { username: "T0001", departmentId: null }, data: { departmentId: cs.id } });
+
+  // A maths course in the same term, taught by the demo instructor to three cadets.
+  const term = await db.term.findFirstOrThrow({ where: { academicYear: 2569, semester: 2 } });
+  const ma101 = await db.course.upsert({
+    where: { code: "MA101" },
+    create: { code: "MA101", title: "Calculus I", titleTh: "แคลคูลัส 1", credits: 3, departmentId: math.id },
+    update: {},
+  });
+  const offering = await db.courseOffering.upsert({
+    where: { courseId_termId_section: { courseId: ma101.id, termId: term.id, section: "1" } },
+    create: { courseId: ma101.id, termId: term.id },
+    update: {},
+  });
+  const people = await db.user.findMany({ where: { username: { in: ["T0001", "6601001", "6601002", "6601003"] } } });
+  for (const p of people) {
+    await db.enrollment.upsert({
+      where: { userId_offeringId: { userId: p.id, offeringId: offering.id } },
+      create: { userId: p.id, offeringId: offering.id, role: p.role === "INSTRUCTOR" ? "INSTRUCTOR" : "STUDENT" },
+      update: {},
+    });
+  }
+
+  if (!(await db.examNetwork.count())) {
+    await db.examNetwork.create({ data: { name: "CS Lab 301", cidrs: "10.20.3.0/24" } });
+  }
 }

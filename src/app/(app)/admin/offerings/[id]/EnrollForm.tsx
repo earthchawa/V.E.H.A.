@@ -11,7 +11,7 @@ export function EnrollForm({ offeringId }: { offeringId: string }) {
   const [state, action, pending] = useActionState(enrollAction.bind(null, offeringId), undefined);
   const { t } = useI18n();
   return (
-    <KeepForm action={action} pending={pending} state={state} resetOnSuccess className="space-y-4">
+    <KeepForm action={action} pending={pending} state={state} resetOnSuccess closeOnSuccess className="space-y-4">
       <div>
         <label className="label" htmlFor="role">{t("roster.addAs")}</label>
         <select id="role" name="role" className="input">

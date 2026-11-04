@@ -7,6 +7,7 @@ import { FormMessage } from "@/components/FormMessage";
 import { SubmitButton } from "@/components/SubmitButton";
 import { useI18n } from "@/lib/i18n/client";
 import type { uploadLimits } from "@/lib/assignments";
+import { FileDropzone } from "@/components/FileDropzone";
 
 export function SubmitForm({
   assignmentId,
@@ -43,7 +44,7 @@ export function SubmitForm({
       </div>
       <div>
         <label className="label" htmlFor="s-files">{t("asg.files")}</label>
-        <input id="s-files" name="files" type="file" multiple className="input" />
+        <FileDropzone id="s-files" name="files" multiple />
         <p className="mt-1.5 text-xs text-subtle">
           {t("asg.filesHint", { n: limits.maxFiles, mb: limits.fileMb })}
           {hasFiles && <> {t("asg.keepFiles")}</>}

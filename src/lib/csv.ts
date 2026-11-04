@@ -45,6 +45,8 @@ export type UserImportRow = {
   fullName: string;
   role: "ADMIN" | "INSTRUCTOR" | "STUDENT";
   email: string | null;
+  /** Department code (optional 5th column). */
+  department: string | null;
 };
 
 const ROLE_ALIASES: Record<string, UserImportRow["role"]> = {
@@ -67,7 +69,7 @@ export function parseUserImport(text: string): { rows: UserImportRow[]; errors: 
 
   parseCsv(text).forEach((cols, idx) => {
     const line = idx + 1;
-    const [username = "", fullName = "", roleRaw = "", emailRaw = ""] = cols;
+    const [username = "", fullName = "", roleRaw = "", emailRaw = "", deptRaw = ""] = cols;
     if (idx === 0 && /^(username|id|student_?id|รหัส.*)$/i.test(username)) return;
 
     if (!USERNAME_RE.test(username)) {
@@ -84,7 +86,7 @@ export function parseUserImport(text: string): { rows: UserImportRow[]; errors: 
     if (email && !EMAIL_RE.test(email)) { errors.push(msg("csv.badEmail", { line, email: emailRaw })); return; }
     if (seen.has(username)) { errors.push(msg("csv.dupId", { line, id: username })); return; }
     seen.add(username);
-    rows.push({ line, username, fullName, role, email });
+    rows.push({ line, username, fullName, role, email, department: deptRaw ? deptRaw.toUpperCase() : null });
   });
   return { rows, errors };
 }

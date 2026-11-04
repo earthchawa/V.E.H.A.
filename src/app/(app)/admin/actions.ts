@@ -11,6 +11,7 @@ import { config } from "@/lib/config";
 import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { getI18n } from "@/lib/i18n/server";
+import { SETTING, setSetting } from "@/lib/settings";
 import type { Translator } from "@/lib/i18n";
 
 export type IssuedPassword = { username: string; fullName: string; password: string };
@@ -29,9 +30,13 @@ async function createUsers(actorId: string, rows: UserImportRow[], t: Translator
     (await db.user.findMany({ where: { email: { in: emails } }, select: { email: true } })).map((u) => u.email),
   );
 
+  const depts = new Map(
+    (await db.department.findMany({ select: { id: true, code: true } })).map((d) => [d.code, d.id]),
+  );
   const issued: IssuedPassword[] = [];
   const skipped: string[] = [];
   for (const r of rows) {
+    if (r.department && !depts.has(r.department)) { skipped.push(t("users.skip.dept", { id: r.username, code: r.department })); continue; }
     if (existing.has(r.username)) { skipped.push(t("users.skip.exists", { id: r.username })); continue; }
     if (r.email && takenEmails.has(r.email)) { skipped.push(t("users.skip.email", { id: r.username })); continue; }
     const password = generateTempPassword();
@@ -41,6 +46,7 @@ async function createUsers(actorId: string, rows: UserImportRow[], t: Translator
         fullName: r.fullName,
         role: r.role,
         email: r.email,
+        departmentId: r.department ? depts.get(r.department) : null,
         passwordHash: await hashPassword(password),
         mustChangePassword: true,
         tempPasswordExpiresAt: tempPasswordExpiry(config.tempPasswordDays),
@@ -56,7 +62,7 @@ async function createUsers(actorId: string, rows: UserImportRow[], t: Translator
 export async function createUserAction(_: FormState, fd: FormData): Promise<FormState> {
   const me = await admin();
   const { t, tm } = await getI18n();
-  const line = [fd.get("username"), fd.get("fullName"), fd.get("role"), fd.get("email")]
+  const line = [fd.get("username"), fd.get("fullName"), fd.get("role"), fd.get("email"), fd.get("department")]
     .map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`)
     .join(",");
   const { rows, errors } = parseUserImport(line);
@@ -146,6 +152,7 @@ const courseSchema = z.object({
   titleTh: z.string().trim().max(200).optional(),
   credits: z.coerce.number().int().min(0).max(12).optional(),
   description: z.string().trim().max(4000).optional(),
+  departmentId: z.string().optional(),
 });
 
 export async function createCourseAction(_: FormState, fd: FormData): Promise<FormState> {
@@ -157,13 +164,15 @@ export async function createCourseAction(_: FormState, fd: FormData): Promise<Fo
     titleTh: fd.get("titleTh") || undefined,
     credits: fd.get("credits") || undefined,
     description: fd.get("description") || undefined,
+    departmentId: fd.get("departmentId") || undefined,
   });
   if (!parsed.success) {
     const field = parsed.error.issues[0]?.path[0];
     return { error: t(field === "code" ? "err.courseCode" : field === "title" ? "err.courseTitle" : "common.invalid") };
   }
   if (await db.course.findUnique({ where: { code: parsed.data.code } })) return { error: t("err.courseExists") };
-  const course = await db.course.create({ data: parsed.data });
+  const dept = parsed.data.departmentId ? await db.department.findUnique({ where: { id: parsed.data.departmentId } }) : null;
+  const course = await db.course.create({ data: { ...parsed.data, departmentId: dept?.id ?? null } });
   await audit({ actorId: me.id, action: "course.created", targetType: "Course", targetId: course.id });
   revalidatePath("/admin/courses");
   return { success: t("ok.courseAdded", { code: course.code }) };
@@ -235,4 +244,90 @@ export async function unenrollAction(fd: FormData): Promise<void> {
     details: { userId: enrollment.userId },
   });
   revalidatePath(`/admin/offerings/${enrollment.offeringId}`);
+}
+
+// ---------- Departments ----------
+
+const DEPT_CODE = /^[A-Z0-9-]{1,16}$/;
+
+/** Create (id = null) or update a division / department. */
+export async function saveDepartmentAction(departmentId: string | null, _: FormState, fd: FormData): Promise<FormState> {
+  const me = await admin();
+  const { t } = await getI18n();
+  const code = String(fd.get("code") ?? "").trim().toUpperCase();
+  const name = String(fd.get("name") ?? "").trim().slice(0, 200);
+  const nameTh = String(fd.get("nameTh") ?? "").trim().slice(0, 200) || null;
+  const parentRaw = String(fd.get("parentId") ?? "");
+  if (!DEPT_CODE.test(code)) return { error: t("dep.codeInvalid") };
+  if (!name) return { error: t("err.nameRequired") };
+  // Only two levels: a parent must itself be a division.
+  const parent = parentRaw ? await db.department.findUnique({ where: { id: parentRaw } }) : null;
+  const parentId = parent && !parent.parentId && parent.id !== departmentId ? parent.id : null;
+  const clash = await db.department.findUnique({ where: { code } });
+  if (clash && clash.id !== departmentId) return { error: t("dep.codeExists") };
+
+  if (departmentId) {
+    const hasChildren = await db.department.count({ where: { parentId: departmentId } });
+    await db.department.update({ where: { id: departmentId }, data: { code, name, nameTh, parentId: hasChildren ? null : parentId } });
+  } else {
+    const position = await db.department.count({ where: { parentId } });
+    await db.department.create({ data: { code, name, nameTh, parentId, position } });
+  }
+  await audit({ actorId: me.id, action: departmentId ? "department.updated" : "department.created", details: { code, name } });
+  revalidatePath("/", "layout");
+  return { success: t("ok.saved") };
+}
+
+export async function deleteDepartmentAction(fd: FormData): Promise<void> {
+  const me = await admin();
+  const id = String(fd.get("departmentId"));
+  if (await db.department.count({ where: { parentId: id } })) return; // UI explains; children must go first
+  const d = await db.department.delete({ where: { id } });
+  await audit({ actorId: me.id, action: "department.deleted", details: { code: d.code } });
+  revalidatePath("/", "layout");
+}
+
+export async function setCourseDepartmentAction(fd: FormData): Promise<void> {
+  const me = await admin();
+  const courseId = String(fd.get("courseId"));
+  const raw = String(fd.get("departmentId") ?? "");
+  const dept = raw ? await db.department.findUnique({ where: { id: raw } }) : null;
+  await db.course.update({ where: { id: courseId }, data: { departmentId: dept?.id ?? null } });
+  await audit({ actorId: me.id, action: "course.department_set", targetType: "Course", targetId: courseId, details: { department: dept?.code ?? null } });
+  revalidatePath("/", "layout");
+}
+
+// ---------- Exam settings ----------
+
+const CIDR = /^(\d{1,3}\.){3}\d{1,3}(\/(\d|[12]\d|3[0-2]))?$|^[0-9a-f:]+$/i;
+
+export async function addExamNetworkAction(_: FormState, fd: FormData): Promise<FormState> {
+  const me = await admin();
+  const { t } = await getI18n();
+  const name = String(fd.get("name") ?? "").trim().slice(0, 100);
+  const lines = String(fd.get("cidrs") ?? "").split(/[\s,]+/).map((s) => s.trim()).filter(Boolean);
+  if (!name) return { error: t("err.nameRequired") };
+  const bad = lines.find((l) => !CIDR.test(l) || l.split("/")[0].split(".").some((p) => Number(p) > 255));
+  if (!lines.length || bad) return { error: t("es.invalidCidr", { v: bad ?? "—" }) };
+  const n = await db.examNetwork.create({ data: { name, cidrs: lines.join("\n") } });
+  await audit({ actorId: me.id, action: "exam.network_added", targetType: "ExamNetwork", targetId: n.id, details: { name, cidrs: lines } });
+  revalidatePath("/admin/exam-settings");
+  return { success: t("ok.saved") };
+}
+
+export async function deleteExamNetworkAction(fd: FormData): Promise<void> {
+  const me = await admin();
+  const n = await db.examNetwork.delete({ where: { id: String(fd.get("networkId")) } });
+  await audit({ actorId: me.id, action: "exam.network_deleted", details: { name: n.name } });
+  revalidatePath("/admin/exam-settings");
+}
+
+export async function saveSebKeysAction(_: FormState, fd: FormData): Promise<FormState> {
+  const me = await admin();
+  const { t } = await getI18n();
+  const keys = String(fd.get("keys") ?? "").split(/\s+/).map((k) => k.trim()).filter(Boolean);
+  if (keys.some((k) => !/^[0-9a-f]{64}$/i.test(k))) return { error: t("common.invalid") };
+  await setSetting(SETTING.sebConfigKeys, keys.join("\n"));
+  await audit({ actorId: me.id, action: "exam.seb_keys_changed", details: { count: keys.length } });
+  return { success: t("ok.saved") };
 }

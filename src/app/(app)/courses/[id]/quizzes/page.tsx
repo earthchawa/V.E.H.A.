@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { getI18n } from "@/lib/i18n/server";
 import { quizPhase } from "@/lib/quiz";
 import { QuizForm } from "./QuizForm";
+import { Modal } from "@/components/Modal";
 
 const PHASE_STYLE = {
   draft: "bg-surface-3 text-muted",
@@ -21,16 +22,26 @@ export default async function QuizzesPage({ params }: { params: Promise<{ id: st
     where: { offeringId: offering.id, ...(canManage ? {} : { isPublished: true }) },
     orderBy: [{ opensAt: { sort: "asc", nulls: "last" } }, { createdAt: "asc" }],
     include: {
-      _count: { select: { questions: true, attempts: true } },
+      _count: { select: { questions: true, attempts: true, networks: true } },
       attempts: canManage ? false : { where: { studentId: user.id } },
     },
   });
-  const categories = canManage
-    ? await db.gradeCategory.findMany({ where: { offeringId: offering.id }, orderBy: { position: "asc" }, select: { id: true, name: true } })
-    : [];
+  const [categories, networks] = canManage
+    ? await Promise.all([
+        db.gradeCategory.findMany({ where: { offeringId: offering.id }, orderBy: { position: "asc" }, select: { id: true, name: true } }),
+        db.examNetwork.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
+      ])
+    : [[], []];
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
+    <div>
+      {canManage && (
+        <div className="mb-6">
+          <Modal label={`+ ${t("qz.new")}`} title={t("qz.new")} size="lg" testId="new-quiz">
+            <QuizForm offeringId={offering.id} categories={categories} networks={networks} />
+          </Modal>
+        </div>
+      )}
       <section>
         {quizzes.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border-strong px-6 py-12 text-center text-sm text-muted">{t("qz.none")}</div>
@@ -49,7 +60,7 @@ export default async function QuizzesPage({ params }: { params: Promise<{ id: st
                           {phase === "upcoming" && q.opensAt ? t("qz.phase.upcoming", { date: date(q.opensAt) }) : t(`qz.phase.${phase}`)}
                         </span>
                         {q.requireSeb && <span className="badge bg-surface-3 text-muted">{t("qz.secLabel")}</span>}
-                        {q.allowedIps && <span className="badge bg-surface-3 text-muted">{t("qz.ipLabel")}</span>}
+                        {q._count.networks > 0 && <span className="badge bg-surface-3 text-muted">{t("qz.roomsLabel")}</span>}
                       </div>
                       <div className="mt-0.5 text-xs text-subtle">
                         {tn("qz.questions", q._count.questions)}
@@ -71,14 +82,6 @@ export default async function QuizzesPage({ params }: { params: Promise<{ id: st
           </ul>
         )}
       </section>
-      {canManage && (
-        <aside>
-          <section className="card">
-            <h2 className="card-title">{t("qz.new")}</h2>
-            <QuizForm offeringId={offering.id} categories={categories} />
-          </section>
-        </aside>
-      )}
     </div>
   );
 }
