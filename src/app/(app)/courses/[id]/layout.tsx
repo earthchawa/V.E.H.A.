@@ -1,6 +1,6 @@
 import { loadCourse } from "@/lib/course";
 import { db } from "@/lib/db";
-import { courseColor } from "@/lib/course-color";
+import { courseTheme, deptLogo } from "@/lib/departments";
 import { getI18n } from "@/lib/i18n/server";
 import { PageHeader } from "@/components/PageHeader";
 import { CourseTabs } from "./CourseTabs";
@@ -8,10 +8,24 @@ import { CourseTabs } from "./CourseTabs";
 export default async function CourseLayout({ params, children }: { params: Promise<{ id: string }>; children: React.ReactNode }) {
   const { id } = await params;
   const { offering, instructors } = await loadCourse(id);
-  const { t, term } = await getI18n();
+  const { t, term, lang } = await getI18n();
+  const dept = offering.course.department;
+  const theme = courseTheme(offering.course.code, dept);
+  const logo = deptLogo(dept);
+  const deptName = (d: { name: string; nameTh: string | null }) => (lang === "th" && d.nameTh ? d.nameTh : d.name);
   const multiSection = (await db.courseOffering.count({ where: { courseId: offering.courseId, termId: offering.termId } })) > 1;
   return (
-    <div className={`cc-${courseColor(offering.course.code)}`}>
+    <div className={theme.className} style={theme.style}>
+      {dept && (
+        <div className="mb-3 flex items-center gap-2 text-xs text-muted" data-testid="course-dept">
+          {logo && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={logo} alt="" className="h-6 w-auto max-w-12 object-contain" />
+          )}
+          <span>{deptName(dept)}</span>
+          {dept.parent && <span className="text-subtle">· {deptName(dept.parent)}</span>}
+        </div>
+      )}
       <PageHeader
         eyebrow={<span className="cc-text">{`${offering.course.code} · ${term(offering.term)}${multiSection ? ` · ${t("dash.section", { s: offering.section })}` : ""}`}</span>}
         title={offering.course.title}

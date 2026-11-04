@@ -654,6 +654,18 @@ export const en = {
   "users.skip.dept": "{id} (unknown department {code})",
   "todo.kind.assignment": "Assignment",
   "todo.kind.quiz": "Quiz",
+
+  // Department branding
+  "dep.color": "Theme colour",
+  "dep.inheritColor": "Use the division's colour",
+  "dep.logo": "Logo",
+  "dep.logoNone": "No logo",
+  "dep.logoInherit": "Use the division's logo",
+  "dep.logoUpload": "Upload a new logo…",
+  "dep.logoKeep": "Keep the uploaded logo",
+  "dep.logoHint": "PNG, JPG or WebP, up to 1 MB. Square images look best.",
+  "dep.logoInvalid": "Logo must be a PNG, JPG or WebP image up to 1 MB.",
+  "dep.preview": "Preview",
 } as const;
 
 export type Key = keyof typeof en;

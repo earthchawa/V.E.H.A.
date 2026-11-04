@@ -12,6 +12,10 @@ import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { getI18n } from "@/lib/i18n/server";
 import { SETTING, setSetting } from "@/lib/settings";
+import { BUNDLED_LOGOS, isHexColor } from "@/lib/departments";
+import { deleteStoredFile, saveFile } from "@/lib/storage";
+
+const LOGO_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
 import type { Translator } from "@/lib/i18n";
 
 export type IssuedPassword = { username: string; fullName: string; password: string };
@@ -266,12 +270,36 @@ export async function saveDepartmentAction(departmentId: string | null, _: FormS
   const clash = await db.department.findUnique({ where: { code } });
   if (clash && clash.id !== departmentId) return { error: t("dep.codeExists") };
 
+  // Colour: departments may inherit their division's colour.
+  const colorRaw = String(fd.get("color") ?? "");
+  const color = fd.get("inheritColor") === "on" && parentId ? null : isHexColor(colorRaw) ? colorRaw.toLowerCase() : null;
+
+  // Logo: "" = none/inherit, a bundled path, "upload" (new file) or "keep" (current upload).
+  const logoChoice = String(fd.get("logo") ?? "");
+  const existing = departmentId ? await db.department.findUnique({ where: { id: departmentId } }) : null;
+  let logo: { logoUrl: string | null; logoKey: string | null; logoMime: string | null } = { logoUrl: null, logoKey: null, logoMime: null };
+  if (logoChoice === "keep" && existing?.logoKey) {
+    logo = { logoUrl: null, logoKey: existing.logoKey, logoMime: existing.logoMime };
+  } else if (logoChoice === "upload") {
+    const file = fd.get("logoFile");
+    if (!(file instanceof File) || file.size === 0 || file.size > 1024 * 1024 || !LOGO_TYPES.has(file.type))
+      return { error: t("dep.logoInvalid") };
+    logo = { logoUrl: null, logoKey: await saveFile(file), logoMime: file.type };
+  } else if (BUNDLED_LOGOS.some((l) => l.url === logoChoice)) {
+    logo = { logoUrl: logoChoice, logoKey: null, logoMime: null };
+  }
+
   if (departmentId) {
     const hasChildren = await db.department.count({ where: { parentId: departmentId } });
-    await db.department.update({ where: { id: departmentId }, data: { code, name, nameTh, parentId: hasChildren ? null : parentId } });
+    await db.department.update({
+      where: { id: departmentId },
+      data: { code, name, nameTh, parentId: hasChildren ? null : parentId, color, ...logo },
+    });
+    // Replace: drop the previous uploaded file once it's no longer used.
+    if (existing?.logoKey && existing.logoKey !== logo.logoKey) await deleteStoredFile(existing.logoKey);
   } else {
     const position = await db.department.count({ where: { parentId } });
-    await db.department.create({ data: { code, name, nameTh, parentId, position } });
+    await db.department.create({ data: { code, name, nameTh, parentId, position, color, ...logo } });
   }
   await audit({ actorId: me.id, action: departmentId ? "department.updated" : "department.created", details: { code, name } });
   revalidatePath("/", "layout");

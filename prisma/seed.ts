@@ -11,6 +11,7 @@ import { generateTempPassword, hashPassword, tempPasswordExpiry } from "../src/l
 import { assembleContent } from "../src/lib/similarity/content";
 import { recheckAssignment } from "../src/lib/similarity/run";
 import { DEMO_ASSIGNMENTS } from "./demo-assignments";
+import { ACADEMY_DIVISIONS } from "../src/lib/departments";
 
 const db = new PrismaClient();
 const issued: [string, string, string][] = [];
@@ -35,6 +36,7 @@ async function ensureUser(username: string, fullName: string, role: Role) {
 
 async function main() {
   await ensureUser(process.env.SEED_ADMIN_USERNAME || "admin", "System Administrator", "ADMIN");
+  await seedDivisions();
 
   if (process.argv.includes("--demo")) {
     const term = await db.term.upsert({
@@ -234,7 +236,7 @@ async function seedDemoOrg() {
   });
   const math = await db.department.upsert({
     where: { code: "MATH" },
-    create: { code: "MATH", name: "Department of Mathematics", nameTh: "ภาควิชาคณิตศาสตร์", parentId: division.id, position: 1 },
+    create: { code: "MATH", name: "Department of Mathematics", nameTh: "ภาควิชาคณิตศาสตร์", parentId: division.id, position: 1, color: "#f97316" },
     update: {},
   });
   await db.course.updateMany({ where: { code: { in: ["CS201", "CS202"] }, departmentId: null }, data: { departmentId: cs.id } });
@@ -264,5 +266,26 @@ async function seedDemoOrg() {
 
   if (!(await db.examNetwork.count())) {
     await db.examNetwork.create({ data: { name: "CS Lab 301", cidrs: "10.20.3.0/24" } });
+  }
+}
+
+/**
+ * The academy's divisions with their badges and colours. Creates missing ones; for existing ones only
+ * fills in colour/logo when they are still empty, so changes made by an admin are kept.
+ */
+async function seedDivisions() {
+  for (const [position, d] of ACADEMY_DIVISIONS.entries()) {
+    const existing = await db.department.findUnique({ where: { code: d.code } });
+    if (!existing) {
+      await db.department.create({ data: { ...d, position } });
+    } else if (!existing.color || (!existing.logoUrl && !existing.logoKey)) {
+      await db.department.update({
+        where: { id: existing.id },
+        data: {
+          color: existing.color ?? d.color,
+          ...(!existing.logoUrl && !existing.logoKey ? { logoUrl: d.logoUrl } : {}),
+        },
+      });
+    }
   }
 }

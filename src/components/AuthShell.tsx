@@ -21,7 +21,11 @@ export async function AuthShell({ title, subtitle, children }: { title: string; 
           {subtitle && <p className="mt-1 text-sm text-muted">{subtitle}</p>}
           <div className="mt-6">{children}</div>
         </div>
-        <p className="mt-8 text-center text-[11px] text-subtle">{t("app.org")}</p>
+        <div className="mt-8 flex flex-col items-center gap-2 text-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logos/academic-faculty.webp" alt="" className="h-12 w-auto opacity-90" data-testid="faculty-logo" />
+          <p className="text-[11px] text-subtle">{t("app.org")}</p>
+        </div>
       </div>
     </main>
   );

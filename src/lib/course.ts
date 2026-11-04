@@ -12,7 +12,7 @@ export const loadCourse = cache(async (offeringId: string) => {
   const offering = await db.courseOffering.findUnique({
     where: { id: offeringId },
     include: {
-      course: true,
+      course: { include: { department: { include: { parent: true } } } },
       term: true,
       enrollments: {
         include: { user: { select: { id: true, username: true, fullName: true } } },

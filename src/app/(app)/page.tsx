@@ -3,7 +3,7 @@ import type { Prisma } from "@prisma/client";
 import { requireUser } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { getI18n } from "@/lib/i18n/server";
-import { courseColor } from "@/lib/course-color";
+import { courseTheme, deptLogo } from "@/lib/departments";
 import { PageHeader } from "@/components/PageHeader";
 import { cadetQuizTodo, cadetTodo, instructorQuizTodo, instructorTodo } from "@/lib/todo";
 
@@ -125,7 +125,10 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
   // Group course cards by department (division › department), departments first, then the rest.
   const dName = (d: { name: string; nameTh: string | null }) => (lang === "th" && d.nameTh ? d.nameTh : d.name);
-  type Group = { key: string; title: string | null; subtitle: string | null; sort: string; offerings: typeof offerings };
+  type Group = { key: string; title: string | null; subtitle: string | null; logo: string | null; color: string | null; sort: string; offerings: typeof offerings };
+  // Theme per course (department colour, else a stable colour from the code) — reused by the to-do rows.
+  const themeByCourse = new Map(offerings.map((o) => [o.courseId, courseTheme(o.course.code, o.course.department)]));
+  const themeFor = (courseId: string, code: string) => themeByCourse.get(courseId) ?? courseTheme(code);
   const groups = new Map<string, Group>();
   for (const o of offerings) {
     const d = o.course.department;
@@ -135,6 +138,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         key,
         title: d ? dName(d) : null,
         subtitle: d?.parent ? dName(d.parent) : null,
+        logo: deptLogo(d),
+        color: d?.color ?? d?.parent?.color ?? null,
         sort: d ? `${d.parent?.code ?? d.code}/${d.parent ? d.code : ""}` : "~",
         offerings: [],
       });
@@ -186,7 +191,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                 <li key={it.key}>
                   <Link
                     href={it.href}
-                    className={`cc-${courseColor(it.courseCode)} flex flex-wrap items-center gap-x-3 gap-y-1 overflow-hidden rounded-xl bg-surface py-3 pr-4 pl-0 text-sm shadow-sm transition hover:bg-surface-2`}
+                    style={themeFor(it.courseId, it.courseCode).style}
+                    className={`${themeFor(it.courseId, it.courseCode).className} flex flex-wrap items-center gap-x-3 gap-y-1 overflow-hidden rounded-xl bg-surface py-3 pr-4 pl-0 text-sm shadow-sm transition hover:bg-surface-2`}
                   >
                     <span className="cc-bar h-8 w-1 self-stretch rounded-r" aria-hidden />
                     <span className="cc-text w-32 shrink-0 font-mono text-xs font-semibold">
@@ -214,9 +220,16 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           {ordered.map((g) => (
             <section key={g.key} data-testid="course-group">
               {grouped && (
-                <div className="mb-3 flex items-baseline gap-2">
-                  <h2 className="text-sm font-semibold">{g.title ?? t("dep.other")}</h2>
-                  {g.subtitle && <span className="text-xs text-subtle">{g.subtitle}</span>}
+                <div className="cc mb-4 flex items-center gap-3" style={g.color ? { ["--cc" as string]: g.color } : undefined}>
+                  {g.logo && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={g.logo} alt="" className="h-10 w-auto max-w-[4.5rem] shrink-0 object-contain" data-testid="group-logo" />
+                  )}
+                  <div className="min-w-0">
+                    <h2 className={`text-sm font-semibold ${g.color ? "cc-text" : ""}`}>{g.title ?? t("dep.other")}</h2>
+                    {g.subtitle && <div className="text-xs text-subtle">{g.subtitle}</div>}
+                  </div>
+                  {g.color && <span className="cc-bar ml-2 h-px flex-1 opacity-40" aria-hidden />}
                 </div>
               )}
               <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -226,7 +239,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                     <li key={o.id}>
                       <Link
                         href={`/courses/${o.id}`}
-                        className={`cc-${courseColor(o.course.code)} group flex h-full flex-col overflow-hidden rounded-xl border border-border bg-surface transition hover:-translate-y-0.5 hover:border-border-strong hover:shadow-lg`}
+                        style={themeFor(o.courseId, o.course.code).style}
+                        className={`${themeFor(o.courseId, o.course.code).className} group flex h-full flex-col overflow-hidden rounded-xl border border-border bg-surface transition hover:-translate-y-0.5 hover:border-border-strong hover:shadow-lg`}
                       >
                         <span className="cc-bar h-1.5" aria-hidden />
                         <div className="flex flex-1 flex-col p-5">

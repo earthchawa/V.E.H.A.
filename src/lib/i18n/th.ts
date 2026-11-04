@@ -638,4 +638,16 @@ export const th: Record<Key, string> = {
   "users.skip.dept": "{id} (ไม่พบภาควิชา {code})",
   "todo.kind.assignment": "งาน",
   "todo.kind.quiz": "แบบทดสอบ",
+
+  // Department branding
+  "dep.color": "สีประจำ",
+  "dep.inheritColor": "ใช้สีของกองวิชา",
+  "dep.logo": "โลโก้",
+  "dep.logoNone": "ไม่มีโลโก้",
+  "dep.logoInherit": "ใช้โลโก้ของกองวิชา",
+  "dep.logoUpload": "อัปโหลดโลโก้ใหม่…",
+  "dep.logoKeep": "ใช้โลโก้ที่อัปโหลดไว้",
+  "dep.logoHint": "PNG, JPG หรือ WebP ไม่เกิน 1 MB ภาพสี่เหลี่ยมจัตุรัสจะดูดีที่สุด",
+  "dep.logoInvalid": "โลโก้ต้องเป็นไฟล์ PNG, JPG หรือ WebP ไม่เกิน 1 MB",
+  "dep.preview": "ตัวอย่าง",
 };

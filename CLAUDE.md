@@ -68,8 +68,13 @@ src/lib/
   Upload cap `config.maxUploadMb` (4 MB on Vercel); forms check sizes in the browser first.
 - **Database URL** may arrive under integration-specific names; `lib/db-url.ts` normalises it.
 - **Styling:** semantic tokens in `src/app/globals.css` (`bg-surface`, `text-muted`, `text-danger`, …) with a
-  light theme under `[data-theme="light"]`. Don't hard-code palette colours for text. Course colours:
-  `cc-N` classes from `courseColor(code)`.
+  light theme under `[data-theme="light"]`. Don't hard-code palette colours for text.
+- **Division/department branding:** each unit has a colour and a logo (bundled under `public/logos/`, or
+  uploaded — PNG/JPG/WebP ≤ 1 MB, served by `/api/department-logo/[id]`). Departments inherit their division's
+  colour/logo unless set. Use `courseTheme(code, department)` / `deptLogo()` from `lib/departments.ts`
+  (falls back to a stable `cc-N` colour); inside, use `cc-bar` / `cc-text` / `cc-tint` (`--cc-fg` keeps text
+  readable in both themes). The 9 academy divisions live in `ACADEMY_DIVISIONS` and are seeded by
+  `npm run db:seed` without overwriting admin edits. Mathematics & Computer is grey by the owner's request.
 - Demo seed must stay **idempotent** (it runs on every Vercel build when `DEMO_SEED=true`).
 
 ## Migrations
@@ -99,5 +104,5 @@ Commit every migration; Vercel applies them during build.
 
 Phases 1–4 done: accounts, terms/courses/sections, materials, assignments + similarity reports (peer
 copying only), gradebook, online quizzes with integrity log / Safe Exam Browser / exam rooms, divisions &
-departments. Not done: internet plagiarism and AI-writing detection (would need Copyleaks; AI hints should
+departments with logos and colours. Not done: internet plagiarism and AI-writing detection (would need Copyleaks; AI hints should
 be a yellow, instructor-only "for review" highlight — never an accusation), department-level admins.

@@ -496,6 +496,13 @@ model Department {
   nameTh    String?
   parentId  String?
   parent    Department?  @relation("DeptTree", fields: [parentId], references: [id], onDelete: Restrict)
+  /// Theme colour (#rrggbb). Departments without one use their division's.
+  color     String?
+  /// Bundled logo under /public (e.g. /logos/mc.webp) …
+  logoUrl   String?
+  /// … or an uploaded logo (storage key + MIME type); takes precedence.
+  logoKey   String?
+  logoMime  String?
   children  Department[] @relation("DeptTree")
   position  Int          @default(0)
   createdAt DateTime     @default(now())

@@ -127,6 +127,9 @@ body {
 :root[data-theme="light"] .cc-2 { --cc: #b45309; } :root[data-theme="light"] .cc-3 { --cc: #db2777; }
 :root[data-theme="light"] .cc-4 { --cc: #7c3aed; } :root[data-theme="light"] .cc-5 { --cc: #0891b2; }
 :root[data-theme="light"] .cc-6 { --cc: #c2410c; } :root[data-theme="light"] .cc-7 { --cc: #4d7c0f; }
+/* --cc can also be any department colour (inline style); --cc-fg keeps text readable in both themes. */
+.cc { --cc-fg: color-mix(in srgb, var(--cc) 82%, white); }
+:root[data-theme="light"] .cc { --cc-fg: color-mix(in srgb, var(--cc) 72%, black); }
 .cc-bar { background: var(--cc); }
-.cc-text { color: var(--cc); }
-.cc-tint { background: color-mix(in srgb, var(--cc) 16%, transparent); color: var(--cc); }
+.cc-text { color: var(--cc-fg); }
+.cc-tint { background: color-mix(in srgb, var(--cc) 18%, transparent); color: var(--cc-fg); }
