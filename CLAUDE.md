@@ -1,4 +1,4 @@
-# AeroClass — NKRAFA Learning Portal
+# SkyCampus — NKRAFA Learning Portal
 
 In-house online classroom for Navaminda Kasatriyadhiraj Royal Thai Air Force Academy (NKRAFA).
 Started with Computer Science cadets (~20 per year, ~80 total), meant to grow to other divisions.
@@ -9,6 +9,7 @@ The project owner writes in Thai; reply in Thai. UI copy exists in English and T
 - Next.js 16 (App Router, Server Actions, Turbopack) + React 19 + TypeScript (strict) + Tailwind CSS 4
 - PostgreSQL 16 via Prisma 6 (`prisma/schema.prisma`)
 - Vitest for unit tests; Playwright (pre-installed in the cloud container) for end-to-end checks
+- The sign-in pages use a three.js scene (`components/LoginScene.tsx`, loaded only there; honours reduced motion)
 - Self-hosted with Docker Compose (`Dockerfile`, `docker-compose.yml`); a public demo runs on Vercel + Neon
 
 ## Commands
@@ -69,12 +70,16 @@ src/lib/
 - **Database URL** may arrive under integration-specific names; `lib/db-url.ts` normalises it.
 - **Styling:** semantic tokens in `src/app/globals.css` (`bg-surface`, `text-muted`, `text-danger`, …) with a
   light theme under `[data-theme="light"]`. Don't hard-code palette colours for text.
-- **Division/department branding:** each unit has a colour and a logo (bundled under `public/logos/`, or
-  uploaded — PNG/JPG/WebP ≤ 1 MB, served by `/api/department-logo/[id]`). Departments inherit their division's
+- **Organisation:** two levels — department (กองวิชา, e.g. "Department of Mathematics and Computer Science")
+  and subject area (สาขาวิชา, e.g. CS, MA, PH, CH); in code both are `Department` rows (`parentId` = level 2).
+  Keep the English "Department of …" naming. The brand (name SkyCampus + Academic Faculty logo) lives in
+  `lib/brand.ts`.
+- **Department branding:** each unit has a colour and a logo (bundled under `public/logos/`, or
+  uploaded — PNG/JPG/WebP ≤ 1 MB, served by `/api/department-logo/[id]`). Subject areas inherit their department's
   colour/logo unless set. Use `courseTheme(code, department)` / `deptLogo()` from `lib/departments.ts`
   (falls back to a stable `cc-N` colour); inside, use `cc-bar` / `cc-text` / `cc-tint` (`--cc-fg` keeps text
-  readable in both themes). The 9 academy divisions live in `ACADEMY_DIVISIONS` and are seeded by
-  `npm run db:seed` without overwriting admin edits. Mathematics & Computer is grey by the owner's request.
+  readable in both themes). The 9 academy departments live in `ACADEMY_DIVISIONS` (subject areas in
+  `ACADEMY_SUBJECT_AREAS`) and are seeded by `npm run db:seed` without overwriting admin edits. Mathematics & Computer is grey by the owner's request.
 - Demo seed must stay **idempotent** (it runs on every Vercel build when `DEMO_SEED=true`).
 
 ## Migrations

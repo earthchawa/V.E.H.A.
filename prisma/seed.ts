@@ -11,7 +11,7 @@ import { generateTempPassword, hashPassword, tempPasswordExpiry } from "../src/l
 import { assembleContent } from "../src/lib/similarity/content";
 import { recheckAssignment } from "../src/lib/similarity/run";
 import { DEMO_ASSIGNMENTS } from "./demo-assignments";
-import { ACADEMY_DIVISIONS } from "../src/lib/departments";
+import { ACADEMY_DIVISIONS, ACADEMY_SUBJECT_AREAS } from "../src/lib/departments";
 
 const db = new PrismaClient();
 const issued: [string, string, string][] = [];
@@ -224,21 +224,8 @@ async function seedDemoQuiz(offeringId: string, teacherId: string) {
 
 /** Organisation demo: one division with two departments, an extra maths course, and an exam room. */
 async function seedDemoOrg() {
-  const division = await db.department.upsert({
-    where: { code: "MC" },
-    create: { code: "MC", name: "Division of Mathematics and Computer", nameTh: "กองวิชาคณิตศาสตร์และคอมพิวเตอร์" },
-    update: {},
-  });
-  const cs = await db.department.upsert({
-    where: { code: "CS" },
-    create: { code: "CS", name: "Department of Computer Science", nameTh: "ภาควิชาวิทยาการคอมพิวเตอร์", parentId: division.id, position: 0 },
-    update: {},
-  });
-  const math = await db.department.upsert({
-    where: { code: "MATH" },
-    create: { code: "MATH", name: "Department of Mathematics", nameTh: "ภาควิชาคณิตศาสตร์", parentId: division.id, position: 1, color: "#f97316" },
-    update: {},
-  });
+  const cs = await db.department.findUniqueOrThrow({ where: { code: "CS" } });
+  const math = await db.department.findUniqueOrThrow({ where: { code: "MA" } });
   await db.course.updateMany({ where: { code: { in: ["CS201", "CS202"] }, departmentId: null }, data: { departmentId: cs.id } });
   await db.user.updateMany({ where: { username: { startsWith: "66010" }, departmentId: null }, data: { departmentId: cs.id } });
   await db.user.updateMany({ where: { username: "T0001", departmentId: null }, data: { departmentId: cs.id } });
@@ -287,5 +274,12 @@ async function seedDivisions() {
         },
       });
     }
+  }
+  // Subject areas (สาขาวิชา): created when missing; they inherit their department's logo and colour.
+  for (const [position, sa] of ACADEMY_SUBJECT_AREAS.entries()) {
+    if (await db.department.findUnique({ where: { code: sa.code } })) continue;
+    const parent = await db.department.findUnique({ where: { code: sa.parent } });
+    if (!parent) continue;
+    await db.department.create({ data: { code: sa.code, name: sa.name, nameTh: sa.nameTh, parentId: parent.id, position } });
   }
 }

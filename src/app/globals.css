@@ -133,3 +133,56 @@ body {
 .cc-bar { background: var(--cc); }
 .cc-text { color: var(--cc-fg); }
 .cc-tint { background: color-mix(in srgb, var(--cc) 18%, transparent); color: var(--cc-fg); }
+
+/* ---- Sign-in page effects ---- */
+@property --angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+/* Rotating light along the card border. */
+.glow-border {
+  position: relative;
+}
+.glow-border::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(from var(--angle), transparent 0 55%, var(--color-accent) 75%, #ffd27a 82%, transparent 92%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: spin-border 6s linear infinite;
+  pointer-events: none;
+}
+@keyframes spin-border {
+  to { --angle: 360deg; }
+}
+/* Soft light that follows the pointer across the card. */
+.spotlight::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(400px circle at var(--mx, 50%) var(--my, 0%), color-mix(in srgb, var(--color-accent) 12%, transparent), transparent 60%);
+  pointer-events: none;
+}
+.float-slow {
+  animation: float-slow 6s ease-in-out infinite;
+}
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+.fade-up {
+  animation: fade-up 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .glow-border::before, .float-slow, .fade-up { animation: none; }
+}

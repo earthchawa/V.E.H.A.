@@ -1,8 +1,8 @@
 {
-  "name": "aeroclass",
+  "name": "skycampus",
   "version": "0.1.0",
   "private": true,
-  "description": "AeroClass — NKRAFA Learning Portal: in-house online classroom (courses per term, materials, assignments, quizzes, grades)",
+  "description": "SkyCampus — NKRAFA Learning Portal: in-house online classroom (courses per term, materials, assignments, quizzes, grades)",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -29,6 +29,7 @@
     "nodemailer": "^7.0.10",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
+    "three": "^0.187.0",
     "unpdf": "^2.1.0",
     "zod": "^4.3.6"
   },
@@ -38,6 +39,7 @@
     "@types/nodemailer": "^8.0.2",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "@types/three": "^0.187.0",
     "prisma": "^6.19.3",
     "tailwindcss": "^4.3.4",
     "tsx": "^4.23.15",

@@ -1,31 +1,41 @@
+import { brand } from "@/lib/brand";
 import { getI18n } from "@/lib/i18n/server";
-import { Logo } from "./Logo";
+import { LogoMark } from "./Logo";
 import { PrefsSwitcher } from "./PrefsSwitcher";
+import { LoginScene } from "./LoginScene";
+import { TiltCard } from "./TiltCard";
 
 export async function AuthShell({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   const { t } = await getI18n();
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-4 py-10">
+      {/* Sky gradient + glow; the 3D scene draws on top of it. */}
+      <div aria-hidden className="pointer-events-none fixed inset-0 bg-gradient-to-b from-accent/10 via-transparent to-transparent" />
       <div
         aria-hidden
         className="pointer-events-none absolute -top-40 left-1/2 h-[480px] w-[720px] -translate-x-1/2 rounded-full bg-accent/15 blur-[120px]"
       />
-      <div className="absolute top-4 right-4"><PrefsSwitcher /></div>
-      <div className="relative w-full max-w-sm">
-        <div className="mb-8 flex flex-col items-center gap-2 text-center">
-          <Logo size="lg" />
-          <p className="text-xs text-muted">{t("app.tagline")}</p>
+      <LoginScene />
+      <div className="absolute top-4 right-4 z-10"><PrefsSwitcher /></div>
+      <div className="relative z-10 w-full max-w-sm">
+        <div className="fade-up mb-8 flex flex-col items-center gap-3 text-center">
+          {/* In dark mode the badge's black lettering needs a light plate behind it. */}
+          <span className="float-slow rounded-3xl p-2 dark:bg-white/90 dark:shadow-[0_8px_32px_rgba(91,140,255,0.35)]" data-testid="faculty-logo">
+            <LogoMark className="h-20 w-auto drop-shadow-[0_8px_24px_rgba(0,0,0,0.25)]" />
+          </span>
+          <div>
+            <div className="bg-gradient-to-r from-fg via-accent to-fg bg-clip-text text-3xl font-semibold tracking-tight text-transparent" data-testid="brand-name">
+              {brand.name}
+            </div>
+            <p className="mt-1 text-xs text-muted">{t("app.tagline")}</p>
+          </div>
         </div>
-        <div className="rounded-2xl border border-border bg-surface/80 p-6 backdrop-blur">
+        <TiltCard className="fade-up rounded-2xl border border-border bg-surface/75 p-6 shadow-2xl backdrop-blur-md [animation-delay:120ms]">
           <h1 className="text-base font-semibold">{title}</h1>
           {subtitle && <p className="mt-1 text-sm text-muted">{subtitle}</p>}
-          <div className="mt-6">{children}</div>
-        </div>
-        <div className="mt-8 flex flex-col items-center gap-2 text-center">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logos/academic-faculty.webp" alt="" className="h-12 w-auto opacity-90" data-testid="faculty-logo" />
-          <p className="text-[11px] text-subtle">{t("app.org")}</p>
-        </div>
+          <div className="relative z-10 mt-6">{children}</div>
+        </TiltCard>
+        <p className="fade-up mt-8 text-center text-[11px] text-subtle [animation-delay:240ms]">{t("app.org")}</p>
       </div>
     </main>
   );
