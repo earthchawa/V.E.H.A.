@@ -111,6 +111,7 @@ export async function deleteMaterialAction(fd: FormData): Promise<void> {
     action: "material.deleted",
     targetType: "Material",
     targetId: material.id,
+    offeringId: material.offeringId,
     details: { title: material.title },
   });
   revalidatePath(`/courses/${material.offeringId}`);

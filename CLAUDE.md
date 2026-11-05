@@ -63,23 +63,26 @@ src/lib/
     quiz marking and attempt resets. Admins get read-only views (+ CSV export).
   - Cadets only ever see their own submissions, reports (peers anonymised) and released grades.
 - **Audit** sensitive actions with `audit({ actorId, action, … })` (logins, passwords, grades with from/to,
-  admin changes).
+  admin changes). `audit()` resolves the entry's course section and department from `targetType`/`targetId`
+  (pass `offeringId` when the target was just deleted). New actions need a `log.<action>` label in i18n and a
+  prefix in `AUDIT_CATEGORIES` (`lib/audit-filter.ts`; a unit test checks this).
 - **Time inputs** are Bangkok local (`parseBangkokLocal` / `toBangkokLocal` in `lib/assignments.ts`).
 - **Storage:** `lib/storage.ts` — `disk` (self-hosted, `UPLOAD_DIR`) or `db` (Postgres, default on Vercel).
   Upload cap `config.maxUploadMb` (4 MB on Vercel); forms check sizes in the browser first.
 - **Database URL** may arrive under integration-specific names; `lib/db-url.ts` normalises it.
 - **Styling:** semantic tokens in `src/app/globals.css` (`bg-surface`, `text-muted`, `text-danger`, …) with a
   light theme under `[data-theme="light"]`. Don't hard-code palette colours for text.
-- **Organisation:** two levels — department (กองวิชา, e.g. "Department of Mathematics and Computer Science")
-  and subject area (สาขาวิชา, e.g. CS, MA, PH, CH); in code both are `Department` rows (`parentId` = level 2).
-  Keep the English "Department of …" naming. The brand (name SkyCampus + Academic Faculty logo) lives in
-  `lib/brand.ts`.
+- **Organisation:** two levels — department (กองวิชา, e.g. "Department of Computer Science" (CS),
+  "Department of Mathematics and Computer Science" (MC)) and subject area (สาขาวิชา, e.g. MA under MC, PH and CH
+  under MS); in code both are `Department` rows (`parentId` = level 2). Keep the English "Department of …" naming.
+  The brand (name SkyCampus + Academic Faculty logo, transparent; `logoDark` variant with light lettering for the
+  dark theme — no white plate) lives in `lib/brand.ts`.
 - **Department branding:** each unit has a colour and a logo (bundled under `public/logos/`, or
   uploaded — PNG/JPG/WebP ≤ 1 MB, served by `/api/department-logo/[id]`). Subject areas inherit their department's
   colour/logo unless set. Use `courseTheme(code, department)` / `deptLogo()` from `lib/departments.ts`
   (falls back to a stable `cc-N` colour); inside, use `cc-bar` / `cc-text` / `cc-tint` (`--cc-fg` keeps text
-  readable in both themes). The 9 academy departments live in `ACADEMY_DIVISIONS` (subject areas in
-  `ACADEMY_SUBJECT_AREAS`) and are seeded by `npm run db:seed` without overwriting admin edits. Mathematics & Computer is grey by the owner's request.
+  readable in both themes). The 10 academy departments live in `ACADEMY_DIVISIONS` (subject areas in
+  `ACADEMY_SUBJECT_AREAS`) and are seeded by `npm run db:seed` without overwriting admin edits. Mathematics & Computer and Computer Science are grey by the owner's request.
 - Demo seed must stay **idempotent** (it runs on every Vercel build when `DEMO_SEED=true`).
 
 ## Migrations

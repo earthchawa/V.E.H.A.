@@ -98,7 +98,7 @@ export async function saveQuizAction(offeringId: string, quizId: string | null, 
 export async function deleteQuizAction(fd: FormData): Promise<void> {
   const { quiz, user } = await quizFor(String(fd.get("quizId")));
   await db.quiz.delete({ where: { id: quiz.id } });
-  await audit({ actorId: user.id, action: "quiz.deleted", targetType: "Quiz", targetId: quiz.id, details: { title: quiz.title } });
+  await audit({ actorId: user.id, action: "quiz.deleted", targetType: "Quiz", targetId: quiz.id, offeringId: quiz.offeringId, details: { title: quiz.title } });
   redirect(`/courses/${quiz.offeringId}/quizzes`);
 }
 

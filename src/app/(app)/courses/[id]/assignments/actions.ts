@@ -113,6 +113,7 @@ export async function deleteAssignmentAction(fd: FormData): Promise<void> {
     action: "assignment.deleted",
     targetType: "Assignment",
     targetId: assignment.id,
+    offeringId: assignment.offeringId,
     details: { title: assignment.title, submissions: assignment.submissions.length },
   });
   redirect(`/courses/${assignment.offeringId}/assignments`);

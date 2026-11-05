@@ -67,7 +67,7 @@ export async function deleteCategoryAction(fd: FormData): Promise<void> {
   const cat = await db.gradeCategory.findUniqueOrThrow({ where: { id: String(fd.get("categoryId")) } });
   const user = await requireManage(cat.offeringId);
   await db.gradeCategory.delete({ where: { id: cat.id } });
-  await audit({ actorId: user.id, action: "grade.category_deleted", targetType: "GradeCategory", targetId: cat.id, details: { name: cat.name } });
+  await audit({ actorId: user.id, action: "grade.category_deleted", targetType: "GradeCategory", targetId: cat.id, offeringId: cat.offeringId, details: { name: cat.name } });
   refresh(cat.offeringId);
 }
 
@@ -114,6 +114,7 @@ export async function deleteItemAction(fd: FormData): Promise<void> {
     action: "grade.item_deleted",
     targetType: "GradeItem",
     targetId: item.id,
+    offeringId: item.offeringId,
     details: { title: item.title, grades: item._count.grades },
   });
   refresh(item.offeringId);

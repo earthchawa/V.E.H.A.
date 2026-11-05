@@ -19,9 +19,8 @@ export async function AuthShell({ title, subtitle, children }: { title: string; 
       <div className="absolute top-4 right-4 z-10"><PrefsSwitcher /></div>
       <div className="relative z-10 w-full max-w-sm">
         <div className="fade-up mb-8 flex flex-col items-center gap-3 text-center">
-          {/* In dark mode the badge's black lettering needs a light plate behind it. */}
-          <span className="float-slow rounded-3xl p-2 dark:bg-white/90 dark:shadow-[0_8px_32px_rgba(91,140,255,0.35)]" data-testid="faculty-logo">
-            <LogoMark className="h-20 w-auto drop-shadow-[0_8px_24px_rgba(0,0,0,0.25)]" />
+          <span className="float-slow block" data-testid="faculty-logo">
+            <LogoMark className="h-20 w-auto drop-shadow-[0_8px_24px_rgba(0,0,0,0.25)] dark:drop-shadow-[0_0_28px_rgba(91,140,255,0.35)]" />
           </span>
           <div>
             <div className="bg-gradient-to-r from-fg via-accent to-fg bg-clip-text text-3xl font-semibold tracking-tight text-transparent" data-testid="brand-name">

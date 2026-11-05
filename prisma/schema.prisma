@@ -202,10 +202,17 @@ model AuditLog {
   targetId   String?
   details    Json?
   ip         String?
+  /// Course section the entry concerns (resolved from the target when written). No FK: logs outlive deletions.
+  offeringId   String?
+  /// Department/subject area the entry concerns: the course's, else the actor's (or target user's).
+  departmentId String?
   createdAt  DateTime @default(now())
 
   @@index([createdAt])
   @@index([actorId])
+  @@index([action])
+  @@index([departmentId, createdAt])
+  @@index([offeringId])
 }
 
 model Assignment {
