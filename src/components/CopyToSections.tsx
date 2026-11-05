@@ -27,7 +27,7 @@ export function CopyToSections({
   return (
     <details className="group relative">
       <summary className="btn-secondary cursor-pointer list-none">{label ?? t("sec.copyTo")}</summary>
-      <div className="absolute right-0 z-10 mt-1 w-60 rounded-lg border border-border bg-surface p-3 shadow-lg">
+      <div className="absolute right-0 z-10 mt-1 w-60 rounded-lg border border-border bg-surface p-3 shadow-lg max-sm:fixed max-sm:inset-x-4 max-sm:w-auto">
         <KeepForm action={dispatch} pending={pending} className="space-y-2">
           <input type="hidden" name="itemId" value={itemId} />
           {hint && <p className="text-xs text-subtle">{hint}</p>}

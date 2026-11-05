@@ -25,6 +25,8 @@ export const th: Record<Key, string> = {
   "nav.users": "ผู้ใช้",
   "nav.terms": "ภาคเรียนและวิชา",
   "nav.activity": "ประวัติการใช้งาน",
+  "nav.menu": "เมนู",
+  "nav.closeMenu": "ปิดเมนู",
   "nav.signOut": "ออกจากระบบ",
 
   "login.title": "เข้าสู่ระบบ",

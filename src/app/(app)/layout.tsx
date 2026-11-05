@@ -4,45 +4,64 @@ import { getI18n } from "@/lib/i18n/server";
 import { PrefsSwitcher } from "@/components/PrefsSwitcher";
 import { Logo } from "@/components/Logo";
 import { NavLink } from "@/components/NavLink";
+import { MobileMenu } from "@/components/MobileMenu";
 import { logoutAction } from "../auth-actions";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
   const { t, role } = await getI18n();
+  const links = [
+    { href: "/", label: t("nav.courses") },
+    ...(user.role === "ADMIN"
+      ? [
+          { href: "/admin/users", label: t("nav.users") },
+          { href: "/admin/courses", label: t("nav.terms") },
+          { href: "/admin/departments", label: t("nav.departments") },
+          { href: "/admin/exam-settings", label: t("nav.examSettings") },
+          { href: "/admin/audit", label: t("nav.activity") },
+        ]
+      : []),
+  ];
   const initials = user.fullName.replace(/^\S*\./, "").trim().slice(0, 1).toUpperCase() || user.username[0];
   return (
     <div className="min-h-screen">
       <header className="sticky top-0 z-10 border-b border-border bg-bg/80 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-6xl items-center gap-6 px-4">
-          <Link href="/" aria-label="Dashboard"><Logo /></Link>
-          <nav className="flex items-center gap-1 overflow-x-auto">
-            <NavLink href="/">{t("nav.courses")}</NavLink>
-            {user.role === "ADMIN" && (
-              <>
-                <NavLink href="/admin/users">{t("nav.users")}</NavLink>
-                <NavLink href="/admin/courses">{t("nav.terms")}</NavLink>
-                <NavLink href="/admin/departments">{t("nav.departments")}</NavLink>
-                <NavLink href="/admin/exam-settings">{t("nav.examSettings")}</NavLink>
-                <NavLink href="/admin/audit">{t("nav.activity")}</NavLink>
-              </>
-            )}
+        <div className="relative mx-auto flex h-14 max-w-6xl items-center gap-3 px-4 lg:gap-6">
+          <Link href="/" aria-label="Dashboard" className="shrink-0"><Logo /></Link>
+          <nav className="hidden items-center gap-1 lg:flex" data-testid="desktop-nav">
+            {links.map((l) => <NavLink key={l.href} href={l.href}>{l.label}</NavLink>)}
           </nav>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-1 sm:gap-2">
             <PrefsSwitcher />
-            <Link href="/account" className="flex items-center gap-2 rounded-md px-2 py-1 transition hover:bg-surface-3">
+            <Link href="/account" title={`${user.fullName} · ${user.username}`} className="hidden items-center gap-2 rounded-md px-2 py-1 transition hover:bg-surface-3 lg:flex">
               <span className="grid h-7 w-7 place-items-center rounded-full bg-surface-3 text-xs font-medium">{initials}</span>
-              <span className="hidden text-left leading-tight sm:block">
+              <span className="hidden text-left leading-tight xl:block">
                 <span className="block text-xs">{user.fullName}</span>
                 <span className="block text-[11px] text-subtle">{role(user.role)} · {user.username}</span>
               </span>
             </Link>
-            <form action={logoutAction}>
-              <button className="rounded-md px-2 py-1.5 text-xs text-muted transition hover:text-fg">{t("nav.signOut")}</button>
+            <form action={logoutAction} className="hidden lg:block">
+              <button className="whitespace-nowrap rounded-md px-2 py-1.5 text-xs text-muted transition hover:text-fg">{t("nav.signOut")}</button>
             </form>
+            <MobileMenu label={t("nav.menu")} closeLabel={t("nav.closeMenu")}>
+              <Link href="/account" className="mb-2 flex items-center gap-3 rounded-lg border border-border bg-surface px-3 py-2.5" data-testid="menu-account">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-surface-3 text-sm font-medium">{initials}</span>
+                <span className="min-w-0 leading-tight">
+                  <span className="block truncate text-sm">{user.fullName}</span>
+                  <span className="block text-xs text-subtle">{role(user.role)} · {user.username}</span>
+                </span>
+              </Link>
+              <nav className="grid gap-0.5">
+                {links.map((l) => <NavLink key={l.href} href={l.href} block>{l.label}</NavLink>)}
+              </nav>
+              <form action={logoutAction} className="mt-2 border-t border-border pt-2">
+                <button className="w-full rounded-md px-3 py-2.5 text-left text-sm text-muted transition hover:bg-surface-3 hover:text-fg">{t("nav.signOut")}</button>
+              </form>
+            </MobileMenu>
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-6xl px-4 py-10">{children}</main>
+      <main className="mx-auto max-w-6xl px-4 py-6 sm:py-10">{children}</main>
     </div>
   );
 }

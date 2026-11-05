@@ -80,7 +80,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
                 return (
                   <tr key={u.id}>
                     <td className="font-mono text-xs">{u.username}</td>
-                    <td>{u.fullName}</td>
+                    <td className="min-w-[9rem]">{u.fullName}</td>
                     <td className="text-muted">{roleLabel(u.role)}{u.department && <span className="ml-1.5 font-mono text-xs text-subtle">{u.department.code}</span>}</td>
                     <td className="text-muted">{u.email ?? <span className="text-subtle">—</span>}</td>
                     <td><span className={`badge ${status.cls}`}>{status.text}</span></td>

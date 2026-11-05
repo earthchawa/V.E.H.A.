@@ -27,6 +27,8 @@ export const en = {
   "nav.users": "Users",
   "nav.terms": "Terms & courses",
   "nav.activity": "Activity",
+  "nav.menu": "Menu",
+  "nav.closeMenu": "Close menu",
   "nav.signOut": "Sign out",
 
   // Sign in

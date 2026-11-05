@@ -43,10 +43,10 @@ export default async function QuizResultsPage({ params }: { params: Promise<{ id
             const pending = pendingByQuestion.get(q.id) ?? 0;
             return (
               <li key={q.id}>
-                <Link href={`${base}/grade/${q.id}`} className="flex items-center gap-3 px-5 py-2.5 text-sm transition hover:bg-surface-2">
-                  <span className="w-12 shrink-0 text-xs font-semibold text-accent">{t("qz.question", { n: i + 1 })}</span>
+                <Link href={`${base}/grade/${q.id}`} className="flex items-center gap-3 px-4 py-2.5 text-sm transition hover:bg-surface-2 sm:px-5">
+                  <span className="shrink-0 whitespace-nowrap text-xs font-semibold text-accent">{t("qz.question", { n: i + 1 })}</span>
                   <span className="min-w-0 flex-1 truncate">{q.prompt}</span>
-                  <span className="badge bg-surface-3 text-muted">{t(`qz.type.${q.type}`)}</span>
+                  <span className="badge hidden bg-surface-3 text-muted sm:inline-flex">{t(`qz.type.${q.type}`)}</span>
                   {pending > 0 ? (
                     <span className="badge bg-accent/15 text-accent" data-testid="q-pending">{t("qz.toGrade", { n: pending })}</span>
                   ) : (

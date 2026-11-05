@@ -27,19 +27,22 @@ export default async function DepartmentsPage() {
   }));
 
   const unit = (d: (typeof all)[number], kind: "division" | "department") => (
-    <div className="cc flex flex-wrap items-center gap-3" style={{ ["--cc" as string]: deptColor(d) ?? "var(--color-accent)" }}>
+    <div className="cc flex flex-wrap items-center gap-x-3 gap-y-2" style={{ ["--cc" as string]: deptColor(d) ?? "var(--color-accent)" }}>
       {deptLogo(d) ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={deptLogo(d)!} alt="" className={`${kind === "division" ? "h-10 max-w-[4.5rem]" : "h-7 max-w-12"} w-auto object-contain`} data-testid="dep-logo" />
+        <img src={deptLogo(d)!} alt="" className={`${kind === "division" ? "h-10 max-w-[4.5rem]" : "h-7 max-w-12"} w-auto shrink-0 object-contain`} data-testid="dep-logo" />
       ) : (
-        <span className={`cc-tint grid ${kind === "division" ? "h-10 w-10" : "h-7 w-7"} place-items-center rounded-lg font-mono text-[10px] font-bold`}>{d.code.slice(0, 3)}</span>
+        <span className={`cc-tint grid shrink-0 ${kind === "division" ? "h-10 w-10" : "h-7 w-7"} place-items-center rounded-lg font-mono text-[10px] font-bold`}>{d.code.slice(0, 3)}</span>
       )}
-      <span className="cc-text font-mono text-xs font-semibold">{d.code}</span>
-      <div className="min-w-0 flex-1">
-        <div className={kind === "division" ? "font-semibold" : ""}>{label(d)}</div>
+      <div className="min-w-[12rem] flex-1">
+        <div className={kind === "division" ? "font-semibold" : ""}>
+          <span className="cc-text mr-2 font-mono text-xs font-semibold">{d.code}</span>
+          {label(d)}
+        </div>
         {d.nameTh && lang !== "th" && <div className="text-xs text-subtle">{d.nameTh}</div>}
+        <div className="mt-0.5 text-xs text-subtle">{tn("dep.courses", d._count.courses)} · {tn("dep.people", d._count.users)}</div>
       </div>
-      <span className="text-xs text-subtle">{tn("dep.courses", d._count.courses)} · {tn("dep.people", d._count.users)}</span>
+      <div className="ml-auto flex shrink-0 items-center gap-2">
       <span className="cc-bar h-5 w-1.5 rounded" title={deptColor(d) ?? ""} />
       <Modal label={t("qz.edit")} title={label(d)} buttonClassName="btn-secondary h-7" size="lg">
         <DepartmentForm
@@ -59,6 +62,7 @@ export default async function DepartmentsPage() {
       {d._count.children === 0 && (
         <ConfirmButton action={deleteDepartmentAction} name="departmentId" value={d.id} message={t("dep.deleteConfirm")} label={t("qz.delete")} />
       )}
+      </div>
     </div>
   );
 
@@ -79,10 +83,10 @@ export default async function DepartmentsPage() {
         <div className="space-y-4">
           {divisions.map((div) => (
             <section key={div.id} className="overflow-hidden rounded-xl border border-border bg-surface" data-testid="division">
-              <div className="border-b border-border bg-surface-2 px-5 py-3">{unit(div, "division")}</div>
+              <div className="border-b border-border bg-surface-2 px-4 py-3 sm:px-5">{unit(div, "division")}</div>
               <ul className="divide-y divide-border">
                 {all.filter((d) => d.parentId === div.id).map((d) => (
-                  <li key={d.id} className="px-5 py-3 pl-10">{unit(d, "department")}</li>
+                  <li key={d.id} className="px-4 py-3 pl-6 sm:px-5 sm:pl-10">{unit(d, "department")}</li>
                 ))}
               </ul>
             </section>

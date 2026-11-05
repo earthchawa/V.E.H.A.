@@ -24,7 +24,7 @@ export function CourseDepartmentSelect({
         defaultValue={value}
         aria-label={ariaLabel}
         onChange={(e) => e.currentTarget.form?.requestSubmit()}
-        className="input h-8 w-auto max-w-64 py-0 text-xs"
+        className="input h-8 w-full py-0 text-xs sm:w-auto sm:max-w-64"
       >
         <option value="">{noneLabel}</option>
         {options.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}

@@ -87,10 +87,10 @@ export default async function ExamPage({ params }: { params: Promise<{ attemptId
     <main className="min-h-screen">
       <header className="border-b border-border">
         <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-3">
-          <Logo />
+          <span className="shrink-0"><Logo /></span>
           <span className="text-subtle">/</span>
-          <span className="truncate text-sm font-medium">{quiz.title}</span>
-          <span className="ml-auto font-mono text-xs text-subtle">{quiz.offering.course.code} · {user.username}</span>
+          <span className="min-w-0 truncate text-sm font-medium">{quiz.title}</span>
+          <span className="ml-auto hidden shrink-0 font-mono text-xs text-subtle sm:inline">{quiz.offering.course.code} · {user.username}</span>
         </div>
         {(quiz.instructions || attempt.deadlineAt) && (
           <div className="mx-auto max-w-3xl px-4 pb-3 text-xs text-muted">

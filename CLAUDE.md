@@ -9,6 +9,9 @@ The project owner writes in Thai; reply in Thai. UI copy exists in English and T
 - Next.js 16 (App Router, Server Actions, Turbopack) + React 19 + TypeScript (strict) + Tailwind CSS 4
 - PostgreSQL 16 via Prisma 6 (`prisma/schema.prisma`)
 - Vitest for unit tests; Playwright (pre-installed in the cloud container) for end-to-end checks
+- Quiz code questions use CodeMirror 6 (`components/code/`) and run only in the browser: Python with Pyodide
+  (self-hosted — `scripts/copy-pyodide.mjs` copies it to `public/pyodide` before dev/build; gitignored),
+  JavaScript in a worker, HTML/CSS/JS in a sandboxed iframe (`public/runners/`, `lib/code.ts`). No server execution.
 - The sign-in pages use a three.js scene (`components/LoginScene.tsx`, loaded only there; honours reduced motion)
 - Self-hosted with Docker Compose (`Dockerfile`, `docker-compose.yml`); a public demo runs on Vercel + Neon
 
@@ -70,6 +73,12 @@ src/lib/
 - **Storage:** `lib/storage.ts` — `disk` (self-hosted, `UPLOAD_DIR`) or `db` (Postgres, default on Vercel).
   Upload cap `config.maxUploadMb` (4 MB on Vercel); forms check sizes in the browser first.
 - **Database URL** may arrive under integration-specific names; `lib/db-url.ts` normalises it.
+- **Exams** use full-screen browser mode with a supervising instructor. Safe Exam Browser support is kept but
+  switched off (`config.sebEnabled`, env `SEB_ENABLED=true`); use `sebRequired(quiz)`, never `quiz.requireSeb`.
+  The exam page blocks copy/paste/drop in the capture phase (so editors can't bypass it) and does not count
+  focus moving into a code preview iframe as leaving the quiz.
+- **Mobile:** every page must work at 360–390 px wide with no horizontal page scroll. Below `lg` the app header
+  collapses into `<MobileMenu>`; wide tables sit in `overflow-x-auto`, or become stacked rows.
 - **Styling:** semantic tokens in `src/app/globals.css` (`bg-surface`, `text-muted`, `text-danger`, …) with a
   light theme under `[data-theme="light"]`. Don't hard-code palette colours for text.
 - **Organisation:** two levels — department (กองวิชา, e.g. "Department of Computer Science" (CS),
@@ -110,7 +119,7 @@ Commit every migration; Vercel applies them during build.
 
 ## Status
 
-Phases 1–4 done: accounts, terms/courses/sections, materials, assignments + similarity reports (peer
+Phases 1–4 done, plus quiz code questions (Python, JavaScript, HTML/CSS/JS; hand-marked): accounts, terms/courses/sections, materials, assignments + similarity reports (peer
 copying only), gradebook, online quizzes with integrity log / Safe Exam Browser / exam rooms, divisions &
 departments with logos and colours. Not done: internet plagiarism and AI-writing detection (would need Copyleaks; AI hints should
 be a yellow, instructor-only "for review" highlight — never an accusation), department-level admins.

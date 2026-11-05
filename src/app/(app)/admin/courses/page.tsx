@@ -57,28 +57,29 @@ export default async function AdminCoursesPage() {
       {courses.length > 0 && (
         <section className="mb-8 overflow-hidden rounded-xl border border-border bg-surface" data-testid="course-catalog">
           <h2 className="border-b border-border px-5 py-3 text-sm font-semibold">{t("tc.course")}</h2>
-          <table className="table">
-            <tbody>
-              {courses.map((c) => (
-                <tr key={c.id}>
-                  <td className="w-24 pl-5 font-mono text-xs text-accent">{c.code}</td>
-                  <td>{c.title}{c.titleTh && <span className="ml-2 text-xs text-subtle">{c.titleTh}</span>}</td>
-                  <td className="pr-5 text-right">
-                    {departments.length > 0 ? (
-                      <CourseDepartmentSelect courseId={c.id} value={c.departmentId ?? ""} options={deptOptions} noneLabel={t("dep.unassigned")} ariaLabel={`${t("dep.field")} ${c.code}`} />
-                    ) : null}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <ul className="divide-y divide-border">
+            {courses.map((c) => (
+              <li key={c.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5 text-sm sm:px-5">
+                <span className="w-16 shrink-0 font-mono text-xs text-accent">{c.code}</span>
+                <span className="min-w-[10rem] flex-1">
+                  {c.title}
+                  {c.titleTh && <span className="ml-2 text-xs text-subtle">{c.titleTh}</span>}
+                </span>
+                {departments.length > 0 ? (
+                  <span className="w-full sm:w-auto">
+                    <CourseDepartmentSelect courseId={c.id} value={c.departmentId ?? ""} options={deptOptions} noneLabel={t("dep.unassigned")} ariaLabel={`${t("dep.field")} ${c.code}`} />
+                  </span>
+                ) : null}
+              </li>
+            ))}
+          </ul>
         </section>
       )}
 
       <div className="space-y-6">
         {terms.map((tm) => (
           <section key={tm.id} className="overflow-hidden rounded-xl border border-border bg-surface">
-            <div className="flex items-center gap-3 border-b border-border px-5 py-3">
+            <div className="flex flex-wrap items-center gap-3 border-b border-border px-4 py-3 sm:px-5">
               <h2 className="text-sm font-semibold">{termLabel(tm)}</h2>
               {tm.isCurrent ? (
                 <span className="badge bg-emerald-500/10 text-success">{t("tc.current")}</span>
@@ -92,22 +93,24 @@ export default async function AdminCoursesPage() {
             {tm.offerings.length === 0 ? (
               <p className="px-5 py-6 text-sm text-muted">{t("tc.noOfferings")}</p>
             ) : (
+              <div className="overflow-x-auto">
               <table className="table">
                 <thead><tr><th className="pl-5">{t("tc.code")}</th><th>{t("tc.course")}</th><th>{t("tc.section")}</th><th>{t("tc.cadets")}</th><th /></tr></thead>
                 <tbody>
                   {tm.offerings.map((o) => (
                     <tr key={o.id}>
                       <td className="pl-5 font-mono text-xs text-accent">{o.course.code}</td>
-                      <td>{o.course.title}</td>
+                      <td className="min-w-[10rem]">{o.course.title}</td>
                       <td className="text-muted">{o.section}</td>
                       <td className="text-muted">{o._count.enrollments}</td>
                       <td className="pr-5 text-right">
-                        <Link href={`/admin/offerings/${o.id}`} className="btn-secondary">{t("tc.manageRoster")}</Link>
+                        <Link href={`/admin/offerings/${o.id}`} className="btn-secondary whitespace-nowrap">{t("tc.manageRoster")}</Link>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
           </section>
         ))}
