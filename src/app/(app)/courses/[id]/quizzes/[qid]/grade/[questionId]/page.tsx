@@ -69,7 +69,7 @@ export default async function GradeQuestionPage({ params }: { params: Promise<{ 
                 <span className="font-mono text-xs text-subtle">{a.attempt.student.username}</span> {a.attempt.student.fullName}
               </span>
             ),
-            body: <AnswerView type={q.type} options={asOptions(q)} accepted={asAccepted(q)} codeAnswer={q.codeAnswer} response={a.response as Response} showKey={false} labels={labels} />,
+            body: <AnswerView type={q.type} options={asOptions(q)} accepted={asAccepted(q)} codeAnswer={q.codeAnswer} language={q.language} response={a.response as Response} showKey={false} labels={labels} />,
             maxPoints: q.points,
             points: a.points,
             feedback: a.feedback,

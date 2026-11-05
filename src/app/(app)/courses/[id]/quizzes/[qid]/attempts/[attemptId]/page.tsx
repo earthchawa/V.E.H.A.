@@ -74,7 +74,7 @@ export default async function AttemptPage({ params }: { params: Promise<{ id: st
                     </>
                   ),
                   body: (
-                    <AnswerView type={q.type} options={asOptions(q)} accepted={asAccepted(q)} codeAnswer={q.codeAnswer} response={a.response as Response} showKey labels={labels} />
+                    <AnswerView type={q.type} options={asOptions(q)} accepted={asAccepted(q)} codeAnswer={q.codeAnswer} language={q.language} response={a.response as Response} showKey labels={labels} />
                   ),
                   maxPoints: q.points,
                   points: a.points,

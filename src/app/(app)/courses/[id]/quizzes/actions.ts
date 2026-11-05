@@ -8,10 +8,12 @@ import type { FormState } from "@/lib/form";
 import { requireUser } from "@/lib/auth/session";
 import { canGrade, offeringAccess } from "@/lib/access";
 import { db } from "@/lib/db";
+import { config } from "@/lib/config";
 import { audit } from "@/lib/audit";
 import { getI18n } from "@/lib/i18n/server";
 import { parseBangkokLocal } from "@/lib/assignments";
 import type { Option } from "@/lib/quiz";
+import { LANGUAGE_FILES, asLanguage, cleanFiles } from "@/lib/code";
 import { recomputeAttempt, refreshMaxScores, regradeQuestion, syncQuizGradeItem } from "@/lib/quiz-server";
 
 async function requireManage(offeringId: string) {
@@ -67,7 +69,7 @@ export async function saveQuizAction(offeringId: string, quizId: string | null, 
     shuffleOptions: fd.get("shuffleOptions") === "on",
     isPublished,
     results: (RESULTS as readonly string[]).includes(results) ? (results as (typeof RESULTS)[number]) : "SCORE",
-    requireSeb: fd.get("requireSeb") === "on",
+    requireSeb: config.sebEnabled && fd.get("requireSeb") === "on",
   };
   // Exam rooms: only when "only in these rooms" is chosen, and only rooms that exist.
   const wanted = fd.get("where") === "rooms" ? fd.getAll("networkId").map(String) : [];
@@ -104,7 +106,7 @@ export async function deleteQuizAction(fd: FormData): Promise<void> {
 
 // ---------- questions ----------
 
-const TYPES: QuestionType[] = ["SINGLE", "MULTIPLE", "SHORT", "ESSAY"];
+const TYPES: QuestionType[] = ["SINGLE", "MULTIPLE", "SHORT", "ESSAY", "CODE"];
 
 export async function saveQuestionAction(quizId: string, questionId: string | null, _: FormState, fd: FormData): Promise<FormState> {
   const { quiz, user } = await quizFor(quizId);
@@ -142,6 +144,13 @@ export async function saveQuestionAction(quizId: string, questionId: string | nu
     options: options as unknown as Prisma.InputJsonValue,
     accepted: accepted as Prisma.InputJsonValue,
     codeAnswer: type === "ESSAY" && fd.get("codeAnswer") === "on",
+    language: type === "CODE" ? asLanguage(fd.get("language")) : null,
+    starter: (type === "CODE"
+      ? cleanFiles(
+          asLanguage(fd.get("language")),
+          Object.fromEntries(LANGUAGE_FILES[asLanguage(fd.get("language"))].map((f) => [f, String(fd.get(`starter:${f}`) ?? "")])),
+        )
+      : {}) as Prisma.InputJsonValue,
   };
 
   let id = questionId;

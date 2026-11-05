@@ -12,6 +12,11 @@ export const config = {
   cookieSecure: process.env.COOKIE_SECURE
     ? process.env.COOKIE_SECURE !== "false"
     : process.env.NODE_ENV === "production",
+  /**
+   * Safe Exam Browser mode. Off by default: quizzes use the full-screen browser mode with a supervising
+   * instructor. Set SEB_ENABLED=true to offer the locked-down mode (and its admin settings) again.
+   */
+  sebEnabled: process.env.SEB_ENABLED === "true",
   tempPasswordDays: Number(process.env.TEMP_PASSWORD_DAYS ?? 14),
   sessionDays: 7,
   maxFailedLogins: 5,

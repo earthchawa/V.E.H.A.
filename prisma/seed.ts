@@ -138,6 +138,7 @@ async function seedDemoAssignments() {
   }
   await seedDemoGrades(offering.id, teacher.id);
   await seedDemoQuiz(offering.id, teacher.id);
+  await seedDemoCodeQuiz(offering.id, teacher.id);
 }
 
 /** Gradebook demo: weighted categories, linked + standalone items, some released scores. */
@@ -220,6 +221,49 @@ async function seedDemoQuiz(offeringId: string, teacherId: string) {
   await db.gradeItem.create({
     data: { offeringId, quizId: quiz.id, title, maxPoints: questions.reduce((n, q) => n + q.points, 0), categoryId: assignments?.id ?? null, position },
   });
+}
+
+/** A coding quiz: Python (with input()) and HTML/CSS/JS, run in the browser and marked by hand. */
+async function seedDemoCodeQuiz(offeringId: string, teacherId: string) {
+  const title = "Quiz 2: Coding practice";
+  if (await db.quiz.findFirst({ where: { offeringId, title } })) return;
+  const now = Date.now();
+  const quiz = await db.quiz.create({
+    data: {
+      offeringId,
+      title,
+      instructions: "เขียนโค้ดและกดรันเพื่อตรวจผลก่อนส่ง อาจารย์จะตรวจให้คะแนนเอง",
+      opensAt: new Date(now - 3600_000),
+      closesAt: new Date(now + 14 * 86400_000),
+      timeLimitMin: 30,
+      isPublished: true,
+      results: "FULL",
+      createdById: teacherId,
+    },
+  });
+  const questions = [
+    {
+      points: 5,
+      language: "python",
+      prompt: "เขียนโปรแกรมรับจำนวนเต็ม n แล้วพิมพ์ผลรวมของ 1 ถึง n\nRead an integer n and print the sum 1 + 2 + … + n.",
+      starter: { "main.py": "n = int(input(\"n = \"))\n# your code here\n" },
+    },
+    {
+      points: 5,
+      language: "web",
+      prompt: "สร้างปุ่มที่เมื่อกดแล้วตัวเลขในหน้าจอเพิ่มขึ้นทีละ 1\nMake a button that increases a counter shown on the page.",
+      starter: {
+        "index.html": "<h1>Counter: <span id=\"count\">0</span></h1>\n<button id=\"add\">+1</button>\n",
+        "style.css": "body {\n  font-family: sans-serif;\n}\n",
+        "script.js": "// your code here\n",
+      },
+    },
+  ];
+  for (const [position, q] of questions.entries()) {
+    await db.quizQuestion.create({ data: { quizId: quiz.id, position, type: "CODE", ...q } });
+  }
+  const position = await db.gradeItem.count({ where: { offeringId } });
+  await db.gradeItem.create({ data: { offeringId, quizId: quiz.id, title, maxPoints: 10, position } });
 }
 
 /** Organisation demo: one division with two departments, an extra maths course, and an exam room. */

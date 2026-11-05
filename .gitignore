@@ -7,3 +7,6 @@ next-env.d.ts
 .env.local
 storage/
 coverage/
+
+# Python runtime copied from node_modules/pyodide (scripts/copy-pyodide.mjs)
+public/pyodide/

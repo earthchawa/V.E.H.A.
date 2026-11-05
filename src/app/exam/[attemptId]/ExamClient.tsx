@@ -4,14 +4,18 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/lib/i18n/client";
 import type { Response } from "@/lib/quiz";
+import { isBlankCode, type CodeFiles, type CodeLanguage } from "@/lib/code";
+import { CodeWorkspace } from "@/components/code/CodeWorkspace";
 import { logEventsAction, saveAnswerAction, submitAttemptAction } from "../actions";
 
 export type ExamQuestion = {
   id: string;
-  type: "SINGLE" | "MULTIPLE" | "SHORT" | "ESSAY";
+  type: "SINGLE" | "MULTIPLE" | "SHORT" | "ESSAY" | "CODE";
   prompt: string;
   points: number;
   codeAnswer: boolean;
+  language: CodeLanguage | null;
+  starter: CodeFiles;
   options: { id: string; text: string }[];
 };
 
@@ -25,7 +29,7 @@ const fmt = (ms: number) => {
   return (h ? `${h}:${String(m).padStart(2, "0")}` : String(m)) + ":" + String(sec).padStart(2, "0");
 };
 
-const isAnswered = (r: Response | undefined) => !!r && ((r.choice?.length ?? 0) > 0 || !!r.text?.trim());
+const isAnswered = (r: Response | undefined) => !!r && ((r.choice?.length ?? 0) > 0 || !!r.text?.trim() || !isBlankCode(r.files));
 
 export function ExamClient({
   attemptId,
@@ -138,7 +142,14 @@ export function ExamClient({
 
   // Integrity monitoring.
   useEffect(() => {
-    const onBlur = () => record("blur");
+    // Clicking into a code question's preview (an iframe on this page) moves focus out of the window;
+    // that is not leaving the quiz.
+    const onBlur = () =>
+      setTimeout(() => {
+        const a = document.activeElement;
+        if (a instanceof HTMLIFrameElement && a.dataset.runPreview) return;
+        record("blur");
+      }, 0);
     const onVis = () => {
       if (document.visibilityState === "hidden") {
         record("hidden");
@@ -151,21 +162,26 @@ export function ExamClient({
         setFsNeeded(true);
       }
     };
+    // Capture phase + stopPropagation so the code editor's own clipboard and drop handlers never run.
     const block = (type: string) => (e: Event) => {
       e.preventDefault();
+      e.stopPropagation();
       record(type);
     };
     const onCopy = block("copy");
     const onPaste = block("paste");
     const onCut = block("copy");
     const onMenu = block("contextmenu");
+    const onDrop = block("paste");
+    const cap = { capture: true };
     window.addEventListener("blur", onBlur);
     document.addEventListener("visibilitychange", onVis);
     document.addEventListener("fullscreenchange", onFs);
-    document.addEventListener("copy", onCopy);
-    document.addEventListener("cut", onCut);
-    document.addEventListener("paste", onPaste);
-    document.addEventListener("contextmenu", onMenu);
+    document.addEventListener("copy", onCopy, cap);
+    document.addEventListener("cut", onCut, cap);
+    document.addEventListener("paste", onPaste, cap);
+    document.addEventListener("drop", onDrop, cap);
+    document.addEventListener("contextmenu", onMenu, cap);
     const warn = (e: BeforeUnloadEvent) => {
       if (!finished.current && pending.current.size) e.preventDefault();
     };
@@ -175,10 +191,11 @@ export function ExamClient({
       window.removeEventListener("blur", onBlur);
       document.removeEventListener("visibilitychange", onVis);
       document.removeEventListener("fullscreenchange", onFs);
-      document.removeEventListener("copy", onCopy);
-      document.removeEventListener("cut", onCut);
-      document.removeEventListener("paste", onPaste);
-      document.removeEventListener("contextmenu", onMenu);
+      document.removeEventListener("copy", onCopy, cap);
+      document.removeEventListener("cut", onCut, cap);
+      document.removeEventListener("paste", onPaste, cap);
+      document.removeEventListener("drop", onDrop, cap);
+      document.removeEventListener("contextmenu", onMenu, cap);
       window.removeEventListener("beforeunload", warn);
     };
   }, [flushEvents, record]);
@@ -293,6 +310,14 @@ export function ExamClient({
                       requestAnimationFrame(() => el.setSelectionRange(s + 4, s + 4));
                     }
                   }}
+                />
+              )}
+              {q.type === "CODE" && q.language && (
+                <CodeWorkspace
+                  idPrefix={q.id}
+                  language={q.language}
+                  files={r.files ?? q.starter}
+                  onChange={(files) => update(q.id, { files })}
                 />
               )}
             </li>

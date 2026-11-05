@@ -1,3 +1,5 @@
+import { config } from "@/lib/config";
+import { sebRequired } from "@/lib/quiz-server";
 import Link from "next/link";
 import { loadCourse } from "@/lib/course";
 import { db } from "@/lib/db";
@@ -38,7 +40,7 @@ export default async function QuizzesPage({ params }: { params: Promise<{ id: st
       {canManage && (
         <div className="mb-6">
           <Modal label={`+ ${t("qz.new")}`} title={t("qz.new")} size="lg" testId="new-quiz">
-            <QuizForm offeringId={offering.id} categories={categories} networks={networks} />
+            <QuizForm offeringId={offering.id} categories={categories} networks={networks} sebEnabled={config.sebEnabled} />
           </Modal>
         </div>
       )}
@@ -59,7 +61,7 @@ export default async function QuizzesPage({ params }: { params: Promise<{ id: st
                         <span className={`badge ${PHASE_STYLE[phase]}`}>
                           {phase === "upcoming" && q.opensAt ? t("qz.phase.upcoming", { date: date(q.opensAt) }) : t(`qz.phase.${phase}`)}
                         </span>
-                        {q.requireSeb && <span className="badge bg-surface-3 text-muted">{t("qz.secLabel")}</span>}
+                        {sebRequired(q) && <span className="badge bg-surface-3 text-muted">{t("qz.secLabel")}</span>}
                         {q._count.networks > 0 && <span className="badge bg-surface-3 text-muted">{t("qz.roomsLabel")}</span>}
                       </div>
                       <div className="mt-0.5 text-xs text-subtle">

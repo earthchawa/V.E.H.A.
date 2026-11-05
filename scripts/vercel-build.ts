@@ -33,4 +33,5 @@ const run = (cmd: string, databaseUrl = db.url!) =>
 
 run("npx prisma migrate deploy", db.directUrl ?? db.url);
 if (process.env.DEMO_SEED === "true") run("npx tsx prisma/seed.ts --demo");
+run("node scripts/copy-pyodide.mjs");
 run("npx next build");

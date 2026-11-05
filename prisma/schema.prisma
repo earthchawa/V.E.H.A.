@@ -374,6 +374,8 @@ enum QuestionType {
   SHORT
   /// Graded by hand (prose or code).
   ESSAY
+  /// Code the cadet can run in the exam page (Python, JavaScript, HTML/CSS/JS); graded by hand.
+  CODE
 }
 
 /// What cadets see after the quiz closes.
@@ -432,6 +434,10 @@ model QuizQuestion {
   accepted  Json         @default("[]")
   /// ESSAY: monospace answer box for code.
   codeAnswer Boolean     @default(false)
+  /// CODE: "python" | "javascript" | "web" (see lib/code.ts).
+  language   String?
+  /// CODE: starter files shown to cadets, { [fileName]: content }.
+  starter    Json        @default("{}")
 
   answers QuizAnswer[]
 
@@ -470,7 +476,7 @@ model QuizAnswer {
   attempt    QuizAttempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
   questionId String
   question   QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
-  /// { choice: [optId] } or { text: "…" }
+  /// { choice: [optId] }, { text: "…" } or, for CODE, { files: { [fileName]: content } }
   response   Json
   /// Null = needs grading by hand.
   points     Float?

@@ -6,6 +6,7 @@ import { requestMeta } from "@/lib/request";
 import type { Layout, Response } from "@/lib/quiz";
 import { asOptions, examBlock, finalizeAttempt, isExpired } from "@/lib/quiz-server";
 import { Logo } from "@/components/Logo";
+import { asLanguage, cleanFiles } from "@/lib/code";
 import { ExamClient, type ExamQuestion } from "./ExamClient";
 
 export async function generateMetadata() {
@@ -71,6 +72,8 @@ export default async function ExamPage({ params }: { params: Promise<{ attemptId
         prompt: q.prompt,
         points: q.points,
         codeAnswer: q.codeAnswer,
+        language: q.type === "CODE" ? asLanguage(q.language) : null,
+        starter: q.type === "CODE" ? cleanFiles(asLanguage(q.language), q.starter) : {},
         // Never send which option is correct.
         options: [...order, ...[...opts.keys()].filter((k) => !order.includes(k))]
           .map((id) => opts.get(id))

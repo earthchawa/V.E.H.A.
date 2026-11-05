@@ -1,8 +1,10 @@
 import { createHash, randomInt } from "node:crypto";
 
-export type QType = "SINGLE" | "MULTIPLE" | "SHORT" | "ESSAY";
+import { isBlankCode, type CodeFiles } from "./code";
+
+export type QType = "SINGLE" | "MULTIPLE" | "SHORT" | "ESSAY" | "CODE";
 export type Option = { id: string; text: string; correct: boolean };
-export type Response = { choice?: string[]; text?: string };
+export type Response = { choice?: string[]; text?: string; files?: CodeFiles };
 export type QuestionForGrading = { type: QType; points: number; options: Option[]; accepted: string[] };
 
 // ---------- grading ----------
@@ -36,6 +38,8 @@ export function autoGrade(q: QuestionForGrading, r: Response | null | undefined)
     if (!text) return 0;
     return q.accepted.some((a) => normaliseShort(a) === text) ? q.points : null;
   }
+  // CODE: graded by hand (cadets run it in the exam page; instructors can run it again when marking).
+  if (q.type === "CODE") return isBlankCode(r?.files) ? 0 : null;
   // ESSAY: blank answers get 0 automatically; anything else is graded by hand.
   return (r?.text ?? "").trim() ? null : 0;
 }

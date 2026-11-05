@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { useI18n } from "@/lib/i18n/client";
 import { Modal } from "@/components/Modal";
+import { asLanguage } from "@/lib/code";
 import { QuestionEditor, type QuestionDraft } from "./QuestionEditor";
 import { deleteQuestionAction, moveQuestionAction, reorderQuestionsAction } from "./actions";
 
@@ -58,6 +59,7 @@ export function QuestionList({ quizId, questions }: { quizId: string; questions:
             <span className="cursor-grab select-none text-subtle active:cursor-grabbing" title={t("qz.dragHint")} aria-hidden>⋮⋮</span>
             <span className="text-xs font-semibold text-accent">{t("qz.question", { n: i + 1 })}</span>
             <span className="badge bg-surface-3 text-muted">{t(`qz.type.${q.type}`)}</span>
+            {q.type === "CODE" && q.language && <span className="badge bg-accent/10 text-accent">{t(`code.lang.${asLanguage(q.language)}`)}</span>}
             <span className="text-xs text-subtle">{t("qz.pts", { n: q.points })}</span>
             <div className="ml-auto flex items-center gap-1">
               {(["up", "down"] as const).map((dir) => (

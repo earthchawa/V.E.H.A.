@@ -6,6 +6,7 @@ import { FormMessage } from "@/components/FormMessage";
 import { SubmitButton } from "@/components/SubmitButton";
 import { useI18n } from "@/lib/i18n/client";
 import type { Option, QType } from "@/lib/quiz";
+import { CODE_LANGUAGES, DEFAULT_STARTER, LANGUAGE_FILES, asLanguage, type CodeLanguage } from "@/lib/code";
 import { saveQuestionAction } from "./actions";
 
 export type QuestionDraft = {
@@ -16,6 +17,8 @@ export type QuestionDraft = {
   options: Option[];
   accepted: string[];
   codeAnswer: boolean;
+  language?: string | null;
+  starter?: Record<string, string>;
 };
 
 export const NEW_QUESTION: QuestionDraft = {
@@ -40,6 +43,10 @@ export function QuestionEditor({ quizId, draft = NEW_QUESTION, onDone, closeOnSu
   const [type, setType] = useState<QType>(draft.type);
   const [options, setOptions] = useState<Option[]>(draft.options.length ? draft.options : NEW_QUESTION.options);
   const choice = type === "SINGLE" || type === "MULTIPLE";
+  const [language, setLanguage] = useState<CodeLanguage>(asLanguage(draft.language));
+  const hasStarter = draft.type === "CODE" && draft.starter && Object.keys(draft.starter).length > 0;
+  const starterFor = (lang: CodeLanguage, file: string) =>
+    hasStarter && asLanguage(draft.language) === lang ? (draft.starter?.[file] ?? "") : (DEFAULT_STARTER[lang][file] ?? "");
 
   // After adding a question, start the next one from a clean slate; after editing, close the editor.
   useEffect(() => {
@@ -47,6 +54,7 @@ export function QuestionEditor({ quizId, draft = NEW_QUESTION, onDone, closeOnSu
     if (draft.id) onDone?.();
     else {
       setType("SINGLE");
+      setLanguage("python");
       setOptions(NEW_QUESTION.options);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -76,7 +84,7 @@ export function QuestionEditor({ quizId, draft = NEW_QUESTION, onDone, closeOnSu
         <div>
           <label className="label" htmlFor={`qt-${draft.id}`}>{t("qz.type")}</label>
           <select id={`qt-${draft.id}`} name="type" className="input" value={type} onChange={(e) => setType(e.target.value as QType)}>
-            {(["SINGLE", "MULTIPLE", "SHORT", "ESSAY"] as const).map((k) => <option key={k} value={k}>{t(`qz.type.${k}`)}</option>)}
+            {(["SINGLE", "MULTIPLE", "SHORT", "ESSAY", "CODE"] as const).map((k) => <option key={k} value={k}>{t(`qz.type.${k}`)}</option>)}
           </select>
         </div>
         <div>
@@ -142,6 +150,36 @@ export function QuestionEditor({ quizId, draft = NEW_QUESTION, onDone, closeOnSu
         <label className="flex items-center gap-2 text-sm text-muted">
           <input type="checkbox" name="codeAnswer" defaultChecked={draft.codeAnswer} className="accent-accent" /> {t("qz.codeAnswer")}
         </label>
+      )}
+      {type === "CODE" && (
+        <div className="space-y-3" data-testid="code-question-fields">
+          <p className="rounded-lg border border-border bg-surface-2 px-3 py-2 text-xs leading-relaxed text-muted">{t("qz.code.hint")}</p>
+          <div>
+            <label className="label" htmlFor={`ql-${draft.id}`}>{t("qz.code.language")}</label>
+            <select id={`ql-${draft.id}`} name="language" className="input" value={language} onChange={(e) => setLanguage(e.target.value as CodeLanguage)}>
+              {CODE_LANGUAGES.map((l) => <option key={l} value={l}>{t(`code.lang.${l}`)}</option>)}
+            </select>
+          </div>
+          <div>
+            <span className="label">{t("qz.code.starter")}</span>
+            <div className="space-y-2" key={language}>
+              {LANGUAGE_FILES[language].map((f) => (
+                <div key={f}>
+                  <label className="mb-1 block font-mono text-[11px] text-subtle" htmlFor={`qs-${draft.id}-${f}`}>{f}</label>
+                  <textarea
+                    id={`qs-${draft.id}-${f}`}
+                    name={`starter:${f}`}
+                    rows={4}
+                    className="input font-mono text-[13px]"
+                    defaultValue={starterFor(language, f)}
+                    spellCheck={false}
+                  />
+                </div>
+              ))}
+            </div>
+            <p className="mt-1.5 text-xs text-subtle">{t("qz.code.starterHint")}</p>
+          </div>
+        </div>
       )}
       <FormMessage state={state} />
       <div className="flex items-center gap-3">

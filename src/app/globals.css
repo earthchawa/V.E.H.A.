@@ -186,3 +186,13 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .glow-border::before, .float-slow, .fade-up { animation: none; }
 }
+
+/* Code editor syntax colours (CodeEditor.tsx). */
+:root {
+  --code-keyword: #c792ea; --code-string: #c3e88d; --code-number: #f78c6c; --code-comment: #6b7280;
+  --code-function: #82aaff; --code-type: #ffcb6b; --code-tag: #f07178; --code-attr: #89ddff;
+}
+:root[data-theme="light"] {
+  --code-keyword: #7c3aed; --code-string: #15803d; --code-number: #c2410c; --code-comment: #6b7280;
+  --code-function: #1d4ed8; --code-type: #a16207; --code-tag: #be123c; --code-attr: #0369a1;
+}

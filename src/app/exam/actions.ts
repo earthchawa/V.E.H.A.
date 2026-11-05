@@ -5,6 +5,7 @@ import type { Prisma } from "@prisma/client";
 import { requireUser } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
+import { asLanguage, cleanFiles } from "@/lib/code";
 import { quizPhase, type Layout, type Response } from "@/lib/quiz";
 import { asOptions, examBlockForAction, finalizeAttempt, isExpired, startAttempt } from "@/lib/quiz-server";
 
@@ -55,6 +56,8 @@ export async function saveAnswerAction(attemptId: string, questionId: string, re
     const valid = new Set(asOptions(q).map((o) => o.id));
     const choice = [...new Set((response.choice ?? []).map(String))].filter((id) => valid.has(id));
     clean = { choice: q.type === "SINGLE" ? choice.slice(0, 1) : choice };
+  } else if (q.type === "CODE") {
+    clean = { files: cleanFiles(asLanguage(q.language), response.files) };
   } else {
     clean = { text: String(response.text ?? "").slice(0, 50000) };
   }

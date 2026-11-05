@@ -1,3 +1,5 @@
+import { config } from "@/lib/config";
+import { sebRequired } from "@/lib/quiz-server";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { loadCourse } from "@/lib/course";
@@ -68,6 +70,7 @@ export default async function QuizPage({
     ]);
     const settingsForm = (
       <QuizForm
+        sebEnabled={config.sebEnabled}
         offeringId={offering.id}
         quizId={quiz.id}
         categories={categories}
@@ -122,6 +125,8 @@ export default async function QuizPage({
                 options: asOptions(q),
                 accepted: asAccepted(q),
                 codeAnswer: q.codeAnswer,
+                language: q.language,
+                starter: q.starter as Record<string, string>,
               }))}
             />
           </section>
@@ -133,7 +138,7 @@ export default async function QuizPage({
                 {row(t("qz.f.opensAt"), quiz.opensAt ? date(quiz.opensAt) : "—")}
                 {row(t("qz.f.closesAt"), quiz.closesAt ? date(quiz.closesAt) : "—")}
                 {row(t("qz.f.timeLimit"), quiz.timeLimitMin ?? "—")}
-                {row(t("qz.f.mode"), t(quiz.requireSeb ? "qz.mode.seb" : "qz.mode.browser"))}
+                {row(t("qz.f.mode"), t(sebRequired(quiz) ? "qz.mode.seb" : "qz.mode.fullscreen"))}
                 {row(t("qz.f.where"), quiz.networks.length ? quiz.networks.map((n) => n.name).join(", ") : t("qz.where.anywhere"))}
                 {row(t("qz.f.results"), t(`qz.res.${quiz.results}`))}
               </dl>
@@ -192,6 +197,7 @@ export default async function QuizPage({
                     options={asOptions(q)}
                     accepted={asAccepted(q)}
                     codeAnswer={q.codeAnswer}
+                    language={q.language}
                     response={(a?.response as Response) ?? null}
                     showKey
                     labels={{ noAnswer: t("qz.noAnswer"), correctAnswer: t("qz.correctAnswer") }}
@@ -224,7 +230,7 @@ export default async function QuizPage({
           </li>
           <li>{t("qz.rule.autosave")}</li>
           <li>{t("qz.rule.integrity")}</li>
-          {quiz.requireSeb && <li>{t("qz.rule.seb")}</li>}
+          {sebRequired(quiz) && <li>{t("qz.rule.seb")}</li>}
         </ul>
         {block ? (
           <p className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-danger" data-testid="quiz-blocked">

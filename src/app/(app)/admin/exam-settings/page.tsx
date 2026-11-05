@@ -1,3 +1,4 @@
+import { config } from "@/lib/config";
 import { headers } from "next/headers";
 import { db } from "@/lib/db";
 import { getI18n } from "@/lib/i18n/server";
@@ -51,7 +52,7 @@ export default async function ExamSettingsPage() {
             </ul>
           )}
         </section>
-        <section className="card space-y-4">
+        {config.sebEnabled && <section className="card space-y-4">
           <h2 className="text-sm font-semibold">{t("es.seb")}</h2>
           <p className="text-xs leading-relaxed text-muted">{t("es.sebSteps")}</p>
           <div>
@@ -59,7 +60,13 @@ export default async function ExamSettingsPage() {
             <code className="block select-all rounded-lg bg-surface-2 px-3 py-2 font-mono text-xs">{startUrl}</code>
           </div>
           <SebKeysForm keys={keys} />
-        </section>
+        </section>}
+        {!config.sebEnabled && (
+          <section className="card space-y-2" data-testid="exam-mode-note">
+            <h2 className="text-sm font-semibold">{t("es.modeTitle")}</h2>
+            <p className="text-xs leading-relaxed text-muted">{t("es.modeNote")}</p>
+          </section>
+        )}
       </div>
     </div>
   );

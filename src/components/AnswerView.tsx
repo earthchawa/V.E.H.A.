@@ -1,4 +1,6 @@
 import type { Option, Response } from "@/lib/quiz";
+import { asLanguage, cleanFiles, isBlankCode } from "@/lib/code";
+import { CodeWorkspace } from "./code/CodeWorkspace";
 
 /** Read-only rendering of a cadet's answer, optionally with the key. */
 export function AnswerView({
@@ -6,14 +8,17 @@ export function AnswerView({
   options,
   accepted,
   codeAnswer,
+  language,
   response,
   showKey,
   labels,
 }: {
-  type: "SINGLE" | "MULTIPLE" | "SHORT" | "ESSAY";
+  type: "SINGLE" | "MULTIPLE" | "SHORT" | "ESSAY" | "CODE";
   options: Option[];
   accepted: string[];
   codeAnswer: boolean;
+  /** CODE questions: the language, so the answer can be run again. */
+  language?: string | null;
   response: Response | null;
   showKey: boolean;
   labels: { noAnswer: string; correctAnswer: string };
@@ -35,6 +40,11 @@ export function AnswerView({
         })}
       </ul>
     );
+  }
+  if (type === "CODE") {
+    if (isBlankCode(response?.files)) return <p className="text-sm text-subtle">{labels.noAnswer}</p>;
+    const lang = asLanguage(language);
+    return <CodeWorkspace language={lang} files={cleanFiles(lang, response?.files)} readOnly idPrefix="answer" />;
   }
   const text = response?.text?.trim();
   return (

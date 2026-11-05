@@ -1,3 +1,4 @@
+import { config } from "./config";
 import { headers } from "next/headers";
 import type { Prisma, Quiz, QuizAttempt, QuizQuestion } from "@prisma/client";
 import { db } from "./db";
@@ -137,6 +138,9 @@ export async function refreshMaxScores(quizId: string): Promise<void> {
 export type Block = "seb" | "ip" | null;
 type QuizAccess = Pick<Quiz, "id" | "requireSeb">;
 
+/** SEB is enforced only while the feature is switched on (config.sebEnabled). */
+export const sebRequired = (quiz: { requireSeb: boolean }) => config.sebEnabled && quiz.requireSeb;
+
 /** Allowed CIDRs for a quiz = all exam rooms it is restricted to (empty = anywhere). */
 async function allowList(quizId: string): Promise<string> {
   const networks = await db.examNetwork.findMany({ where: { quizzes: { some: { id: quizId } } }, select: { cidrs: true } });
@@ -148,7 +152,7 @@ export async function examBlock(quiz: QuizAccess, path: string): Promise<Block> 
   const h = await headers();
   const { ip, userAgent } = await requestMeta();
   if (!ipAllowed(ip, await allowList(quiz.id))) return "ip";
-  if (quiz.requireSeb) {
+  if (sebRequired(quiz)) {
     const proto = h.get("x-forwarded-proto") ?? "http";
     const host = h.get("x-forwarded-host") ?? h.get("host") ?? "";
     const ok = sebOk({
@@ -167,7 +171,7 @@ export async function examBlockForAction(quiz: QuizAccess): Promise<Block> {
   const h = await headers();
   const { ip, userAgent } = await requestMeta();
   if (!ipAllowed(ip, await allowList(quiz.id))) return "ip";
-  if (quiz.requireSeb && !h.get("x-safeexambrowser-configkeyhash") && !/\bSEB\b|SafeExamBrowser/i.test(userAgent ?? "")) return "seb";
+  if (sebRequired(quiz) && !h.get("x-safeexambrowser-configkeyhash") && !/\bSEB\b|SafeExamBrowser/i.test(userAgent ?? "")) return "seb";
   return null;
 }
 

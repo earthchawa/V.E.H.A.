@@ -44,7 +44,10 @@ export function QuizForm({
   categories = [],
   networks = [],
   closeOnSuccess = false,
+  sebEnabled = false,
 }: {
+  /** Offer the Safe Exam Browser mode (config.sebEnabled). */
+  sebEnabled?: boolean;
   offeringId: string;
   quizId?: string | null;
   defaults?: QuizDefaults;
@@ -122,11 +125,17 @@ export function QuizForm({
           <option value="FULL">{t("qz.res.FULL")}</option>
         </select>
       </div>
-      <fieldset className="space-y-2">
-        <legend className="label">{t("qz.f.mode")}</legend>
-        {choice(!seb, () => setSeb(false), t("qz.mode.browser"), t("qz.mode.browserHint"), "requireSeb", "")}
-        {choice(seb, () => setSeb(true), t("qz.mode.seb"), t("qz.mode.sebHint"), "requireSeb", "on")}
-      </fieldset>
+      {sebEnabled ? (
+        <fieldset className="space-y-2">
+          <legend className="label">{t("qz.f.mode")}</legend>
+          {choice(!seb, () => setSeb(false), t("qz.mode.browser"), t("qz.mode.browserHint"), "requireSeb", "")}
+          {choice(seb, () => setSeb(true), t("qz.mode.seb"), t("qz.mode.sebHint"), "requireSeb", "on")}
+        </fieldset>
+      ) : (
+        <p className="rounded-lg border border-border bg-surface-2 px-3 py-2.5 text-xs leading-relaxed text-muted" data-testid="fullscreen-note">
+          {t("qz.mode.fullscreenNote")}
+        </p>
+      )}
       <fieldset className="space-y-2">
         <legend className="label">{t("qz.f.where")}</legend>
         {choice(!roomsOnly, () => setRoomsOnly(false), t("qz.where.anywhere"), "", "where", "anywhere")}
