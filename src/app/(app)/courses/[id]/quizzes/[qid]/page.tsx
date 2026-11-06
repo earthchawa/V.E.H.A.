@@ -47,7 +47,6 @@ export default async function QuizPage({
 
   const header = (
     <div className="mb-6">
-      <Link href={`/courses/${offering.id}/quizzes`} className="text-xs text-muted transition hover:text-fg">{t("qz.backToQuizzes")}</Link>
       <div className="mt-2 flex flex-wrap items-center gap-3">
         <h2 className="text-xl font-semibold tracking-tight">{quiz.title}</h2>
         <span className="badge bg-surface-3 text-muted">

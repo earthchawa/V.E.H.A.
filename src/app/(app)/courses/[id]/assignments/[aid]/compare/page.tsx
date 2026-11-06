@@ -46,7 +46,6 @@ export default async function ComparePage({
 
   return (
     <div>
-      <Link href={base} className="text-xs text-muted transition hover:text-fg">← {assignment.title}</Link>
       <h2 className="mt-2 mb-6 text-xl font-semibold tracking-tight">{t("cmp.title")}</h2>
       <div className="grid gap-6 lg:grid-cols-2">
         {[left, right].map(({ s, share, pieces }) => (

@@ -12,6 +12,7 @@ import { assembleContent } from "../src/lib/similarity/content";
 import { recheckAssignment } from "../src/lib/similarity/run";
 import { DEMO_ASSIGNMENTS } from "./demo-assignments";
 import { ACADEMY_DIVISIONS, ACADEMY_SUBJECT_AREAS } from "../src/lib/departments";
+import { CURRICULUM, curriculumDepartment, curriculumNote } from "../src/lib/curriculum";
 
 const db = new PrismaClient();
 const issued: [string, string, string][] = [];
@@ -37,6 +38,7 @@ async function ensureUser(username: string, fullName: string, role: Role) {
 async function main() {
   await ensureUser(process.env.SEED_ADMIN_USERNAME || "admin", "System Administrator", "ADMIN");
   await seedDivisions();
+  await seedCurriculum();
 
   if (process.argv.includes("--demo")) {
     const term = await db.term.upsert({
@@ -325,5 +327,16 @@ async function seedDivisions() {
     const parent = await db.department.findUnique({ where: { code: sa.parent } });
     if (!parent) continue;
     await db.department.create({ data: { code: sa.code, name: sa.name, nameTh: sa.nameTh, parentId: parent.id, position } });
+  }
+}
+
+/** Real courses from the curriculum book (CS / MA). Creates missing ones only; never overwrites admin edits. */
+async function seedCurriculum() {
+  for (const c of CURRICULUM) {
+    if (await db.course.findUnique({ where: { code: c.code } })) continue;
+    const dept = await db.department.findUnique({ where: { code: curriculumDepartment(c.code) } });
+    await db.course.create({
+      data: { code: c.code, title: c.title, titleTh: c.titleTh, credits: c.credits, description: curriculumNote(c), departmentId: dept?.id ?? null },
+    });
   }
 }

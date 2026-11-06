@@ -31,7 +31,6 @@ export default async function QuizResultsPage({ params }: { params: Promise<{ id
   return (
     <div className="space-y-6">
       <div>
-        <Link href={base} className="text-xs text-muted transition hover:text-fg">← {quiz.title}</Link>
         <h2 className="mt-2 text-xl font-semibold tracking-tight">{t("qz.results")}</h2>
         <p className="mt-1 text-sm text-muted">{t("qz.started", { n: attempts.length, total: students.length })}</p>
       </div>

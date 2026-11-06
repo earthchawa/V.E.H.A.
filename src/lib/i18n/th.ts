@@ -2,7 +2,7 @@ import type { Key } from "./en";
 
 /** Thai strings. Must define every key in en.ts (enforced by the type). */
 export const th: Record<Key, string> = {
-  "app.tagline": "ระบบการเรียนออนไลน์ รร.นนก.",
+  "app.tagline": "ระบบการเรียนออนไลน์ของ นนอ.",
   "app.org": "โรงเรียนนายเรืออากาศนวมินทกษัตริยาธิราช",
   "common.optional": "(ไม่บังคับ)",
   "common.working": "กำลังดำเนินการ…",
@@ -27,6 +27,7 @@ export const th: Record<Key, string> = {
   "nav.activity": "ประวัติการใช้งาน",
   "nav.menu": "เมนู",
   "nav.closeMenu": "ปิดเมนู",
+  "nav.back": "ย้อนกลับ",
   "nav.signOut": "ออกจากระบบ",
 
   "login.title": "เข้าสู่ระบบ",
@@ -227,7 +228,6 @@ export const th: Record<Key, string> = {
   "err.offeringExists": "วิชานี้เปิดในภาคเรียนและกลุ่มนี้แล้ว",
   "ok.offered": "เปิดวิชาแล้ว",
 
-  "roster.back": "← ภาคเรียนและวิชา",
   "roster.open": "ไปหน้าวิชา",
   "roster.add": "เพิ่มรายชื่อ",
   "roster.addAs": "เพิ่มเป็น",
@@ -365,7 +365,6 @@ export const th: Record<Key, string> = {
   "ok.assignmentCreated": "สร้างงานแล้ว",
   "ok.assignmentSaved": "บันทึกแล้ว",
   "err.dueInvalid": "กำหนดส่งไม่ถูกต้อง",
-  "asg.back": "← งานที่มอบหมาย",
   "asg.instructions": "คำสั่งงาน",
   "asg.yourSubmission": "งานของคุณ",
   "asg.submit": "ส่งงาน",
@@ -654,7 +653,6 @@ export const th: Record<Key, string> = {
   "qz.correctAnswer": "คำตอบที่ถูก",
   "qz.yourAnswer": "คำตอบของคุณ",
   "qz.noAnswer": "ไม่ได้ตอบ",
-  "qz.backToQuizzes": "← แบบทดสอบ",
   "qz.results": "ผลสอบ",
   "qz.started": "เริ่มทำแล้ว {n}/{total}",
   "qz.col.score": "คะแนน",

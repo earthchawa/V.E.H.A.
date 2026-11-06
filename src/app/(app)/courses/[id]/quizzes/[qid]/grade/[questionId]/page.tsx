@@ -34,7 +34,6 @@ export default async function GradeQuestionPage({ params }: { params: Promise<{ 
   return (
     <div>
       <div className="flex flex-wrap items-center gap-3">
-        <Link href={`${base}/results`} className="text-xs text-muted transition hover:text-fg">← {t("qz.results")}</Link>
         <div className="ml-auto flex gap-3 text-xs">
           {prev && <Link href={`${base}/grade/${prev.id}`} className="text-muted hover:text-fg">{t("qz.prevQuestion")}</Link>}
           {next && <Link href={`${base}/grade/${next.id}`} className="text-muted hover:text-fg">{t("qz.nextQuestion")}</Link>}

@@ -82,17 +82,25 @@ src/lib/
   collapses into `<MobileMenu>`; wide tables sit in `overflow-x-auto`, or become stacked rows.
 - **Styling:** semantic tokens in `src/app/globals.css` (`bg-surface`, `text-muted`, `text-danger`, …) with a
   light theme under `[data-theme="light"]`. Don't hard-code palette colours for text.
-- **Organisation:** two levels — department (กองวิชา, e.g. "Department of Computer Science" (CS),
-  "Department of Mathematics and Computer Science" (MC)) and subject area (สาขาวิชา, e.g. MA under MC, PH and CH
-  under MS); in code both are `Department` rows (`parentId` = level 2). Keep the English "Department of …" naming.
-  The brand (name V.E.H.A. = Virtual Educational Hangar for Air-cadets, formerly SkyCampus/AeroClass, + Academic Faculty logo, transparent; `logoDark` variant with light lettering for the
-  dark theme — no white plate) lives in `lib/brand.ts`.
+- **Organisation:** two levels — department (กองวิชา, e.g. "Department of Mathematics and Computer Science" (MC))
+  and subject area (ภาควิชา in Thai, e.g. CS ภาควิชาคอมพิวเตอร์ and MA ภาควิชาคณิตศาสตร์ under MC; PH and CH under MS);
+  in code both are `Department` rows (`parentId` = level 2). Keep the English "Department of …" naming.
+  The brand (name V.E.H.A. = Virtual Educational Hangar for Air-cadets, formerly SkyCampus/AeroClass; Academic
+  Faculty badge, transparent, `logoDark` variant with light lettering for the dark theme — no white plate; `mark`
+  = AF emblem for small sizes) lives in `lib/brand.ts`.
 - **Department branding:** each unit has a colour and a logo (bundled under `public/logos/`, or
   uploaded — PNG/JPG/WebP ≤ 1 MB, served by `/api/department-logo/[id]`). Subject areas inherit their department's
   colour/logo unless set. Use `courseTheme(code, department)` / `deptLogo()` from `lib/departments.ts`
   (falls back to a stable `cc-N` colour); inside, use `cc-bar` / `cc-text` / `cc-tint` (`--cc-fg` keeps text
   readable in both themes). The 10 academy departments live in `ACADEMY_DIVISIONS` (subject areas in
-  `ACADEMY_SUBJECT_AREAS`) and are seeded by `npm run db:seed` without overwriting admin edits. Mathematics & Computer and Computer Science are grey by the owner's request.
+  `ACADEMY_SUBJECT_AREAS`) and are seeded by `npm run db:seed` without overwriting admin edits. Mathematics & Computer is grey by the owner's request.
+- **Curriculum:** real courses from the curriculum book live in `lib/curriculum.ts` (คต → CS, คณ → MA; electives
+  numbered "xxx" left out). `db:seed` creates missing ones; existing databases got them from the
+  `*_curriculum_cs_ma` migration (generated from the list; a test keeps them in step). Add other departments'
+  courses the same way: extend the list and add a new data migration. Demo courses CS201/CS202/MA101 are demo-only.
+- **Navigation:** `<BackButton>` in the app layout (history first, else `parentPath()` from `lib/nav.ts`; add new
+  routes without their own page there). Don't add per-page "← …" links. The header uses the AF emblem
+  (`brand.mark`); the full faculty badge is only for the sign-in page.
 - Demo seed must stay **idempotent** (it runs on every Vercel build when `DEMO_SEED=true`).
 
 ## Migrations

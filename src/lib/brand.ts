@@ -5,6 +5,8 @@ export const brand = {
   /** What the letters stand for (kept in English in both languages, like the name). */
   fullName: "Virtual Educational Hangar for Air-cadets",
   logo: "/logos/academic-faculty.webp",
+  /** Just the "AF" emblem (no lettering or wreath): readable at header size, works on both themes. */
+  mark: "/logos/af-mark.webp",
   /** Same badge with the dark lettering lightened, for the dark theme (transparent background). */
   logoDark: "/logos/academic-faculty-dark.webp",
 };

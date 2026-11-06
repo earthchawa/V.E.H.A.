@@ -31,7 +31,6 @@ export default async function AssignmentPage({ params }: { params: Promise<{ id:
 
   const header = (
     <div className="mb-6">
-      <Link href={`/courses/${offering.id}/assignments`} className="text-xs text-muted transition hover:text-fg">{t("asg.back")}</Link>
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <h2 className="text-xl font-semibold tracking-tight">{assignment.title}</h2>
         {!assignment.isPublished && <span className="badge bg-surface-3 text-muted">{t("asg.draft")}</span>}

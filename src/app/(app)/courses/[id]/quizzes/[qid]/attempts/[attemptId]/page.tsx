@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { loadCourse } from "@/lib/course";
 import { db } from "@/lib/db";
@@ -39,7 +38,6 @@ export default async function AttemptPage({ params }: { params: Promise<{ id: st
 
   return (
     <div>
-      <Link href={`${base}/results`} className="text-xs text-muted transition hover:text-fg">← {t("qz.results")}</Link>
       <div className="mt-2 mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h2 className="text-xl font-semibold tracking-tight">{attempt.student.fullName}</h2>

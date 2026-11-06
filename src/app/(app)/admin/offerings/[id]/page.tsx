@@ -25,7 +25,6 @@ export default async function OfferingAdminPage({ params }: { params: Promise<{ 
 
   return (
     <div>
-      <Link href="/admin/courses" className="text-xs text-muted transition hover:text-fg">{t("roster.back")}</Link>
       <div className="mt-3">
         <PageHeader
           eyebrow={`${offering.course.code} · ${termLabel(offering.term)} · ${t("dash.section", { s: offering.section })}`}

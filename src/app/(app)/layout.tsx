@@ -5,6 +5,7 @@ import { PrefsSwitcher } from "@/components/PrefsSwitcher";
 import { Logo } from "@/components/Logo";
 import { NavLink } from "@/components/NavLink";
 import { MobileMenu } from "@/components/MobileMenu";
+import { BackButton } from "@/components/BackButton";
 import { logoutAction } from "../auth-actions";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -61,7 +62,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-6xl px-4 py-6 sm:py-10">{children}</main>
+      <main className="mx-auto max-w-6xl px-4 py-6 sm:py-10">
+        <BackButton />
+        {children}
+      </main>
     </div>
   );
 }

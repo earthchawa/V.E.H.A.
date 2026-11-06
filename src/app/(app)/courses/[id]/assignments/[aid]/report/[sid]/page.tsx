@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { loadCourse } from "@/lib/course";
 import { db } from "@/lib/db";
@@ -90,7 +89,6 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
 
   return (
     <div>
-      <Link href={base} className="text-xs text-muted transition hover:text-fg">← {assignment.title}</Link>
       <div className="mt-2 mb-6 flex flex-wrap items-end justify-between gap-6">
         <div>
           <h2 className="text-xl font-semibold tracking-tight">{t("rep.title")}</h2>

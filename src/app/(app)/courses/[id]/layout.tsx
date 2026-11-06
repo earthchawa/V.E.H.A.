@@ -20,10 +20,13 @@ export default async function CourseLayout({ params, children }: { params: Promi
         <div className="mb-3 flex items-center gap-2 text-xs text-muted" data-testid="course-dept">
           {logo && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={logo} alt="" className="h-6 w-auto max-w-12 object-contain" />
+            <img src={logo} alt="" className="h-6 w-auto max-w-12 shrink-0 object-contain" />
           )}
-          <span>{deptName(dept)}</span>
-          {dept.parent && <span className="text-subtle">· {deptName(dept.parent)}</span>}
+          {/* One line of text that wraps naturally on narrow screens. */}
+          <span className="min-w-0">
+            {deptName(dept)}
+            {dept.parent && <span className="text-subtle"> · {deptName(dept.parent)}</span>}
+          </span>
         </div>
       )}
       <PageHeader

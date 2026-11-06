@@ -1,7 +1,7 @@
 /** English strings — the source of truth for message keys. `{name}` placeholders are interpolated. */
 export const en = {
   // App
-  "app.tagline": "NKRAFA online classroom",
+  "app.tagline": "Online classroom for NKRAFA cadets",
   "app.org": "Navaminda Kasatriyadhiraj Royal Thai Air Force Academy",
   "common.optional": "(optional)",
   "common.working": "Working…",
@@ -29,6 +29,7 @@ export const en = {
   "nav.activity": "Activity",
   "nav.menu": "Menu",
   "nav.closeMenu": "Close menu",
+  "nav.back": "Back",
   "nav.signOut": "Sign out",
 
   // Sign in
@@ -239,7 +240,6 @@ export const en = {
   "ok.offered": "Course offered.",
 
   // Roster (admin)
-  "roster.back": "← Terms & courses",
   "roster.open": "Open course",
   "roster.add": "Add people",
   "roster.addAs": "Add as",
@@ -380,7 +380,6 @@ export const en = {
   "ok.assignmentCreated": "Assignment created.",
   "ok.assignmentSaved": "Saved.",
   "err.dueInvalid": "Invalid due date.",
-  "asg.back": "← Assignments",
   "asg.instructions": "Instructions",
   "asg.yourSubmission": "Your submission",
   "asg.submit": "Submit",
@@ -670,7 +669,6 @@ export const en = {
   "qz.correctAnswer": "Correct answer",
   "qz.yourAnswer": "Your answer",
   "qz.noAnswer": "No answer",
-  "qz.backToQuizzes": "← Quizzes",
   "qz.results": "Results",
   "qz.started": "{n}/{total} started",
   "qz.col.score": "Score",
