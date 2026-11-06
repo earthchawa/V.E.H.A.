@@ -31,7 +31,8 @@ export function Logo({ size = "sm" }: { size?: "sm" | "lg" }) {
       <img src={brand.mark} alt="" className="h-7 w-auto shrink-0 object-contain" />
       <span className="flex flex-col justify-center border-l border-border pl-2.5 leading-none">
         <span className="text-[15px] font-semibold tracking-[0.14em]">{brand.name}</span>
-        <span className="mt-1 hidden text-[10px] tracking-wide text-subtle sm:block">{brand.fullName}</span>
+        {/* Hidden at lg, where the full admin menu needs the room; shown again from xl. */}
+        <span className="mt-1 hidden text-[10px] tracking-wide text-subtle sm:block lg:hidden xl:block">{brand.fullName}</span>
       </span>
     </span>
   );
