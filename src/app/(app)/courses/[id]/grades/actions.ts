@@ -29,6 +29,22 @@ const refresh = (offeringId: string) => revalidatePath(`/courses/${offeringId}`,
 
 // ---------- Categories ----------
 
+/** Starting point for a course with no categories yet: coursework / midterm / final (editable afterwards). */
+export async function applyGradeTemplateAction(fd: FormData): Promise<void> {
+  const offeringId = String(fd.get("offeringId"));
+  const user = await requireManage(offeringId);
+  const { t } = await getI18n();
+  if (await db.gradeCategory.count({ where: { offeringId } })) return; // only on an empty setup
+  const rows = [
+    { name: t("gr.tpl.coursework"), weight: 40 },
+    { name: t("gr.tpl.midterm"), weight: 25 },
+    { name: t("gr.tpl.final"), weight: 35 },
+  ];
+  await db.gradeCategory.createMany({ data: rows.map((r, position) => ({ offeringId, ...r, position })) });
+  await audit({ actorId: user.id, action: "grade.category_added", targetType: "CourseOffering", targetId: offeringId, details: { template: rows } });
+  refresh(offeringId);
+}
+
 export async function addCategoryAction(offeringId: string, _: FormState, fd: FormData): Promise<FormState> {
   const user = await requireManage(offeringId);
   const { t } = await getI18n();

@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useI18n } from "@/lib/i18n/client";
-import { parentPath } from "@/lib/nav";
+import { isNavRoot, parentPath } from "@/lib/nav";
 
 /**
  * "← Back" above every app page except the dashboard. After moving around inside the app it goes back
@@ -21,7 +21,7 @@ export function BackButton() {
   }, [path]);
 
   const parent = parentPath(path);
-  if (!parent) return null;
+  if (!parent || isNavRoot(path)) return null;
   const goBack = () => {
     if (visited.current.length > 1) {
       visited.current.pop();

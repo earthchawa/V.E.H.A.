@@ -76,9 +76,12 @@ export function CreateCourseForm({ departments = [] }: { departments?: { id: str
 export function CreateOfferingForm({
   courses,
   terms,
+  defaultTermId,
 }: {
   courses: { id: string; label: string }[];
   terms: { id: string; label: string; isCurrent: boolean }[];
+  /** Semester picked on the page; falls back to the current one. */
+  defaultTermId?: string;
 }) {
   const [state, action, pending] = useActionState(createOfferingAction, undefined);
   const { t } = useI18n();
@@ -93,7 +96,7 @@ export function CreateOfferingForm({
       <div className="grid grid-cols-[1fr_5rem] gap-3">
         <div>
           <label className="label" htmlFor="termId">{t("tc.term")}</label>
-          <select id="termId" name="termId" className="input" defaultValue={terms.find((x) => x.isCurrent)?.id} required>
+          <select id="termId" name="termId" className="input" defaultValue={defaultTermId ?? terms.find((x) => x.isCurrent)?.id} required>
             {terms.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}
           </select>
         </div>

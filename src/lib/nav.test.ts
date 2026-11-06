@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parentPath } from "./nav";
+import { isNavRoot, parentPath } from "./nav";
 
 describe("parentPath", () => {
   it.each([
@@ -17,4 +17,11 @@ describe("parentPath", () => {
     ["/admin/users", "/"],
     ["/admin/offerings/o1", "/admin/courses"],
   ])("%s → %s", (path, parent) => expect(parentPath(path)).toBe(parent));
+
+  it("menu pages have no Back button", () => {
+    expect(isNavRoot("/admin/users")).toBe(true);
+    expect(isNavRoot("/admin/courses/")).toBe(true);
+    expect(isNavRoot("/admin/offerings/o1")).toBe(false);
+    expect(isNavRoot("/courses/c1")).toBe(false);
+  });
 });

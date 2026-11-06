@@ -103,8 +103,15 @@ src/lib/
   schedule (`year, semester, code, title_th, title_en, credits, section, instructors`; Thai codes such as คต 231
   map to CS231; creates missing terms/courses/sections, enrols instructors, never changes existing rows, so
   re-importing is safe). Real staff/cadet lists are uploaded through these screens — never commit them.
+- **Wording:** English UI says "semester" (never "term"; the model is still `Term`); Thai says ภาคเรียน.
+- **Admin screens:** Users = role tabs + live filters (`<FilterBar>`), grouped by department, one "Manage" dialog per
+  person (edit username/name/role/email/department — audited as `user.updated` with from/to — reset password,
+  disable). Semesters & courses = semester chips (current / upcoming) with sections grouped by subject area, plus a
+  course-catalogue tab. Instructors see an "upcoming semester" notice on the dashboard to prepare ahead.
+- **Gradebook (instructor):** tabs Scores | Grading setup (`?view=setup`); setup is 3 steps: categories & weights
+  (template button when empty), graded work = score-table columns (`GradeItem`), letter grades.
 - **Navigation:** `<BackButton>` in the app layout (history first, else `parentPath()` from `lib/nav.ts`; add new
-  routes without their own page there). Don't add per-page "← …" links. The header uses the AF emblem
+  routes without their own page there; hidden on top-menu pages, `NAV_ROOTS`). Don't add per-page "← …" links. The header uses the AF emblem
   (`brand.mark`); the full faculty badge is only for the sign-in page.
 - Demo seed must stay **idempotent** (it runs on every Vercel build when `DEMO_SEED=true`).
 

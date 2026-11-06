@@ -23,3 +23,7 @@ export function parentPath(path: string): string | null {
   }
   return seg.length > 1 ? join(seg.length - 1) : "/";
 }
+
+/** Pages reached straight from the top menu: there is nothing to go "back" to, so no Back button. */
+export const NAV_ROOTS = ["/", "/account", "/admin/users", "/admin/courses", "/admin/departments", "/admin/exam-settings", "/admin/audit"];
+export const isNavRoot = (path: string) => NAV_ROOTS.includes(path.replace(/\/+$/, "") || "/");

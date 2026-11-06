@@ -63,7 +63,7 @@ export function ScaleForm({ offeringId, scale }: { offeringId: string; scale: Sc
   const [state, action, pending] = useActionState(saveScaleAction.bind(null, offeringId), undefined);
   const { t } = useI18n();
   return (
-    <KeepForm action={action} pending={pending} className="space-y-3">
+    <KeepForm action={action} pending={pending} className="max-w-xs space-y-3">
       <table className="table">
         <thead><tr><th>{t("gr.letter")}</th><th>{t("gr.min")}</th></tr></thead>
         <tbody>

@@ -2,7 +2,7 @@
 
 import { KeepForm } from "@/components/KeepForm";
 import { useActionState } from "react";
-import { createUserAction, importUsersAction, resetUserPasswordAction } from "../actions";
+import { createUserAction, importUsersAction, resetUserPasswordAction, toggleUserActiveAction, updateUserAction } from "../actions";
 import { FormMessage } from "@/components/FormMessage";
 import { SubmitButton } from "@/components/SubmitButton";
 import { IssuedPasswords, type Issued } from "@/components/IssuedPasswords";
@@ -94,5 +94,84 @@ export function ResetPasswordButton({ userId, username }: { userId: string; user
         <SubmitButton className="btn-secondary" pendingText="…">{t("users.reset")}</SubmitButton>
       )}
     </form>
+  );
+}
+
+export type ManagedUser = {
+  id: string;
+  username: string;
+  fullName: string;
+  role: "ADMIN" | "INSTRUCTOR" | "STUDENT";
+  email: string | null;
+  department: string | null;
+  isActive: boolean;
+};
+
+/** Everything about one account in one place: details, then password reset and disabling. */
+export function ManageUserForm({ user, departments, isSelf }: { user: ManagedUser; departments: { code: string; label: string }[]; isSelf: boolean }) {
+  const [state, action, pending] = useActionState(updateUserAction.bind(null, user.id), undefined);
+  const { t } = useI18n();
+  const id = (f: string) => `mu-${user.id}-${f}`;
+  return (
+    <div className="space-y-6">
+      {/* Close on success: a renamed user moves in the sorted list, and the row (with this dialog) moves with it. */}
+      <KeepForm action={action} pending={pending} state={state} closeOnSuccess className="space-y-4">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label className="label" htmlFor={id("username")}>{t("login.id")}</label>
+            <input id={id("username")} name="username" className="input font-mono" defaultValue={user.username} required />
+          </div>
+          <div>
+            <label className="label" htmlFor={id("role")}>{t("account.role")}</label>
+            <select id={id("role")} name="role" className="input" defaultValue={user.role} disabled={isSelf}>
+              <option value="STUDENT">{t("role.STUDENT")}</option>
+              <option value="INSTRUCTOR">{t("role.INSTRUCTOR")}</option>
+              <option value="ADMIN">{t("role.ADMIN")}</option>
+            </select>
+            {isSelf && <input type="hidden" name="role" value={user.role} />}
+          </div>
+        </div>
+        <p className="-mt-2 text-xs text-subtle">{t("users.usernameHint")}</p>
+        <div>
+          <label className="label" htmlFor={id("fullName")}>{t("users.fullName")}</label>
+          <input id={id("fullName")} name="fullName" className="input" defaultValue={user.fullName} required />
+          <p className="mt-1 text-xs text-subtle">{t("users.fullNameHint")}</p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label className="label" htmlFor={id("dept")}>{t("dep.field")}</label>
+            <select id={id("dept")} name="department" className="input" defaultValue={user.department ?? ""}>
+              <option value="">{t("dep.unassigned")}</option>
+              {departments.map((d) => <option key={d.code} value={d.code}>{d.label}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="label" htmlFor={id("email")}>{t("users.email")} <span className="text-subtle">{t("common.optional")}</span></label>
+            <input id={id("email")} name="email" type="email" className="input" defaultValue={user.email ?? ""} />
+          </div>
+        </div>
+        <FormMessage state={state} />
+        <SubmitButton>{t("users.saveChanges")}</SubmitButton>
+      </KeepForm>
+
+      <div className="space-y-3 border-t border-border pt-4">
+        <h3 className="text-sm font-semibold">{t("users.accountActions")}</h3>
+        <div className="flex flex-wrap items-center gap-3">
+          <ResetPasswordButton userId={user.id} username={user.username} />
+          {!isSelf && (
+            <form
+              action={toggleUserActiveAction}
+              onSubmit={(e) => {
+                if (user.isActive && !confirm(t("users.disableConfirm", { id: user.username }))) e.preventDefault();
+              }}
+            >
+              <input type="hidden" name="userId" value={user.id} />
+              <button className={user.isActive ? "btn-danger" : "btn-secondary"}>{t(user.isActive ? "users.disable" : "users.enable")}</button>
+            </form>
+          )}
+        </div>
+        <p className="text-xs text-subtle">{t(user.isActive ? "users.disableHint" : "users.enableHint")}</p>
+      </div>
+    </div>
   );
 }

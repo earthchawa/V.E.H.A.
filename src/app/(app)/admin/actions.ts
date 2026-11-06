@@ -119,6 +119,49 @@ export async function toggleUserActiveAction(fd: FormData): Promise<void> {
   revalidatePath("/admin/users");
 }
 
+/**
+ * Edit an account: username (cadet number or staff login), full name with rank or academic title,
+ * role, email and department. Changes are audited with their old and new values.
+ */
+export async function updateUserAction(userId: string, _: FormState, fd: FormData): Promise<FormState> {
+  const me = await admin();
+  const { t } = await getI18n();
+  const user = await db.user.findUniqueOrThrow({ where: { id: userId }, include: { department: { select: { code: true } } } });
+
+  const username = String(fd.get("username") ?? "").trim();
+  const fullName = String(fd.get("fullName") ?? "").trim().replace(/\s+/g, " ").slice(0, 200);
+  const roleRaw = String(fd.get("role") ?? user.role);
+  const email = String(fd.get("email") ?? "").trim().toLowerCase() || null;
+  const deptCode = String(fd.get("department") ?? "").trim().toUpperCase() || null;
+
+  if (!/^[A-Za-z0-9._-]{3,32}$/.test(username)) return { error: t("users.err.username") };
+  if (!fullName) return { error: t("users.err.name") };
+  if (!["ADMIN", "INSTRUCTOR", "STUDENT"].includes(roleRaw)) return { error: t("common.invalid") };
+  const role = roleRaw as "ADMIN" | "INSTRUCTOR" | "STUDENT";
+  if (user.id === me.id && role !== "ADMIN") return { error: t("users.err.selfRole") }; // never lock yourself out
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { error: t("users.err.email") };
+  if (username !== user.username && (await db.user.findUnique({ where: { username } }))) return { error: t("users.err.taken", { id: username }) };
+  if (email && email !== user.email && (await db.user.findUnique({ where: { email } }))) return { error: t("users.err.emailTaken") };
+  const dept = deptCode ? await db.department.findUnique({ where: { code: deptCode } }) : null;
+  if (deptCode && !dept) return { error: t("common.invalid") };
+
+  const before = { username: user.username, fullName: user.fullName, role: user.role, email: user.email, department: user.department?.code ?? null };
+  const after = { username, fullName, role, email, department: dept?.code ?? null };
+  const changed = Object.fromEntries(
+    Object.keys(after)
+      .filter((k) => before[k as keyof typeof before] !== after[k as keyof typeof after])
+      .map((k) => [k, { from: before[k as keyof typeof before], to: after[k as keyof typeof after] }]),
+  );
+  if (!Object.keys(changed).length) return { success: t("ok.saved") };
+
+  await db.user.update({ where: { id: user.id }, data: { username, fullName, role, email, departmentId: dept?.id ?? null } });
+  // Sign them out after a role change so menus and permissions match at once (admins can't change their own role).
+  if (changed.role) await db.session.deleteMany({ where: { userId: user.id } });
+  await audit({ actorId: me.id, action: "user.updated", targetType: "User", targetId: user.id, details: changed });
+  revalidatePath("/admin/users");
+  return { success: t("ok.saved") };
+}
+
 // ---------- Terms / courses / offerings ----------
 
 const termSchema = z.object({

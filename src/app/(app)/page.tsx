@@ -34,8 +34,27 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const { term: termParam } = await searchParams;
   const { t, tn, term: termLabel, date, lang } = await getI18n();
 
-  const terms = await db.term.findMany({ orderBy: [{ academicYear: "desc" }, { semester: "desc" }] });
-  const term = terms.find((x) => x.id === termParam) ?? terms.find((x) => x.isCurrent) ?? terms[0];
+  const allTerms = await db.term.findMany({ orderBy: [{ academicYear: "desc" }, { semester: "desc" }] });
+  // Instructors and cadets only see semesters they have courses in (plus the current one); admins see all.
+  const mine =
+    user.role === "ADMIN"
+      ? null
+      : new Set((await db.courseOffering.findMany({ where: { enrollments: { some: { userId: user.id } } }, select: { termId: true }, distinct: ["termId"] })).map((o) => o.termId));
+  const terms = allTerms.filter((x) => !mine || x.isCurrent || mine.has(x.id));
+  const current = allTerms.find((x) => x.isCurrent) ?? null;
+  const term = terms.find((x) => x.id === termParam) ?? current ?? terms[0];
+  const isUpcoming = (x: { academicYear: number; semester: number }) =>
+    !!current && (x.academicYear > current.academicYear || (x.academicYear === current.academicYear && x.semester > current.semester));
+  // Courses this instructor teaches in a later semester, so they can prepare ahead.
+  const upcomingTeaching =
+    term?.isCurrent
+      ? await db.courseOffering.findMany({
+          where: { term: { OR: terms.filter(isUpcoming).map((x) => ({ id: x.id })) }, enrollments: { some: { userId: user.id, role: "INSTRUCTOR" } } },
+          include: { term: true, course: { select: { code: true } } },
+          orderBy: { course: { code: "asc" } },
+        })
+      : [];
+  const nextTerm = upcomingTeaching[0]?.term ?? null;
 
   const where: Prisma.CourseOfferingWhereInput = {
     termId: term?.id ?? "__none__",
@@ -155,19 +174,40 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         eyebrow={term ? termLabel(term) : undefined}
         title={t("dash.title")}
         description={term ? tn("dash.count", offerings.length) : t("dash.noTerms")}
-        actions={
-          terms.length > 1 && (
-            <form className="flex items-center gap-2">
-              <select name="term" defaultValue={term?.id} className="input h-9 w-auto py-0" aria-label={t("tc.term")}>
-                {terms.map((x) => (
-                  <option key={x.id} value={x.id}>{termLabel(x)}{x.isCurrent ? ` ${t("dash.current")}` : ""}</option>
-                ))}
-              </select>
-              <button className="btn-secondary h-9">{t("dash.view")}</button>
-            </form>
-          )
-        }
       />
+      {terms.length > 1 && (
+        <nav className="-mt-4 mb-6 flex flex-wrap gap-2" aria-label={t("tc.term")} data-testid="dash-semesters">
+          {[...terms].reverse().map((x) => (
+            <Link
+              key={x.id}
+              href={x.isCurrent ? "/" : `/?term=${x.id}`}
+              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs transition ${
+                term?.id === x.id ? "border-accent/50 bg-accent/15 text-fg" : "border-border text-muted hover:bg-surface-3 hover:text-fg"
+              }`}
+            >
+              {termLabel(x)}
+              {x.isCurrent && <span className="text-success">● {t("dash.currentShort")}</span>}
+              {isUpcoming(x) && <span className="text-accent">{t("tc.upcoming")}</span>}
+            </Link>
+          ))}
+        </nav>
+      )}
+      {nextTerm && (
+        <Link
+          href={`/?term=${nextTerm.id}`}
+          className="mb-8 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-border bg-surface px-4 py-3 text-sm transition hover:bg-surface-2"
+          data-testid="upcoming-teaching"
+        >
+          <span className="badge bg-accent/10 text-accent">{t("tc.upcoming")}</span>
+          <span className="min-w-0 flex-1">
+            {t("dash.upcoming", { term: termLabel(nextTerm), n: upcomingTeaching.filter((o) => o.termId === nextTerm.id).length })}
+            <span className="ml-1.5 font-mono text-xs text-subtle">
+              {upcomingTeaching.filter((o) => o.termId === nextTerm.id).map((o) => o.course.code).join(" · ")}
+            </span>
+          </span>
+          <span className="text-accent">{t("dash.prepare")} →</span>
+        </Link>
+      )}
 
       {showTodo && (
         <section
