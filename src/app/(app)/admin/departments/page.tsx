@@ -70,7 +70,7 @@ export default async function DepartmentsPage() {
     <div>
       <PageHeader
         title={t("dep.title")}
-        description={t("dep.desc")}
+        help={t("dep.desc")}
         actions={
           <Modal label={`+ ${t("dep.add")}`} title={t("dep.add")} size="lg" testId="add-department">
             <DepartmentForm divisions={divisionOptions} />

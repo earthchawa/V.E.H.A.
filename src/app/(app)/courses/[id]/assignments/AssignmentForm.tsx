@@ -7,6 +7,7 @@ import { FormMessage } from "@/components/FormMessage";
 import { SubmitButton } from "@/components/SubmitButton";
 import { useI18n } from "@/lib/i18n/client";
 import { SectionCheckboxes, type SectionRef } from "@/components/SectionCheckboxes";
+import { InfoTip } from "@/components/InfoTip";
 
 export type AssignmentDefaults = {
   title: string;
@@ -66,13 +67,12 @@ export function AssignmentForm({
         <textarea id="a-instructions" name="instructions" rows={4} className="input" defaultValue={d.instructions} />
       </div>
       <div>
-        <label className="label" htmlFor="a-due">{t("asg.f.due")}</label>
+        <label className="label inline-flex items-center gap-1.5" htmlFor="a-due">{t("asg.f.due")} <InfoTip text={t("asg.f.dueHint")} align="start" /></label>
         <input id="a-due" name="dueAt" type="datetime-local" className="input" defaultValue={d.dueAt} />
-        <p className="mt-1.5 text-xs text-subtle">{t("asg.f.dueHint")}</p>
       </div>
       <div className="grid grid-cols-[6rem_1fr] gap-3">
         <div>
-          <label className="label" htmlFor="a-points">{t("asg.f.points")}</label>
+          <label className="label inline-flex items-center gap-1.5" htmlFor="a-points">{t("asg.f.points")} <InfoTip text={t("asg.f.pointsHint")} align="start" /></label>
           <input id="a-points" name="points" inputMode="decimal" className="input" defaultValue={d.points} />
         </div>
         <div>
@@ -82,13 +82,12 @@ export function AssignmentForm({
             {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </div>
-        <p className="col-span-2 -mt-1.5 text-xs text-subtle">{t("asg.f.pointsHint")}</p>
       </div>
       <div className="space-y-2 text-sm text-muted">
         <label className="flex items-center gap-2"><input type="checkbox" name="allowLate" defaultChecked={d.allowLate} className="accent-accent" /> {t("asg.f.allowLate")}</label>
         <label className="flex items-center gap-2"><input type="checkbox" name="isPublished" defaultChecked={d.isPublished} className="accent-accent" /> {t("asg.f.published")}</label>
         <label className="flex items-center gap-2"><input type="checkbox" name="checkSimilarity" defaultChecked={d.checkSimilarity} className="accent-accent" /> {t("asg.f.check")}</label>
-        <label className="flex items-start gap-2 pl-5"><input type="checkbox" name="ignoreCommon" defaultChecked={d.ignoreCommon} className="mt-1 accent-accent" /> <span>{t("asg.f.ignoreCommon")}<span className="block text-xs text-subtle">{t("asg.f.ignoreCommonHint")}</span></span></label>
+        <label className="flex items-start gap-2 pl-5"><input type="checkbox" name="ignoreCommon" defaultChecked={d.ignoreCommon} className="mt-1 accent-accent" /> <span className="inline-flex items-center gap-1.5">{t("asg.f.ignoreCommon")} <InfoTip text={t("asg.f.ignoreCommonHint")} /></span></label>
       </div>
       <div>
         <label className="label" htmlFor="a-vis">{t("asg.f.reportVis")}</label>
@@ -99,9 +98,8 @@ export function AssignmentForm({
         </select>
       </div>
       <div>
-        <label className="label" htmlFor="a-base">{t("asg.f.baseText")} <span className="text-subtle">{t("common.optional")}</span></label>
+        <label className="label inline-flex items-center gap-1.5" htmlFor="a-base">{t("asg.f.baseText")} <span className="text-subtle">{t("common.optional")}</span> <InfoTip text={t("asg.f.baseHint")} align="start" /></label>
         <textarea id="a-base" name="baseText" rows={3} className="input font-mono text-xs" defaultValue={d.baseText} />
-        <p className="mt-1.5 text-xs text-subtle">{t("asg.f.baseHint")}</p>
       </div>
       {!assignmentId && <SectionCheckboxes sections={sections} />}
       <FormMessage state={state} />

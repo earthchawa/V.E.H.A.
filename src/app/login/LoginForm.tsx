@@ -6,6 +6,7 @@ import { loginAction } from "../auth-actions";
 import { FormMessage } from "@/components/FormMessage";
 import { SubmitButton } from "@/components/SubmitButton";
 import { useI18n } from "@/lib/i18n/client";
+import { InfoTip } from "@/components/InfoTip";
 
 export function LoginForm() {
   const [state, action, pending] = useActionState(loginAction, undefined);
@@ -13,7 +14,7 @@ export function LoginForm() {
   return (
     <KeepForm action={action} pending={pending} className="space-y-4">
       <div>
-        <label className="label" htmlFor="username">{t("login.id")}</label>
+        <label className="label inline-flex items-center gap-1.5" htmlFor="username">{t("login.id")} <InfoTip text={t("login.subtitle")} align="start" /></label>
         <input id="username" name="username" className="input" autoComplete="username" placeholder={t("login.idPlaceholder")} required autoFocus />
       </div>
       <div>

@@ -14,7 +14,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   const { reset } = await searchParams;
   const { t } = await getI18n();
   return (
-    <AuthShell title={t("login.title")} subtitle={t("login.subtitle")}>
+    <AuthShell title={t("login.title")}>
       {reset && (
         <p className="mb-4 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-sm text-success">
           {t("login.resetDone")}

@@ -9,6 +9,7 @@ import { Modal } from "@/components/Modal";
 import { ConfirmButton } from "@/app/(app)/courses/[id]/grades/ConfirmButton";
 import { deleteExamNetworkAction } from "../actions";
 import { AddRoomForm, SebKeysForm } from "./forms";
+import { InfoTip } from "@/components/InfoTip";
 
 export async function generateMetadata() {
   return { title: (await getI18n()).t("es.title") };
@@ -26,16 +27,15 @@ export default async function ExamSettingsPage() {
 
   return (
     <div>
-      <PageHeader title={t("es.title")} description={t("es.desc")} />
+      <PageHeader title={t("es.title")} help={t("es.desc")} />
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="card">
           <div className="mb-4 flex items-center justify-between gap-3">
-            <h2 className="text-sm font-semibold">{t("es.rooms")}</h2>
+            <h2 className="flex items-center gap-1.5 text-sm font-semibold">{t("es.rooms")} <InfoTip text={t("es.roomsHint")} align="start" /></h2>
             <Modal label={`+ ${t("es.addRoom")}`} title={t("es.addRoom")} buttonClassName="btn-secondary h-8" testId="add-room">
               <AddRoomForm yourIp={ip} />
             </Modal>
           </div>
-          <p className="-mt-2 mb-4 text-xs text-muted">{t("es.roomsHint")}</p>
           {rooms.length === 0 ? (
             <p className="text-sm text-subtle">{t("es.noRooms")}</p>
           ) : (

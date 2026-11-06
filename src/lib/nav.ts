@@ -27,3 +27,23 @@ export function parentPath(path: string): string | null {
 /** Pages reached straight from the top menu: there is nothing to go "back" to, so no Back button. */
 export const NAV_ROOTS = ["/", "/account", "/admin/users", "/admin/courses", "/admin/departments", "/admin/exam-settings", "/admin/audit"];
 export const isNavRoot = (path: string) => NAV_ROOTS.includes(path.replace(/\/+$/, "") || "/");
+
+/** What the Back button returns to, for a label like "Back to the assignment". */
+export type BackTarget = "dashboard" | "assignments" | "assignment" | "quizzes" | "quiz" | "results" | "semesters" | "page";
+export function backTarget(path: string): BackTarget {
+  const parent = parentPath(path);
+  if (!parent || parent === "/") return "dashboard";
+  const seg = parent.split("/").filter(Boolean);
+  if (seg[0] === "courses") {
+    if (seg.length === 3 && seg[2] === "assignments") return "assignments";
+    if (seg.length === 4 && seg[2] === "assignments") return "assignment";
+    if (seg.length === 3 && seg[2] === "quizzes") return "quizzes";
+    if (seg.length === 4 && seg[2] === "quizzes") return "quiz";
+    if (seg[4] === "results") return "results";
+  }
+  if (parent === "/admin/courses") return "semesters";
+  return "page";
+}
+
+/** Course pages below the tabs (an assignment, a report, quiz results…): Back sits under the tabs there. */
+export const isCourseDetail = (path: string) => /^\/courses\/[^/]+\/(assignments|quizzes)\/[^/]+/.test(path);

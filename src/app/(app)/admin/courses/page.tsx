@@ -100,7 +100,7 @@ export default async function AdminCoursesPage({ searchParams }: { searchParams:
     <div>
       <PageHeader
         title={t("tc.title")}
-        description={t("tc.desc")}
+        help={t("tc.desc")}
         actions={
           <div className="flex flex-wrap gap-2">
             <Modal label={t("sched.import")} title={t("sched.import")} buttonClassName="btn-secondary h-9" size="lg" testId="import-schedule"><ImportScheduleForm /></Modal>

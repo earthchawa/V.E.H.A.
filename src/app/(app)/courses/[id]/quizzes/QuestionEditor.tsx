@@ -8,6 +8,7 @@ import { useI18n } from "@/lib/i18n/client";
 import type { Option, QType } from "@/lib/quiz";
 import { CODE_LANGUAGES, DEFAULT_STARTER, LANGUAGE_FILES, asLanguage, type CodeLanguage } from "@/lib/code";
 import { saveQuestionAction } from "./actions";
+import { InfoTip } from "@/components/InfoTip";
 
 export type QuestionDraft = {
   id: string | null;
@@ -141,9 +142,8 @@ export function QuestionEditor({ quizId, draft = NEW_QUESTION, onDone, closeOnSu
       )}
       {type === "SHORT" && (
         <div>
-          <label className="label" htmlFor={`qa-${draft.id}`}>{t("qz.accepted")}</label>
+          <label className="label inline-flex items-center gap-1.5" htmlFor={`qa-${draft.id}`}>{t("qz.accepted")} <InfoTip text={t("qz.acceptedHint")} align="start" /></label>
           <textarea id={`qa-${draft.id}`} name="accepted" rows={3} className="input" defaultValue={draft.accepted.join("\n")} />
-          <p className="mt-1.5 text-xs text-subtle">{t("qz.acceptedHint")}</p>
         </div>
       )}
       {type === "ESSAY" && (
@@ -161,7 +161,7 @@ export function QuestionEditor({ quizId, draft = NEW_QUESTION, onDone, closeOnSu
             </select>
           </div>
           <div>
-            <span className="label">{t("qz.code.starter")}</span>
+            <span className="label inline-flex items-center gap-1.5">{t("qz.code.starter")} <InfoTip text={t("qz.code.starterHint")} align="start" /></span>
             <div className="space-y-2" key={language}>
               {LANGUAGE_FILES[language].map((f) => (
                 <div key={f}>
@@ -177,7 +177,6 @@ export function QuestionEditor({ quizId, draft = NEW_QUESTION, onDone, closeOnSu
                 </div>
               ))}
             </div>
-            <p className="mt-1.5 text-xs text-subtle">{t("qz.code.starterHint")}</p>
           </div>
         </div>
       )}

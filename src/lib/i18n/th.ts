@@ -27,7 +27,6 @@ export const th: Record<Key, string> = {
   "nav.activity": "ประวัติการใช้งาน",
   "nav.menu": "เมนู",
   "nav.closeMenu": "ปิดเมนู",
-  "nav.back": "ย้อนกลับ",
   "nav.signOut": "ออกจากระบบ",
 
   "login.title": "เข้าสู่ระบบ",
@@ -863,4 +862,13 @@ export const th: Record<Key, string> = {
   "gr.goSetup": "ตั้งค่าการให้คะแนน",
   "gr.toScores": "ไปที่ตารางคะแนน",
   "gr.fixInSetup": "แก้ในหน้าตั้งค่าการให้คะแนน",
+  "gr.basedOnReleased": "คิดจากคะแนนที่เผยแพร่แล้วเท่านั้น",
+  "nav.backTo.dashboard": "ย้อนกลับ",
+  "nav.backTo.assignments": "กลับไปที่งานที่มอบหมาย",
+  "nav.backTo.assignment": "กลับไปที่งาน",
+  "nav.backTo.quizzes": "กลับไปที่แบบทดสอบ",
+  "nav.backTo.quiz": "กลับไปที่แบบทดสอบนี้",
+  "nav.backTo.results": "กลับไปที่ผลการสอบ",
+  "nav.backTo.semesters": "กลับไปที่ภาคเรียนและรายวิชา",
+  "nav.backTo.page": "ย้อนกลับ",
 };

@@ -6,6 +6,7 @@ import { FormMessage } from "@/components/FormMessage";
 import { SubmitButton } from "@/components/SubmitButton";
 import { useI18n } from "@/lib/i18n/client";
 import { gradeSubmissionAction } from "@/app/(app)/courses/[id]/grades/actions";
+import { InfoTip } from "@/components/InfoTip";
 
 /** Instructor grading box on the report page: points + feedback for this submission. */
 export function GradePanel({
@@ -29,7 +30,7 @@ export function GradePanel({
     <section className="card mb-6">
       <KeepForm action={action} pending={pending} className="grid gap-4 sm:grid-cols-[10rem_1fr_auto] sm:items-end">
         <div>
-          <label className="label" htmlFor="g-points">{t("gr.gradeThis")} <span className="text-subtle">{t("gr.outOf", { max: maxPoints })}</span></label>
+          <label className="label inline-flex items-center gap-1.5" htmlFor="g-points">{t("gr.gradeThis")} <span className="text-subtle">{t("gr.outOf", { max: maxPoints })}</span>{!released && <InfoTip text={t("gr.notReleasedNote")} align="start" />}</label>
           <input id="g-points" name="points" inputMode="decimal" defaultValue={points ?? ""} className="input font-mono" />
         </div>
         <div>
@@ -39,7 +40,6 @@ export function GradePanel({
         <SubmitButton>{t("gr.saveGrade")}</SubmitButton>
         <div className="sm:col-span-3">
           <FormMessage state={state} />
-          {!released && <p className="text-xs text-subtle">{t("gr.notReleasedNote")}</p>}
         </div>
       </KeepForm>
     </section>

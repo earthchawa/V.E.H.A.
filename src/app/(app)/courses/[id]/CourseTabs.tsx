@@ -12,7 +12,7 @@ export function CourseTabs({ base, labels }: { base: string; labels: { materials
     { href: `${base}/grades`, label: labels.grades, active: path.startsWith(`${base}/grades`) },
   ];
   return (
-    <nav className="-mt-4 mb-8 flex gap-6 border-b border-border">
+    <nav className="mb-6 flex gap-6 overflow-x-auto border-b border-border">
       {tabs.map((tab) => (
         <Link
           key={tab.href}

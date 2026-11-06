@@ -9,6 +9,7 @@ import { applyGradeTemplateAction, copyGradebookSetupAction, deleteCategoryActio
 import Link from "next/link";
 import { siblingSections } from "@/lib/sections";
 import { CopyToSections } from "@/components/CopyToSections";
+import { InfoTip } from "@/components/InfoTip";
 
 export async function generateMetadata() {
   return { title: (await getI18n()).t("course.tab.grades") };
@@ -90,7 +91,7 @@ export default async function GradesPage({ params, searchParams }: { params: Pro
                   <span className="font-mono text-muted">{formatPct(result.totalPct)}</span>
                 </div>
                 {gradePoints(result.letter) != null && <p className="mt-1 text-xs text-subtle">GPA {gradePoints(result.letter)!.toFixed(1)}</p>}
-                <p className="mt-3 text-xs text-subtle">{t("gr.currentHint")}</p>
+                <p className="mt-3 inline-flex items-center gap-1.5 text-xs text-subtle">{t("gr.basedOnReleased")} <InfoTip text={t("gr.currentHint")} /></p>
               </>
             ) : (
               <p className="text-sm text-muted">{t("gr.totalHidden")}</p>
@@ -122,11 +123,11 @@ export default async function GradesPage({ params, searchParams }: { params: Pro
   );
   const Step = ({ n, title, hint, children, testId }: { n: number; title: string; hint: string; children: React.ReactNode; testId: string }) => (
     <section className="card" data-testid={testId}>
-      <h3 className="flex items-center gap-2 text-sm font-semibold">
+      <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold">
         <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-accent/15 font-mono text-xs text-accent">{n}</span>
         {title}
+        <InfoTip text={hint} align="start" />
       </h3>
-      <p className="mt-1.5 mb-4 text-xs leading-relaxed text-muted">{hint}</p>
       {children}
     </section>
   );
@@ -139,6 +140,7 @@ export default async function GradesPage({ params, searchParams }: { params: Pro
           <nav className="flex gap-1">
             {tab(false, t("gr.tab.scores"), "tab-scores")}
             {tab(true, t("gr.tab.setup"), "tab-setup")}
+            {showSetup && <span className="self-center"><InfoTip text={t("gr.setupIntro")} /></span>}
           </nav>
         )}
         <div className="ml-auto flex flex-wrap items-center gap-2">
@@ -176,7 +178,6 @@ export default async function GradesPage({ params, searchParams }: { params: Pro
         </>
       ) : (
         <div className="space-y-6" data-testid="grade-setup">
-          <p className="max-w-3xl text-sm leading-relaxed text-muted">{t("gr.setupIntro")}</p>
 
           <Step n={1} title={t("gr.categories")} hint={t("gr.categoriesHint")} testId="setup-categories">
             {categories.length === 0 ? (

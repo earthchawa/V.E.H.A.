@@ -29,7 +29,6 @@ export const en = {
   "nav.activity": "Activity",
   "nav.menu": "Menu",
   "nav.closeMenu": "Close menu",
-  "nav.back": "Back",
   "nav.signOut": "Sign out",
 
   // Sign in
@@ -879,6 +878,15 @@ export const en = {
   "gr.goSetup": "Set up grading",
   "gr.toScores": "Go to the score table",
   "gr.fixInSetup": "Fix in Grading setup",
+  "gr.basedOnReleased": "Released, graded work only",
+  "nav.backTo.dashboard": "Back",
+  "nav.backTo.assignments": "Back to assignments",
+  "nav.backTo.assignment": "Back to the assignment",
+  "nav.backTo.quizzes": "Back to quizzes",
+  "nav.backTo.quiz": "Back to the quiz",
+  "nav.backTo.results": "Back to results",
+  "nav.backTo.semesters": "Back to semesters & courses",
+  "nav.backTo.page": "Back",
 } as const;
 
 export type Key = keyof typeof en;

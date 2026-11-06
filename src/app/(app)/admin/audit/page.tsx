@@ -16,6 +16,7 @@ import {
   type AuditCategory,
 } from "@/lib/audit-filter";
 import { departmentScope, loadAuditLogs } from "@/lib/audit-query";
+import { InfoTip } from "@/components/InfoTip";
 
 export async function generateMetadata() {
   return { title: (await getI18n()).t("act.title") };
@@ -83,7 +84,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
     <div>
       <PageHeader
         title={t("act.title")}
-        description={t("act.desc")}
+        help={t("act.desc")}
         actions={
           <a href={`/api/admin/audit${auditQuery(f)}`} className="btn-secondary" data-testid="audit-export">
             {t("act.f.export")}
@@ -151,7 +152,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
 
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
         <span data-testid="audit-count">{t("act.count", { n: total.toLocaleString() })}</span>
-        <span className="text-subtle">{t("act.deptNote")}</span>
+        <InfoTip text={t("act.deptNote")} align="end" />
       </div>
 
       <section className="overflow-hidden rounded-xl border border-border bg-surface">

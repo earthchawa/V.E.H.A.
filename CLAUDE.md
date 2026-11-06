@@ -110,8 +110,11 @@ src/lib/
   course-catalogue tab. Instructors see an "upcoming semester" notice on the dashboard to prepare ahead.
 - **Gradebook (instructor):** tabs Scores | Grading setup (`?view=setup`); setup is 3 steps: categories & weights
   (template button when empty), graded work = score-table columns (`GradeItem`), letter grades.
-- **Navigation:** `<BackButton>` in the app layout (history first, else `parentPath()` from `lib/nav.ts`; add new
-  routes without their own page there; hidden on top-menu pages, `NAV_ROOTS`). Don't add per-page "← …" links. The header uses the AF emblem
+- **Help text:** explanations go in an `<InfoTip>` (ⓘ, hover/focus/tap) next to the title or label, or `PageHeader
+  help=`, not as paragraphs. Keep only step-by-step instructions inside import dialogs visible.
+- **Navigation:** `<BackButton>` (history first, else `parentPath()` from `lib/nav.ts`; add new routes without their
+  own page there). App shell: above the page, hidden on top-menu pages (`NAV_ROOTS`). Inside a course: under the
+  course tabs, only on detail pages (`isCourseDetail`), labelled with where it goes (`backTarget`). Don't add per-page "← …" links. The header uses the AF emblem
   (`brand.mark`); the full faculty badge is only for the sign-in page.
 - Demo seed must stay **idempotent** (it runs on every Vercel build when `DEMO_SEED=true`).
 

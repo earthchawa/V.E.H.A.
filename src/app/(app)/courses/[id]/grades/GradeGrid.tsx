@@ -7,6 +7,7 @@ import { useI18n } from "@/lib/i18n/client";
 import { FormMessage } from "@/components/FormMessage";
 import type { FormState } from "@/lib/form";
 import { saveGradesAction } from "./actions";
+import { InfoTip } from "@/components/InfoTip";
 
 type Item = { id: string; title: string; maxPoints: number; categoryId: string | null; isReleased: boolean };
 type Student = { id: string; username: string; fullName: string };
@@ -170,7 +171,7 @@ export function GradeGrid({
           {pending ? t("gr.saving") : t("gr.save")}
         </button>
         {changes.out.length > 0 && <span className="text-xs text-accent">{t("gr.unsaved", { n: changes.out.length })}</span>}
-        <span className="text-xs text-subtle">{t("gr.blankHint")}</span>
+        <InfoTip text={t("gr.blankHint")} />
         <div className="w-full sm:w-auto"><FormMessage state={state} /></div>
       </div>}
     </div>

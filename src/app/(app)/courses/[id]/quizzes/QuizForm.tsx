@@ -6,6 +6,7 @@ import { FormMessage } from "@/components/FormMessage";
 import { SubmitButton } from "@/components/SubmitButton";
 import { useI18n } from "@/lib/i18n/client";
 import { saveQuizAction } from "./actions";
+import { InfoTip } from "@/components/InfoTip";
 
 export type QuizDefaults = {
   title: string;
@@ -89,18 +90,17 @@ export function QuizForm({
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
-          <label className="label" htmlFor="qz-open">{t("qz.f.opensAt")}</label>
+          <label className="label inline-flex items-center gap-1.5" htmlFor="qz-open">{t("qz.f.opensAt")} <InfoTip text={t("qz.f.windowHint")} align="start" /></label>
           <input id="qz-open" name="opensAt" type="datetime-local" className="input" defaultValue={d.opensAt} />
         </div>
         <div>
           <label className="label" htmlFor="qz-close">{t("qz.f.closesAt")}</label>
           <input id="qz-close" name="closesAt" type="datetime-local" className="input" defaultValue={d.closesAt} />
         </div>
-        <p className="-mt-1.5 text-xs text-subtle sm:col-span-2">{t("qz.f.windowHint")}</p>
       </div>
       <div className="grid grid-cols-[8rem_1fr] gap-3">
         <div>
-          <label className="label" htmlFor="qz-limit">{t("qz.f.timeLimit")}</label>
+          <label className="label inline-flex items-center gap-1.5" htmlFor="qz-limit">{t("qz.f.timeLimit")} <InfoTip text={t("qz.f.timeLimitHint")} align="start" /></label>
           <input id="qz-limit" name="timeLimitMin" inputMode="numeric" className="input" defaultValue={d.timeLimitMin} />
         </div>
         <div>
@@ -110,7 +110,6 @@ export function QuizForm({
             {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </div>
-        <p className="col-span-2 -mt-1.5 text-xs text-subtle">{t("qz.f.timeLimitHint")}</p>
       </div>
       <div className="space-y-2 text-sm text-muted">
         {check("shuffleQuestions", t("qz.f.shuffleQuestions"))}

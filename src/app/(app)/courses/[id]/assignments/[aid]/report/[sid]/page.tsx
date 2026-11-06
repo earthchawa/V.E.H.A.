@@ -8,6 +8,7 @@ import { level } from "@/lib/similarity/level";
 import { buildPieces } from "@/lib/similarity/highlight";
 import { ReportView, type ReportSource } from "@/components/ReportView";
 import { GradePanel } from "./GradePanel";
+import { InfoTip } from "@/components/InfoTip";
 
 const RING = { low: "text-success", medium: "text-warning", high: "text-danger" } as const;
 
@@ -91,7 +92,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
     <div>
       <div className="mt-2 mb-6 flex flex-wrap items-end justify-between gap-6">
         <div>
-          <h2 className="text-xl font-semibold tracking-tight">{t("rep.title")}</h2>
+          <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight">{t("rep.title")} <InfoTip text={t("rep.method", { k: K.text, kc: K.code })} align="start" /></h2>
           <p className="mt-1 text-sm text-muted">
             {submission.student.fullName} <span className="font-mono text-xs text-subtle">{submission.student.username}</span>
             {submission.checkedAt && <> · {t("rep.checkedAt", { date: date(submission.checkedAt) })}</>}
@@ -100,8 +101,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
         <div className="flex items-center gap-4 rounded-xl border border-border bg-surface px-5 py-3">
           <div className={`font-mono text-3xl font-semibold ${RING[lv]}`} data-testid="overall">{submission.similarity == null ? "—" : pct(score)}</div>
           <div className="text-xs">
-            <div className="font-medium">{t("rep.overall")} · <span className={RING[lv]}>{t(`rep.level.${lv}`)}</span></div>
-            <div className="mt-0.5 max-w-52 text-subtle">{t("rep.overallHint")}</div>
+            <div className="font-medium">{t("rep.overall")} · <span className={RING[lv]}>{t(`rep.level.${lv}`)}</span> <InfoTip text={t("rep.overallHint")} align="end" /></div>
           </div>
         </div>
       </div>
@@ -116,7 +116,6 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
         />
       )}
       <ReportView pieces={pieces} sources={sources} />
-      <p className="mt-6 max-w-3xl text-xs leading-relaxed text-subtle">{t("rep.method", { k: K.text, kc: K.code })}</p>
     </div>
   );
 }

@@ -89,7 +89,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
     <div>
       <PageHeader
         title={t("users.title")}
-        description={t("users.desc")}
+        help={t("users.desc")}
         actions={
           <div className="flex flex-wrap gap-2">
             <Modal label={`+ ${t("users.new")}`} title={t("users.new")} testId="new-user">

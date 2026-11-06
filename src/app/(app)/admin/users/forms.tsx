@@ -8,6 +8,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { IssuedPasswords, type Issued } from "@/components/IssuedPasswords";
 import { FileDropzone } from "@/components/FileDropzone";
 import { useI18n } from "@/lib/i18n/client";
+import { InfoTip } from "@/components/InfoTip";
 
 export function CreateUserForm({ departments = [] }: { departments?: { code: string; label: string }[] }) {
   const [state, action, pending] = useActionState(createUserAction, undefined);
@@ -118,7 +119,7 @@ export function ManageUserForm({ user, departments, isSelf }: { user: ManagedUse
       <KeepForm action={action} pending={pending} state={state} closeOnSuccess className="space-y-4">
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
-            <label className="label" htmlFor={id("username")}>{t("login.id")}</label>
+            <label className="label inline-flex items-center gap-1.5" htmlFor={id("username")}>{t("login.id")} <InfoTip text={t("users.usernameHint")} align="start" /></label>
             <input id={id("username")} name="username" className="input font-mono" defaultValue={user.username} required />
           </div>
           <div>
@@ -131,11 +132,9 @@ export function ManageUserForm({ user, departments, isSelf }: { user: ManagedUse
             {isSelf && <input type="hidden" name="role" value={user.role} />}
           </div>
         </div>
-        <p className="-mt-2 text-xs text-subtle">{t("users.usernameHint")}</p>
         <div>
-          <label className="label" htmlFor={id("fullName")}>{t("users.fullName")}</label>
+          <label className="label inline-flex items-center gap-1.5" htmlFor={id("fullName")}>{t("users.fullName")} <InfoTip text={t("users.fullNameHint")} align="start" /></label>
           <input id={id("fullName")} name="fullName" className="input" defaultValue={user.fullName} required />
-          <p className="mt-1 text-xs text-subtle">{t("users.fullNameHint")}</p>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
@@ -155,7 +154,7 @@ export function ManageUserForm({ user, departments, isSelf }: { user: ManagedUse
       </KeepForm>
 
       <div className="space-y-3 border-t border-border pt-4">
-        <h3 className="text-sm font-semibold">{t("users.accountActions")}</h3>
+        <h3 className="flex items-center gap-1.5 text-sm font-semibold">{t("users.accountActions")} <InfoTip text={t(user.isActive ? "users.disableHint" : "users.enableHint")} align="start" /></h3>
         <div className="flex flex-wrap items-center gap-3">
           <ResetPasswordButton userId={user.id} username={user.username} />
           {!isSelf && (
@@ -170,7 +169,6 @@ export function ManageUserForm({ user, departments, isSelf }: { user: ManagedUse
             </form>
           )}
         </div>
-        <p className="text-xs text-subtle">{t(user.isActive ? "users.disableHint" : "users.enableHint")}</p>
       </div>
     </div>
   );

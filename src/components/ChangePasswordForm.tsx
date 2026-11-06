@@ -6,6 +6,7 @@ import { changePasswordAction } from "@/app/auth-actions";
 import { FormMessage } from "./FormMessage";
 import { SubmitButton } from "./SubmitButton";
 import { useI18n } from "@/lib/i18n/client";
+import { InfoTip } from "@/components/InfoTip";
 
 export function ChangePasswordForm({ askEmail, currentEmail }: { askEmail?: boolean; currentEmail?: string | null }) {
   const [state, action, pending] = useActionState(changePasswordAction, undefined);
@@ -27,9 +28,8 @@ export function ChangePasswordForm({ askEmail, currentEmail }: { askEmail?: bool
       </div>
       {askEmail && (
         <div>
-          <label className="label" htmlFor="email">{t("pw.recoveryEmail")} <span className="text-subtle">{t("common.optional")}</span></label>
+          <label className="label inline-flex items-center gap-1.5" htmlFor="email">{t("pw.recoveryEmail")} <span className="text-subtle">{t("common.optional")}</span> <InfoTip text={t("pw.recoveryHint")} align="start" /></label>
           <input id="email" name="email" type="email" className="input" defaultValue={currentEmail ?? ""} autoComplete="email" />
-          <p className="mt-1.5 text-xs text-subtle">{t("pw.recoveryHint")}</p>
         </div>
       )}
       <FormMessage state={state} />

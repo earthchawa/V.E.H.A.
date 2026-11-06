@@ -3,6 +3,7 @@ import { UpdateEmailForm } from "@/components/UpdateEmailForm";
 import { PageHeader } from "@/components/PageHeader";
 import { requireUser } from "@/lib/auth/session";
 import { getI18n } from "@/lib/i18n/server";
+import { InfoTip } from "@/components/InfoTip";
 
 export async function generateMetadata() {
   return { title: (await getI18n()).t("account.title") };
@@ -28,8 +29,7 @@ export default async function AccountPage() {
           <ChangePasswordForm />
         </section>
         <section className="card">
-          <h2 className="card-title">{t("account.email")}</h2>
-          <p className="-mt-2 mb-4 text-xs text-muted">{t("account.emailHint")}</p>
+          <h2 className="card-title flex items-center gap-1.5">{t("account.email")} <InfoTip text={t("account.emailHint")} align="start" /></h2>
           <UpdateEmailForm currentEmail={user.email} />
         </section>
       </div>

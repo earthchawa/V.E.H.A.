@@ -8,6 +8,7 @@ import { FileDropzone } from "@/components/FileDropzone";
 import { useI18n } from "@/lib/i18n/client";
 import { BUNDLED_LOGOS } from "@/lib/departments";
 import { saveDepartmentAction } from "../actions";
+import { InfoTip } from "@/components/InfoTip";
 
 export type DivisionOption = { id: string; label: string; color: string | null; logo: string | null };
 export type DepartmentDefaults = {
@@ -87,7 +88,7 @@ export function DepartmentForm({
           )}
         </div>
         <div>
-          <label className="label" htmlFor="dep-logo">{t("dep.logo")}</label>
+          <label className="label inline-flex items-center gap-1.5" htmlFor="dep-logo">{t("dep.logo")} <InfoTip text={t("dep.logoHint")} align="start" /></label>
           <select id="dep-logo" name="logo" className="input" value={logo} onChange={(e) => setLogo(e.target.value)}>
             <option value="">{t(isDept ? "dep.logoInherit" : "dep.logoNone")}</option>
             {BUNDLED_LOGOS.map((l) => <option key={l.url} value={l.url}>{l.label}</option>)}
@@ -99,7 +100,6 @@ export function DepartmentForm({
       {logo === "upload" && (
         <div>
           <FileDropzone id="dep-logo-file" name="logoFile" accept="image/png,image/jpeg,image/webp" required />
-          <p className="mt-1.5 text-xs text-subtle">{t("dep.logoHint")}</p>
         </div>
       )}
 
