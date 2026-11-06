@@ -778,7 +778,7 @@ export const en = {
   "es.save": "Save",
   "nav.departments": "Departments",
   "dep.title": "Departments & subject areas",
-  "dep.desc": "Group courses and people by department (กองวิชา, e.g. Mathematics and Computer Science) and subject area (สาขาวิชา, e.g. CS, MA).",
+  "dep.desc": "Group courses and people by department (กองวิชา, e.g. Mathematics and Computer Science) and subject area (ภาควิชา, e.g. CS, MA).",
   "dep.add": "Add department or subject area",
   "dep.code": "Code",
   "dep.name": "Name (English)",

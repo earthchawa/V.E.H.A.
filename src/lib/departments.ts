@@ -16,7 +16,7 @@ export const BUNDLED_LOGOS = [
 
 /**
  * The academy's departments (กองวิชา), with colours taken from their badges
- * (Mathematics and Computer Science and Computer Science are grey by the owner's request).
+ * (Mathematics and Computer Science is grey by the owner's request).
  */
 export const ACADEMY_DIVISIONS = [
   { code: "AE", name: "Department of Aeronautical Engineering", nameTh: "กองวิชาวิศวกรรมอากาศยาน", color: "#e5b80b", logoUrl: "/logos/ae.webp" },
@@ -25,17 +25,17 @@ export const ACADEMY_DIVISIONS = [
   { code: "CE", name: "Department of Civil Engineering", nameTh: "กองวิชาวิศวกรรมโยธา", color: "#6272a4", logoUrl: "/logos/ce.webp" },
   { code: "IEA", name: "Department of Industrial Engineering and Aviation Management", nameTh: "กองวิชาวิศวกรรมอุตสาหการและการจัดการการบิน", color: "#e8507f", logoUrl: "/logos/iea.webp" },
   { code: "MC", name: "Department of Mathematics and Computer Science", nameTh: "กองวิชาคณิตศาสตร์และคอมพิวเตอร์", color: "#9ca3af", logoUrl: "/logos/mc.webp" },
-  { code: "CS", name: "Department of Computer Science", nameTh: "กองวิชาวิทยาการคอมพิวเตอร์", color: "#9ca3af", logoUrl: "/logos/mc.webp" },
   { code: "MS", name: "Department of Military and Aerospace Materials Science", nameTh: "กองวิชาวัสดุศาสตร์ทางการทหารและอากาศยาน", color: "#5fae5f", logoUrl: "/logos/ms.webp" },
   { code: "EDA", name: "Department of Education Administration", nameTh: "กองอำนวยการศึกษา", color: "#0e7490", logoUrl: "/logos/eda.webp" },
   { code: "HS", name: "Department of Humanities and Social Sciences", nameTh: "กองวิชามนุษยศาสตร์และสังคมศาสตร์", color: "#12a9de", logoUrl: "/logos/hs.webp" },
 ] as const;
 
-/** Subject areas (สาขาวิชา) inside a department. They use their department's logo and colour. */
+/** Subject areas (ภาควิชา) inside a department. They use their department's logo and colour. */
 export const ACADEMY_SUBJECT_AREAS = [
-  { parent: "MC", code: "MA", name: "Mathematics", nameTh: "สาขาวิชาคณิตศาสตร์" },
-  { parent: "MS", code: "PH", name: "Physics", nameTh: "สาขาวิชาฟิสิกส์" },
-  { parent: "MS", code: "CH", name: "Chemistry", nameTh: "สาขาวิชาเคมี" },
+  { parent: "MC", code: "CS", name: "Computer Science", nameTh: "ภาควิชาคอมพิวเตอร์" },
+  { parent: "MC", code: "MA", name: "Mathematics", nameTh: "ภาควิชาคณิตศาสตร์" },
+  { parent: "MS", code: "PH", name: "Physics", nameTh: "ภาควิชาฟิสิกส์" },
+  { parent: "MS", code: "CH", name: "Chemistry", nameTh: "ภาควิชาเคมี" },
 ] as const;
 
 export const isHexColor = (v: string) => /^#[0-9a-f]{6}$/i.test(v);

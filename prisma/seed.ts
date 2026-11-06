@@ -319,7 +319,7 @@ async function seedDivisions() {
       });
     }
   }
-  // Subject areas (สาขาวิชา): created when missing; they inherit their department's logo and colour.
+  // Subject areas (ภาควิชา): created when missing; they inherit their department's logo and colour.
   for (const [position, sa] of ACADEMY_SUBJECT_AREAS.entries()) {
     if (await db.department.findUnique({ where: { code: sa.code } })) continue;
     const parent = await db.department.findUnique({ where: { code: sa.parent } });
