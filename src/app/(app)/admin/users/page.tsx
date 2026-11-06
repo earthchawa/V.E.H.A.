@@ -7,6 +7,9 @@ import { toggleUserActiveAction } from "../actions";
 import { CreateUserForm, ImportUsersForm, ResetPasswordButton } from "./forms";
 import { Modal } from "@/components/Modal";
 
+/** Bulk imports run as server actions from this page: hashing dozens of passwords takes ~15 s, so allow 60 s on Vercel. */
+export const maxDuration = 60;
+
 export async function generateMetadata() {
   return { title: (await getI18n()).t("users.title") };
 }

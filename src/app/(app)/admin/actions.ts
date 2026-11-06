@@ -212,17 +212,21 @@ export async function importScheduleAction(_: FormState, fd: FormData): Promise<
   const { rows, errors } = parseSchedule(text);
   if (errors.length) return { error: t("err.csvRows", { rows: errors.slice(0, 10).map(tm).join("\n") }) };
 
-  // Every instructor must already have an account (import them first on the Users page).
-  const usernames = [...new Set(rows.flatMap((r) => r.instructors))];
+  // Every instructor and cadet must already have an account (import them first on the Users page).
+  const usernames = [...new Set(rows.flatMap((r) => [...r.instructors, ...r.cadets]))];
   const users = await db.user.findMany({ where: { username: { in: usernames } }, select: { id: true, username: true, role: true } });
   const byName = new Map(users.map((u) => [u.username, u]));
   const missing = usernames.filter((u) => !byName.has(u));
   if (missing.length) return { error: t("sched.err.missingUsers", { list: missing.join(", ") }) };
-  const cadets = users.filter((u) => u.role === "STUDENT").map((u) => u.username);
-  if (cadets.length) return { error: t("roster.cadetNotInstructor", { list: cadets.join(", ") }) };
+  const asInstructor = new Set(rows.flatMap((r) => r.instructors));
+  const asCadet = new Set(rows.flatMap((r) => r.cadets));
+  const cadetsAsInstructors = users.filter((u) => u.role === "STUDENT" && asInstructor.has(u.username)).map((u) => u.username);
+  if (cadetsAsInstructors.length) return { error: t("roster.cadetNotInstructor", { list: cadetsAsInstructors.join(", ") }) };
+  const staffAsCadets = users.filter((u) => u.role !== "STUDENT" && asCadet.has(u.username)).map((u) => u.username);
+  if (staffAsCadets.length) return { error: t("sched.err.notCadet", { list: staffAsCadets.join(", ") }) };
 
   const depts = new Map((await db.department.findMany({ select: { id: true, code: true } })).map((d) => [d.code, d.id]));
-  const count = { terms: 0, courses: 0, offerings: 0, enrolled: 0 };
+  const count = { terms: 0, courses: 0, offerings: 0, enrolled: 0, cadets: 0 };
   for (const r of rows) {
     let term = await db.term.findUnique({ where: { academicYear_semester: { academicYear: r.academicYear, semester: r.semester } } });
     if (!term) {
@@ -253,6 +257,13 @@ export async function importScheduleAction(_: FormState, fd: FormData): Promise<
       if (existing) continue;
       await db.enrollment.create({ data: { userId, offeringId: offering.id, role: "INSTRUCTOR" } });
       count.enrolled++;
+    }
+    for (const name of r.cadets) {
+      const userId = byName.get(name)!.id;
+      const existing = await db.enrollment.findUnique({ where: { userId_offeringId: { userId, offeringId: offering.id } } });
+      if (existing) continue;
+      await db.enrollment.create({ data: { userId, offeringId: offering.id, role: "STUDENT" } });
+      count.cadets++;
     }
   }
   await audit({ actorId: me.id, action: "offering.imported", details: { rows: rows.length, ...count } });

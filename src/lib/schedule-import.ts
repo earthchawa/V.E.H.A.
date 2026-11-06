@@ -5,9 +5,9 @@ const msg = (key: Msg["key"], vars?: Msg["vars"]): Msg => ({ key, vars });
 
 /**
  * One line of a teaching schedule: which course runs in which term and section, and who teaches it.
- * Columns: year, semester, code, title_th, title_en, credits, section, instructors.
+ * Columns: year, semester, code, title_th, title_en, credits, section, instructors, cadets.
  * Only year, semester, code and instructors are required; titles/credits are used when the course
- * does not exist yet. Instructors are usernames separated by spaces, commas, semicolons or "|".
+ * does not exist yet. Instructors and cadets are usernames separated by spaces, commas, semicolons or "|".
  */
 export type ScheduleRow = {
   line: number;
@@ -19,6 +19,8 @@ export type ScheduleRow = {
   credits: number | null;
   section: string;
   instructors: string[];
+  /** Cadets to enrol (optional 9th column). */
+  cadets: string[];
 };
 
 const CODE_RE = /^[A-Z]{2,4}\d{3}[A-Z]?$/;
@@ -43,7 +45,7 @@ export function parseSchedule(text: string): { rows: ScheduleRow[]; errors: Msg[
   const seen = new Set<string>();
   parseCsv(text).forEach((cols, idx) => {
     const line = idx + 1;
-    const [yearRaw = "", semRaw = "", codeRaw = "", titleTh = "", titleEn = "", creditsRaw = "", sectionRaw = "", instRaw = ""] = cols.map((c) => c.trim());
+    const [yearRaw = "", semRaw = "", codeRaw = "", titleTh = "", titleEn = "", creditsRaw = "", sectionRaw = "", instRaw = "", cadetRaw = ""] = cols.map((c) => c.trim());
     if (cols.every((c) => !c.trim())) return;
     if (idx === 0 && /^(year|academic|ปี)/i.test(yearRaw)) return; // header row
 
@@ -63,8 +65,10 @@ export function parseSchedule(text: string): { rows: ScheduleRow[]; errors: Msg[
     }
     const section = sectionRaw || "1";
     if (!/^[A-Za-z0-9-]{1,8}$/.test(section)) { errors.push(msg("sched.badSection", { line, value: sectionRaw })); return; }
-    const instructors = [...new Set(instRaw.split(/[\s,;|]+/).filter(Boolean))];
-    const bad = instructors.find((u) => !USER_RE.test(u));
+    const list = (raw: string) => [...new Set(raw.split(/[\s,;|]+/).filter(Boolean))];
+    const instructors = list(instRaw);
+    const cadets = list(cadetRaw);
+    const bad = [...instructors, ...cadets].find((u) => !USER_RE.test(u));
     if (bad) { errors.push(msg("sched.badUser", { line, value: bad })); return; }
     if (!instructors.length) { errors.push(msg("sched.noInstructor", { line })); return; }
     const key = `${academicYear}/${semester}/${code}/${section}`;
@@ -80,6 +84,7 @@ export function parseSchedule(text: string): { rows: ScheduleRow[]; errors: Msg[
       credits,
       section,
       instructors,
+      cadets,
     });
   });
   return { rows, errors };

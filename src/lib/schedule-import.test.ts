@@ -25,6 +25,12 @@ describe("parseSchedule", () => {
     expect(errors[3].vars?.line).toBe(5);
   });
 
+  it("reads an optional cadets column", () => {
+    const { rows } = parseSchedule('2569,1,CS231,,,,1,nanthiphat_p,"phasawat_p khanison_n, phasawat_p"');
+    expect(rows[0].cadets).toEqual(["phasawat_p", "khanison_n"]);
+    expect(parseSchedule("2569,1,CS231,,,,1,nanthiphat_p").rows[0].cadets).toEqual([]);
+  });
+
   it("helpers", () => {
     expect(normaliseCourseCode(" ma 111 ")).toBe("MA111");
     expect(codeArea("CS530")).toBe("CS");

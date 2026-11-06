@@ -115,8 +115,8 @@ export function ImportScheduleForm() {
   return (
     <KeepForm action={action} pending={pending} state={state} resetOnSuccess className="space-y-4">
       <p className="text-xs leading-relaxed text-muted">{t("sched.help")}</p>
-      <pre className="overflow-x-auto rounded-lg bg-surface-2 p-3 font-mono text-[11px] leading-relaxed text-muted">{`year,semester,code,title_th,title_en,credits,section,instructors
-2569,1,CS231,,,,1,nanthiphat_p
+      <pre className="overflow-x-auto rounded-lg bg-surface-2 p-3 font-mono text-[11px] leading-relaxed text-muted">{`year,semester,code,title_th,title_en,credits,section,instructors,cadets
+2569,1,CS231,,,,1,nanthiphat_p,phasawat_p khanison_n
 2569,2,คต 132,การโปรแกรมคอมพิวเตอร์เบื้องต้น,Introduction to Computer Programming,3,1,thewa_k siraphat_t`}</pre>
       <FileDropzone id="sched-file" name="file" accept=".csv,text/csv" />
       <textarea name="csv" rows={4} className="input font-mono text-xs" aria-label="CSV rows" placeholder={t("sched.paste")} />
