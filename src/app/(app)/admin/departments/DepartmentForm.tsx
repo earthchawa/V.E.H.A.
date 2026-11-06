@@ -88,7 +88,7 @@ export function DepartmentForm({
           )}
         </div>
         <div>
-          <label className="label inline-flex items-center gap-1.5" htmlFor="dep-logo">{t("dep.logo")} <InfoTip text={t("dep.logoHint")} align="start" /></label>
+          <label className="label flex items-center gap-1.5" htmlFor="dep-logo">{t("dep.logo")} <InfoTip text={t("dep.logoHint")} align="start" /></label>
           <select id="dep-logo" name="logo" className="input" value={logo} onChange={(e) => setLogo(e.target.value)}>
             <option value="">{t(isDept ? "dep.logoInherit" : "dep.logoNone")}</option>
             {BUNDLED_LOGOS.map((l) => <option key={l.url} value={l.url}>{l.label}</option>)}

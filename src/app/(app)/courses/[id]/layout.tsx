@@ -28,19 +28,20 @@ export default async function CourseLayout({ params, children }: { params: Promi
           <h1 className="text-2xl font-semibold tracking-tight">{offering.course.title}</h1>
           {offering.course.titleTh && <div className="mt-1 text-sm text-muted">{offering.course.titleTh}</div>}
         </div>
-        <div className="flex shrink-0 items-center gap-3 md:max-w-[22rem] md:flex-row-reverse md:text-right">
+        <div className="flex shrink-0 items-center gap-3 md:flex-row-reverse md:text-right">
           {logo && (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={logo} alt="" className="h-11 w-auto max-w-16 shrink-0 object-contain" />
           )}
           <div className="min-w-0 text-xs leading-relaxed">
+            {/* Subject area, department and instructors each on their own line (names never break mid-way on desktop). */}
             {dept && (
-              <div className="text-muted" data-testid="course-dept">
-                {deptName(dept)}
-                {dept.parent && <span className="text-subtle"> · {deptName(dept.parent)}</span>}
+              <div data-testid="course-dept">
+                <div className="font-medium text-fg md:whitespace-nowrap">{deptName(dept)}</div>
+                {dept.parent && <div className="text-subtle md:whitespace-nowrap">{deptName(dept.parent)}</div>}
               </div>
             )}
-            <div className="text-fg" data-testid="course-instructors">
+            <div className="mt-0.5 text-muted" data-testid="course-instructors">
               {instructors.map((e) => e.user.fullName).join(", ") || <span className="text-subtle">{t("course.noInstructor")}</span>}
             </div>
           </div>

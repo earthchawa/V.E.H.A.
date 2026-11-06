@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { setCurrentTermAction } from "../actions";
 import { CreateCourseForm, CreateOfferingForm, CreateTermForm, ImportScheduleForm } from "./forms";
 import { Modal } from "@/components/Modal";
+import { InfoTip } from "@/components/InfoTip";
 import { CourseDepartmentSelect } from "./CourseDepartmentSelect";
 import { deptColor, deptLogo } from "@/lib/departments";
 
@@ -147,6 +148,7 @@ export default async function AdminCoursesPage({ searchParams }: { searchParams:
                         <button className="btn-secondary">{t("tc.makeCurrent")}</button>
                       </form>
                     )}
+                    {courses.length > 0 && <span className="self-center"><InfoTip text={t("tc.offerHelp")} align="end" /></span>}
                     {courses.length > 0 && (
                       <Modal label={`+ ${t("tc.offer")}`} title={t("tc.offer")} buttonClassName="btn h-8 px-3 text-xs" testId="offer-course">
                         <CreateOfferingForm

@@ -193,22 +193,18 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
                   rows.push(
                     <tr key={l.id} data-action={l.action}>
                       <td className="whitespace-nowrap pl-5 font-mono text-xs text-muted" title={date(l.createdAt)}>{timeFmt.format(l.createdAt)}</td>
-                      <td>
-                        <div className="flex items-center gap-2">
-                          {cat && (
-                            <span className="cc cc-tint badge shrink-0" style={{ ["--cc" as string]: CAT_COLOR[cat] }}>
-                              {t(`act.cat.${cat}` as Key)}
-                            </span>
-                          )}
-                          <span className={isProblem(l.action) ? "font-medium text-danger" : "text-fg"} title={l.action}>
-                            {actionLabel(l.action)}
-                          </span>
-                        </div>
-                      </td>
                       <td className="whitespace-nowrap">
+                        {/* Category as a coloured dot (named in the chips above and on hover), so the action fits on one line. */}
+                        <span className="inline-flex items-center gap-2" title={cat ? t(`act.cat.${cat}` as Key) : undefined}>
+                          <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: cat ? CAT_COLOR[cat] : "var(--color-subtle)" }} />
+                          <span className={isProblem(l.action) ? "font-medium text-danger" : "text-fg"}>{actionLabel(l.action)}</span>
+                        </span>
+                      </td>
+                      <td className="whitespace-nowrap leading-tight">
                         {l.actor ? (
                           <>
-                            <span className="font-mono text-xs text-subtle">{l.actor.username}</span> {l.actor.fullName}
+                            <div>{l.actor.fullName}</div>
+                            <div className="font-mono text-xs text-subtle">{l.actor.username}</div>
                           </>
                         ) : (
                           <span className="text-subtle">—</span>
@@ -227,7 +223,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
                           </span>
                         )}
                       </td>
-                      <td className="max-w-md font-mono text-xs text-subtle">
+                      <td className="max-w-sm font-mono text-xs text-subtle">
                         {details.length > 80 ? (
                           <details>
                             <summary className="cursor-pointer truncate">{details.slice(0, 80)}…</summary>

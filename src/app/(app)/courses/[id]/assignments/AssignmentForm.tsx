@@ -67,12 +67,12 @@ export function AssignmentForm({
         <textarea id="a-instructions" name="instructions" rows={4} className="input" defaultValue={d.instructions} />
       </div>
       <div>
-        <label className="label inline-flex items-center gap-1.5" htmlFor="a-due">{t("asg.f.due")} <InfoTip text={t("asg.f.dueHint")} align="start" /></label>
+        <label className="label flex items-center gap-1.5" htmlFor="a-due">{t("asg.f.due")} <InfoTip text={t("asg.f.dueHint")} align="start" /></label>
         <input id="a-due" name="dueAt" type="datetime-local" className="input" defaultValue={d.dueAt} />
       </div>
       <div className="grid grid-cols-[6rem_1fr] gap-3">
         <div>
-          <label className="label inline-flex items-center gap-1.5" htmlFor="a-points">{t("asg.f.points")} <InfoTip text={t("asg.f.pointsHint")} align="start" /></label>
+          <label className="label flex items-center gap-1.5" htmlFor="a-points">{t("asg.f.points")} <InfoTip text={t("asg.f.pointsHint")} align="start" /></label>
           <input id="a-points" name="points" inputMode="decimal" className="input" defaultValue={d.points} />
         </div>
         <div>
@@ -98,7 +98,7 @@ export function AssignmentForm({
         </select>
       </div>
       <div>
-        <label className="label inline-flex items-center gap-1.5" htmlFor="a-base">{t("asg.f.baseText")} <span className="text-subtle">{t("common.optional")}</span> <InfoTip text={t("asg.f.baseHint")} align="start" /></label>
+        <label className="label flex items-center gap-1.5" htmlFor="a-base">{t("asg.f.baseText")} <span className="text-subtle">{t("common.optional")}</span> <InfoTip text={t("asg.f.baseHint")} align="start" /></label>
         <textarea id="a-base" name="baseText" rows={3} className="input font-mono text-xs" defaultValue={d.baseText} />
       </div>
       {!assignmentId && <SectionCheckboxes sections={sections} />}

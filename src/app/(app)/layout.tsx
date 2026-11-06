@@ -36,8 +36,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <PrefsSwitcher />
             <Link href="/account" title={`${user.fullName} · ${user.username}`} className="hidden items-center gap-2 rounded-md px-2 py-1 transition hover:bg-surface-3 lg:flex">
               <span className="grid h-7 w-7 place-items-center rounded-full bg-surface-3 text-xs font-medium">{initials}</span>
-              <span className="hidden text-left leading-tight xl:block">
-                <span className="block text-xs">{user.fullName}</span>
+              {/* Admins have six menu items, so their name only shows on very wide screens; never wraps. */}
+              <span className={`hidden max-w-[14rem] whitespace-nowrap text-left leading-tight ${user.role === "ADMIN" ? "2xl:block" : "lg:block"}`}>
+                <span className="block truncate text-xs">{user.fullName}</span>
                 <span className="block text-[11px] text-subtle">{role(user.role)} · {user.username}</span>
               </span>
             </Link>

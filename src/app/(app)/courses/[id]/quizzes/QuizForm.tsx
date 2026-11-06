@@ -90,7 +90,7 @@ export function QuizForm({
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
-          <label className="label inline-flex items-center gap-1.5" htmlFor="qz-open">{t("qz.f.opensAt")} <InfoTip text={t("qz.f.windowHint")} align="start" /></label>
+          <label className="label flex items-center gap-1.5" htmlFor="qz-open">{t("qz.f.opensAt")} <InfoTip text={t("qz.f.windowHint")} align="start" /></label>
           <input id="qz-open" name="opensAt" type="datetime-local" className="input" defaultValue={d.opensAt} />
         </div>
         <div>
@@ -100,7 +100,7 @@ export function QuizForm({
       </div>
       <div className="grid grid-cols-[8rem_1fr] gap-3">
         <div>
-          <label className="label inline-flex items-center gap-1.5" htmlFor="qz-limit">{t("qz.f.timeLimit")} <InfoTip text={t("qz.f.timeLimitHint")} align="start" /></label>
+          <label className="label flex items-center gap-1.5" htmlFor="qz-limit">{t("qz.f.timeLimit")} <InfoTip text={t("qz.f.timeLimitHint")} align="start" /></label>
           <input id="qz-limit" name="timeLimitMin" inputMode="numeric" className="input" defaultValue={d.timeLimitMin} />
         </div>
         <div>

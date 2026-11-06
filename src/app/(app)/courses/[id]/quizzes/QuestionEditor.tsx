@@ -142,7 +142,7 @@ export function QuestionEditor({ quizId, draft = NEW_QUESTION, onDone, closeOnSu
       )}
       {type === "SHORT" && (
         <div>
-          <label className="label inline-flex items-center gap-1.5" htmlFor={`qa-${draft.id}`}>{t("qz.accepted")} <InfoTip text={t("qz.acceptedHint")} align="start" /></label>
+          <label className="label flex items-center gap-1.5" htmlFor={`qa-${draft.id}`}>{t("qz.accepted")} <InfoTip text={t("qz.acceptedHint")} align="start" /></label>
           <textarea id={`qa-${draft.id}`} name="accepted" rows={3} className="input" defaultValue={draft.accepted.join("\n")} />
         </div>
       )}
@@ -161,7 +161,7 @@ export function QuestionEditor({ quizId, draft = NEW_QUESTION, onDone, closeOnSu
             </select>
           </div>
           <div>
-            <span className="label inline-flex items-center gap-1.5">{t("qz.code.starter")} <InfoTip text={t("qz.code.starterHint")} align="start" /></span>
+            <span className="label flex items-center gap-1.5">{t("qz.code.starter")} <InfoTip text={t("qz.code.starterHint")} align="start" /></span>
             <div className="space-y-2" key={language}>
               {LANGUAGE_FILES[language].map((f) => (
                 <div key={f}>

@@ -30,7 +30,7 @@ export function GradePanel({
     <section className="card mb-6">
       <KeepForm action={action} pending={pending} className="grid gap-4 sm:grid-cols-[10rem_1fr_auto] sm:items-end">
         <div>
-          <label className="label inline-flex items-center gap-1.5" htmlFor="g-points">{t("gr.gradeThis")} <span className="text-subtle">{t("gr.outOf", { max: maxPoints })}</span>{!released && <InfoTip text={t("gr.notReleasedNote")} align="start" />}</label>
+          <label className="label flex items-center gap-1.5" htmlFor="g-points">{t("gr.gradeThis")} <span className="text-subtle">{t("gr.outOf", { max: maxPoints })}</span>{!released && <InfoTip text={t("gr.notReleasedNote")} align="start" />}</label>
           <input id="g-points" name="points" inputMode="decimal" defaultValue={points ?? ""} className="input font-mono" />
         </div>
         <div>

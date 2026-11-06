@@ -28,7 +28,7 @@ export function ChangePasswordForm({ askEmail, currentEmail }: { askEmail?: bool
       </div>
       {askEmail && (
         <div>
-          <label className="label inline-flex items-center gap-1.5" htmlFor="email">{t("pw.recoveryEmail")} <span className="text-subtle">{t("common.optional")}</span> <InfoTip text={t("pw.recoveryHint")} align="start" /></label>
+          <label className="label flex items-center gap-1.5" htmlFor="email">{t("pw.recoveryEmail")} <span className="text-subtle">{t("common.optional")}</span> <InfoTip text={t("pw.recoveryHint")} align="start" /></label>
           <input id="email" name="email" type="email" className="input" defaultValue={currentEmail ?? ""} autoComplete="email" />
         </div>
       )}

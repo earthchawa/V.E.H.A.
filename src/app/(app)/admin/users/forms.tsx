@@ -119,7 +119,7 @@ export function ManageUserForm({ user, departments, isSelf }: { user: ManagedUse
       <KeepForm action={action} pending={pending} state={state} closeOnSuccess className="space-y-4">
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
-            <label className="label inline-flex items-center gap-1.5" htmlFor={id("username")}>{t("login.id")} <InfoTip text={t("users.usernameHint")} align="start" /></label>
+            <label className="label flex items-center gap-1.5" htmlFor={id("username")}>{t("login.id")} <InfoTip text={t("users.usernameHint")} align="start" /></label>
             <input id={id("username")} name="username" className="input font-mono" defaultValue={user.username} required />
           </div>
           <div>
@@ -133,7 +133,7 @@ export function ManageUserForm({ user, departments, isSelf }: { user: ManagedUse
           </div>
         </div>
         <div>
-          <label className="label inline-flex items-center gap-1.5" htmlFor={id("fullName")}>{t("users.fullName")} <InfoTip text={t("users.fullNameHint")} align="start" /></label>
+          <label className="label flex items-center gap-1.5" htmlFor={id("fullName")}>{t("users.fullName")} <InfoTip text={t("users.fullNameHint")} align="start" /></label>
           <input id={id("fullName")} name="fullName" className="input" defaultValue={user.fullName} required />
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
