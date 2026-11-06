@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { getI18n } from "@/lib/i18n/server";
 import { PageHeader } from "@/components/PageHeader";
 import { setCurrentTermAction } from "../actions";
-import { CreateCourseForm, CreateOfferingForm, CreateTermForm } from "./forms";
+import { CreateCourseForm, CreateOfferingForm, CreateTermForm, ImportScheduleForm } from "./forms";
 import { Modal } from "@/components/Modal";
 import { CourseDepartmentSelect } from "./CourseDepartmentSelect";
 
@@ -40,6 +40,7 @@ export default async function AdminCoursesPage() {
     <div>
       <PageHeader title={t("tc.title")} description={t("tc.desc")} />
       <div className="-mt-3 mb-8 flex flex-wrap gap-2">
+        <Modal label={t("sched.import")} title={t("sched.import")} buttonClassName="btn-secondary h-9" size="lg" testId="import-schedule"><ImportScheduleForm /></Modal>
         <Modal label={`+ ${t("tc.addTerm")}`} title={t("tc.addTerm")} buttonClassName="btn-secondary h-9" testId="add-term"><CreateTermForm /></Modal>
         <Modal label={`+ ${t("tc.addCourse")}`} title={t("tc.addCourse")} buttonClassName="btn-secondary h-9" testId="add-course"><CreateCourseForm departments={deptOptions} /></Modal>
         {terms.length && courses.length ? (

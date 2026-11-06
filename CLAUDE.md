@@ -98,6 +98,11 @@ src/lib/
   numbered "xxx" left out). `db:seed` creates missing ones; existing databases got them from the
   `*_curriculum_cs_ma` migration (generated from the list; a test keeps them in step). Add other departments'
   courses the same way: extend the list and add a new data migration. Demo courses CS201/CS202/MA101 are demo-only.
+- **Bulk set-up (admin):** Users → Import from CSV (`username, fullName, role, email, department, password`; the
+  optional starting password must still be changed at first sign-in) and Terms & courses → Import teaching
+  schedule (`year, semester, code, title_th, title_en, credits, section, instructors`; Thai codes such as คต 231
+  map to CS231; creates missing terms/courses/sections, enrols instructors, never changes existing rows, so
+  re-importing is safe). Real staff/cadet lists are uploaded through these screens — never commit them.
 - **Navigation:** `<BackButton>` in the app layout (history first, else `parentPath()` from `lib/nav.ts`; add new
   routes without their own page there). Don't add per-page "← …" links. The header uses the AF emblem
   (`brand.mark`); the full faculty badge is only for the sign-in page.

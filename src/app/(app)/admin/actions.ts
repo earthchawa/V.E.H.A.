@@ -7,6 +7,7 @@ import { requireRole } from "@/lib/auth/session";
 import { issueTempPassword } from "@/lib/auth/account";
 import { generateTempPassword, hashPassword, tempPasswordExpiry } from "@/lib/auth/password";
 import { parseUserImport, type UserImportRow } from "@/lib/csv";
+import { codeArea, parseSchedule } from "@/lib/schedule-import";
 import { config } from "@/lib/config";
 import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
@@ -43,7 +44,7 @@ async function createUsers(actorId: string, rows: UserImportRow[], t: Translator
     if (r.department && !depts.has(r.department)) { skipped.push(t("users.skip.dept", { id: r.username, code: r.department })); continue; }
     if (existing.has(r.username)) { skipped.push(t("users.skip.exists", { id: r.username })); continue; }
     if (r.email && takenEmails.has(r.email)) { skipped.push(t("users.skip.email", { id: r.username })); continue; }
-    const password = generateTempPassword();
+    const password = r.password ?? generateTempPassword();
     await db.user.create({
       data: {
         username: r.username,
@@ -196,6 +197,67 @@ export async function createOfferingAction(_: FormState, fd: FormData): Promise<
   await audit({ actorId: me.id, action: "offering.created", targetType: "CourseOffering", targetId: o.id });
   revalidatePath("/admin/courses");
   return { success: t("ok.offered") };
+}
+
+/**
+ * Import a teaching schedule (CSV): creates missing terms, courses and sections and enrols the instructors.
+ * Safe to run again: nothing that already exists is changed, so a corrected file can be re-imported.
+ */
+export async function importScheduleAction(_: FormState, fd: FormData): Promise<FormState> {
+  const me = await admin();
+  const { t, tm } = await getI18n();
+  const file = fd.get("file");
+  const text = file instanceof File && file.size > 0 ? await file.text() : String(fd.get("csv") ?? "");
+  if (!text.trim()) return { error: t("err.csvMissing") };
+  const { rows, errors } = parseSchedule(text);
+  if (errors.length) return { error: t("err.csvRows", { rows: errors.slice(0, 10).map(tm).join("\n") }) };
+
+  // Every instructor must already have an account (import them first on the Users page).
+  const usernames = [...new Set(rows.flatMap((r) => r.instructors))];
+  const users = await db.user.findMany({ where: { username: { in: usernames } }, select: { id: true, username: true, role: true } });
+  const byName = new Map(users.map((u) => [u.username, u]));
+  const missing = usernames.filter((u) => !byName.has(u));
+  if (missing.length) return { error: t("sched.err.missingUsers", { list: missing.join(", ") }) };
+  const cadets = users.filter((u) => u.role === "STUDENT").map((u) => u.username);
+  if (cadets.length) return { error: t("roster.cadetNotInstructor", { list: cadets.join(", ") }) };
+
+  const depts = new Map((await db.department.findMany({ select: { id: true, code: true } })).map((d) => [d.code, d.id]));
+  const count = { terms: 0, courses: 0, offerings: 0, enrolled: 0 };
+  for (const r of rows) {
+    let term = await db.term.findUnique({ where: { academicYear_semester: { academicYear: r.academicYear, semester: r.semester } } });
+    if (!term) {
+      term = await db.term.create({ data: { academicYear: r.academicYear, semester: r.semester } });
+      count.terms++;
+    }
+    let course = await db.course.findUnique({ where: { code: r.code } });
+    if (!course) {
+      course = await db.course.create({
+        data: {
+          code: r.code,
+          title: r.titleEn ?? r.titleTh ?? r.code,
+          titleTh: r.titleTh,
+          credits: r.credits,
+          departmentId: depts.get(codeArea(r.code)) ?? null,
+        },
+      });
+      count.courses++;
+    }
+    let offering = await db.courseOffering.findUnique({ where: { courseId_termId_section: { courseId: course.id, termId: term.id, section: r.section } } });
+    if (!offering) {
+      offering = await db.courseOffering.create({ data: { courseId: course.id, termId: term.id, section: r.section } });
+      count.offerings++;
+    }
+    for (const name of r.instructors) {
+      const userId = byName.get(name)!.id;
+      const existing = await db.enrollment.findUnique({ where: { userId_offeringId: { userId, offeringId: offering.id } } });
+      if (existing) continue;
+      await db.enrollment.create({ data: { userId, offeringId: offering.id, role: "INSTRUCTOR" } });
+      count.enrolled++;
+    }
+  }
+  await audit({ actorId: me.id, action: "offering.imported", details: { rows: rows.length, ...count } });
+  revalidatePath("/admin/courses");
+  return { success: t("sched.ok", { rows: rows.length, ...count }) };
 }
 
 // ---------- Enrollment ----------

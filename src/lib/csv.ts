@@ -1,7 +1,9 @@
 import { msg, type Msg } from "./i18n";
 
 /** Minimal CSV parser (RFC 4180 quoting) — enough for spreadsheet exports from Excel / Google Sheets. */
-export function parseCsv(text: string): string[][] {
+export function parseCsv(input: string): string[][] {
+  // Excel's "CSV UTF-8" starts with a byte-order mark; it would otherwise stick to the first header.
+  const text = input.replace(/^\uFEFF/, "");
   const rows: string[][] = [];
   let row: string[] = [];
   let field = "";
@@ -47,6 +49,8 @@ export type UserImportRow = {
   email: string | null;
   /** Department code (optional 5th column). */
   department: string | null;
+  /** Starting password (optional 6th column); otherwise a random one is issued. Must still be changed at first sign-in. */
+  password: string | null;
 };
 
 const ROLE_ALIASES: Record<string, UserImportRow["role"]> = {
@@ -54,6 +58,9 @@ const ROLE_ALIASES: Record<string, UserImportRow["role"]> = {
   instructor: "INSTRUCTOR", teacher: "INSTRUCTOR", อาจารย์: "INSTRUCTOR",
   admin: "ADMIN", ผู้ดูแลระบบ: "ADMIN",
 };
+
+/** Shortest starting password an admin may set in an import (the user must change it at first sign-in). */
+export const START_PASSWORD_MIN = 6;
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const USERNAME_RE = /^[A-Za-z0-9._-]{3,32}$/;
@@ -69,7 +76,7 @@ export function parseUserImport(text: string): { rows: UserImportRow[]; errors: 
 
   parseCsv(text).forEach((cols, idx) => {
     const line = idx + 1;
-    const [username = "", fullName = "", roleRaw = "", emailRaw = "", deptRaw = ""] = cols;
+    const [username = "", fullName = "", roleRaw = "", emailRaw = "", deptRaw = "", passwordRaw = ""] = cols;
     if (idx === 0 && /^(username|id|student_?id|รหัส.*)$/i.test(username)) return;
 
     if (!USERNAME_RE.test(username)) {
@@ -84,9 +91,13 @@ export function parseUserImport(text: string): { rows: UserImportRow[]; errors: 
     }
     const email = emailRaw ? emailRaw.toLowerCase() : null;
     if (email && !EMAIL_RE.test(email)) { errors.push(msg("csv.badEmail", { line, email: emailRaw })); return; }
+    if (passwordRaw && (passwordRaw.length < START_PASSWORD_MIN || passwordRaw.length > 64 || /\s/.test(passwordRaw))) {
+      errors.push(msg("csv.badPassword", { line, n: START_PASSWORD_MIN }));
+      return;
+    }
     if (seen.has(username)) { errors.push(msg("csv.dupId", { line, id: username })); return; }
     seen.add(username);
-    rows.push({ line, username, fullName, role, email, department: deptRaw ? deptRaw.toUpperCase() : null });
+    rows.push({ line, username, fullName, role, email, department: deptRaw ? deptRaw.toUpperCase() : null, password: passwordRaw || null });
   });
   return { rows, errors };
 }

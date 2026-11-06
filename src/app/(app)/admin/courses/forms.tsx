@@ -2,7 +2,8 @@
 
 import { KeepForm } from "@/components/KeepForm";
 import { useActionState } from "react";
-import { createCourseAction, createOfferingAction, createTermAction } from "../actions";
+import { createCourseAction, createOfferingAction, createTermAction, importScheduleAction } from "../actions";
+import { FileDropzone } from "@/components/FileDropzone";
 import { FormMessage } from "@/components/FormMessage";
 import { SubmitButton } from "@/components/SubmitButton";
 import { useI18n } from "@/lib/i18n/client";
@@ -103,6 +104,24 @@ export function CreateOfferingForm({
       </div>
       <FormMessage state={state} />
       <SubmitButton>{t("tc.offer")}</SubmitButton>
+    </KeepForm>
+  );
+}
+
+/** Import a whole teaching schedule: terms, courses, sections and their instructors in one go. */
+export function ImportScheduleForm() {
+  const [state, action, pending] = useActionState(importScheduleAction, undefined);
+  const { t } = useI18n();
+  return (
+    <KeepForm action={action} pending={pending} state={state} resetOnSuccess className="space-y-4">
+      <p className="text-xs leading-relaxed text-muted">{t("sched.help")}</p>
+      <pre className="overflow-x-auto rounded-lg bg-surface-2 p-3 font-mono text-[11px] leading-relaxed text-muted">{`year,semester,code,title_th,title_en,credits,section,instructors
+2569,1,CS231,,,,1,nanthiphat_p
+2569,2,คต 132,การโปรแกรมคอมพิวเตอร์เบื้องต้น,Introduction to Computer Programming,3,1,thewa_k siraphat_t`}</pre>
+      <FileDropzone id="sched-file" name="file" accept=".csv,text/csv" />
+      <textarea name="csv" rows={4} className="input font-mono text-xs" aria-label="CSV rows" placeholder={t("sched.paste")} />
+      <FormMessage state={state} />
+      <SubmitButton pendingText={t("users.importing")}>{t("sched.importBtn")}</SubmitButton>
     </KeepForm>
   );
 }

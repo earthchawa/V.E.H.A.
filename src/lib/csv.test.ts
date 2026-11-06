@@ -34,4 +34,12 @@ describe("parseUserImport", () => {
     expect(rows[0].role).toBe("STUDENT");
     expect(errors).toHaveLength(4);
   });
+
+  it("skips a byte-order mark and reads an optional starting password", () => {
+    const { rows, errors } = parseUserImport("\uFEFFusername,fullName,role,email,department,password\nthewa_k,น.อ.เทวา กาญจนชม,instructor,,CS,csthebest\nx_y,X Y,instructor,,,\n");
+    expect(errors).toEqual([]);
+    expect(rows[0]).toMatchObject({ username: "thewa_k", role: "INSTRUCTOR", department: "CS", password: "csthebest" });
+    expect(rows[1].password).toBeNull();
+    expect(parseUserImport("a_b,A B,instructor,,,abc").errors[0].key).toBe("csv.badPassword");
+  });
 });
