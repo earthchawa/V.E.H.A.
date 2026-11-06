@@ -16,11 +16,14 @@ import { copyAssignmentAction } from "../actions";
 import { siblingSections } from "@/lib/sections";
 import { CopyToSections } from "@/components/CopyToSections";
 import { Modal } from "@/components/Modal";
+import { ConfirmButton } from "../../grades/ConfirmButton";
+import { PastAssignmentForm, ReferenceDocumentForm, type PastOption } from "../ReferenceForms";
+import { removeReferenceAction } from "../actions";
 
 export default async function AssignmentPage({ params }: { params: Promise<{ id: string; aid: string }> }) {
   const { id, aid } = await params;
   const { user, offering, canManage, students } = await loadCourse(id);
-  const { t, date, pct } = await getI18n();
+  const { t, tn, date, pct, term } = await getI18n();
 
   const assignment = await db.assignment.findUnique({ where: { id: aid }, include: { gradeItem: true } });
   if (!assignment || assignment.offeringId !== offering.id || (!canManage && !assignment.isPublished)) notFound();
@@ -58,6 +61,23 @@ export default async function AssignmentPage({ params }: { params: Promise<{ id:
       }),
       db.similarityMatch.findMany({ where: { assignmentId: assignment.id } }),
     ]);
+    // Reference library: what is already linked, and which other runs of this course could be.
+    const [sources, pastCandidates] = await Promise.all([
+      db.similaritySource.findMany({
+        where: { assignmentId: assignment.id },
+        orderBy: { createdAt: "asc" },
+        include: { matches: { select: { score: true, submissionId: true } }, pastAssignment: { select: { _count: { select: { submissions: true } } } } },
+      }),
+      db.assignment.findMany({
+        where: { offeringId: { not: offering.id }, offering: { courseId: offering.courseId } },
+        include: { offering: { include: { term: true } }, _count: { select: { submissions: true } } },
+        orderBy: [{ offering: { term: { academicYear: "desc" } } }, { offering: { term: { semester: "desc" } } }, { createdAt: "asc" }],
+      }),
+    ]);
+    const linked = new Set(sources.map((s) => s.pastAssignmentId).filter(Boolean));
+    const pastOptions: PastOption[] = pastCandidates
+      .filter((a) => !linked.has(a.id) && a._count.submissions > 0)
+      .map((a) => ({ id: a.id, label: `${term(a.offering.term)} · ${t("tc.section")} ${a.offering.section} — ${a.title}`, submissions: a._count.submissions }));
     const byStudent = new Map(submissions.map((s) => [s.studentId, s]));
     const nameOf = new Map(submissions.map((s) => [s.id, s.student.fullName]));
     const rows = students
@@ -136,6 +156,49 @@ export default async function AssignmentPage({ params }: { params: Promise<{ id:
                     ))}
                   </ul>
                 )}
+              </section>
+            )}
+            {assignment.checkSimilarity && (
+              <section className="card" data-testid="reference-library">
+                <h3 className="card-title mb-1">{t("src.title.card")}</h3>
+                <p className="mb-3 text-xs leading-relaxed text-muted">{t("src.cardHint")}</p>
+                {sources.length === 0 ? (
+                  <p className="mb-3 text-sm text-subtle">{t("src.none")}</p>
+                ) : (
+                  <ul className="mb-3 space-y-2">
+                    {sources.map((s) => {
+                      const hit = new Set(s.matches.map((m) => m.submissionId)).size;
+                      const top = s.matches.reduce((n, m) => Math.max(n, m.score), 0);
+                      return (
+                        <li key={s.id} className="rounded-lg border border-border px-3 py-2 text-sm" data-testid="reference">
+                          <div className="flex items-start gap-2">
+                            <span className={`badge mt-0.5 shrink-0 ${s.kind === "DOCUMENT" ? "bg-accent/10 text-accent" : "bg-surface-3 text-muted"}`}>
+                              {t(s.kind === "DOCUMENT" ? "src.kind.doc" : "src.kind.past")}
+                            </span>
+                            <span className="min-w-0 flex-1 break-words">
+                              {s.url ? <a href={s.url} target="_blank" rel="noreferrer noopener" className="hover:text-accent hover:underline">{s.title}</a> : s.title}
+                            </span>
+                          </div>
+                          <div className="mt-1.5 flex items-center gap-2 text-xs text-subtle">
+                            <span className="flex-1">
+                              {s.kind === "PAST_ASSIGNMENT" && <>{tn("src.subs", s.pastAssignment?._count.submissions ?? 0)} · </>}
+                              {hit ? t("src.hits", { n: hit, top: pct(top) }) : t("src.noHits")}
+                            </span>
+                            <ConfirmButton action={removeReferenceAction} name="sourceId" value={s.id} message={t("src.removeConfirm")} label={t("src.remove")} />
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  <Modal label={`+ ${t("src.addDoc")}`} title={t("src.addDoc")} buttonClassName="btn-secondary" size="lg" testId="add-reference-doc">
+                    <ReferenceDocumentForm assignmentId={assignment.id} />
+                  </Modal>
+                  <Modal label={`+ ${t("src.addPast")}`} title={t("src.addPast")} buttonClassName="btn-secondary" testId="add-reference-past">
+                    <PastAssignmentForm assignmentId={assignment.id} options={pastOptions} />
+                  </Modal>
+                </div>
               </section>
             )}
             <div className="flex flex-wrap gap-2">

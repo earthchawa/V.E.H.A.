@@ -1,8 +1,8 @@
 {
-  "name": "skycampus",
+  "name": "veha",
   "version": "0.1.0",
   "private": true,
-  "description": "SkyCampus — NKRAFA Learning Portal: in-house online classroom (courses per term, materials, assignments, quizzes, grades)",
+  "description": "V.E.H.A. (Virtual Educational Hangar for Air-cadets) — NKRAFA online classroom: courses per term, materials, assignments, quizzes, grades",
   "scripts": {
     "predev": "node scripts/copy-pyodide.mjs",
     "dev": "next dev",

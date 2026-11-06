@@ -23,10 +23,11 @@ export async function AuthShell({ title, subtitle, children }: { title: string; 
             <LogoMark className="h-20 w-auto drop-shadow-[0_8px_24px_rgba(0,0,0,0.25)] dark:drop-shadow-[0_0_28px_rgba(91,140,255,0.35)]" />
           </span>
           <div>
-            <div className="bg-gradient-to-r from-fg via-accent to-fg bg-clip-text text-3xl font-semibold tracking-tight text-transparent" data-testid="brand-name">
+            <div className="bg-gradient-to-r from-fg via-accent to-fg bg-clip-text text-3xl font-semibold tracking-[0.12em] text-transparent" data-testid="brand-name">
               {brand.name}
             </div>
-            <p className="mt-1 text-xs text-muted">{t("app.tagline")}</p>
+            <p className="mt-1 text-xs font-medium tracking-wide text-muted" data-testid="brand-full-name">{brand.fullName}</p>
+            <p className="mt-0.5 text-[11px] text-subtle">{t("app.tagline")}</p>
           </div>
         </div>
         <TiltCard className="fade-up rounded-2xl border border-border bg-surface/75 p-6 shadow-2xl backdrop-blur-md [animation-delay:120ms]">

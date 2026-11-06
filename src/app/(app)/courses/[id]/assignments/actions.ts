@@ -14,6 +14,7 @@ import { acceptsSubmissions, isPastDue, parseBangkokLocal, uploadLimits } from "
 import { config } from "@/lib/config";
 import { extractFile, type Extracted } from "@/lib/similarity/extract";
 import { assembleContent } from "@/lib/similarity/content";
+import { referenceContent } from "@/lib/similarity/sources";
 import { recheckAssignment } from "@/lib/similarity/run";
 import { copyAssignment, validTargets } from "@/lib/sections";
 
@@ -230,4 +231,78 @@ export async function copyAssignmentAction(_: FormState, fd: FormData): Promise<
   }
   await audit({ actorId: user.id, action: "assignment.copied", targetType: "Assignment", targetId: assignment.id, details: { to: targets.map((x) => x.id) } });
   return { success: t("sec.copied", { list: targets.map((x) => t("dash.section", { s: x.section })).join(", ") }) };
+}
+
+// ---------- reference library (in-house internet / past-year checking) ----------
+
+const MAX_REFERENCE_CHARS = 300_000;
+
+/** Add a reference document (pasted text and/or files) the assignment's submissions are compared with. */
+export async function addReferenceDocumentAction(assignmentId: string, _: FormState, fd: FormData): Promise<FormState> {
+  const assignment = await db.assignment.findUniqueOrThrow({ where: { id: assignmentId } });
+  const user = await requireManage(assignment.offeringId);
+  const { t } = await getI18n();
+
+  const title = String(fd.get("title") ?? "").trim().slice(0, 200);
+  if (!title) return { error: t("err.titleRequired") };
+  const urlRaw = String(fd.get("url") ?? "").trim().slice(0, 1000);
+  if (urlRaw && !/^https?:\/\/\S+$/i.test(urlRaw)) return { error: t("src.err.url") };
+  const text = String(fd.get("text") ?? "").trim().slice(0, MAX_REFERENCE_CHARS) || null;
+  const uploads = fd.getAll("files").filter((f): f is File => f instanceof File && f.size > 0);
+  const limits = uploadLimits(config.maxUploadMb);
+  if (uploads.length > limits.maxFiles) return { error: t("err.tooManyFiles", { n: limits.maxFiles }) };
+  if (uploads.reduce((n, f) => n + f.size, 0) > limits.totalMb * 1024 * 1024) return { error: t("err.filesTooBig", { mb: limits.totalMb }) };
+
+  const files: { fileName: string; extracted: Extracted[] | null }[] = [];
+  for (const f of uploads) {
+    const fileName = f.name.slice(0, 255);
+    files.push({ fileName, extracted: await extractFile(fileName, Buffer.from(await f.arrayBuffer())) });
+  }
+  const { content, segments } = referenceContent(text, files);
+  if (!content.trim()) return { error: t("src.err.empty") };
+
+  const source = await db.similaritySource.create({
+    data: {
+      assignmentId,
+      kind: "DOCUMENT",
+      title,
+      url: urlRaw || null,
+      content: content.slice(0, MAX_REFERENCE_CHARS),
+      segments: segments as Prisma.InputJsonValue,
+      createdById: user.id,
+    },
+  });
+  await recheckAssignment(assignmentId);
+  await audit({ actorId: user.id, action: "similarity.source_added", targetType: "Assignment", targetId: assignmentId, details: { title, kind: "DOCUMENT", source: source.id } });
+  revalidatePath(`/courses/${assignment.offeringId}/assignments/${assignmentId}`, "layout");
+  return { success: t("src.added") };
+}
+
+/** Compare with every submission to the same course's assignment in an earlier term or another section. */
+export async function addPastAssignmentSourceAction(assignmentId: string, _: FormState, fd: FormData): Promise<FormState> {
+  const assignment = await db.assignment.findUniqueOrThrow({ where: { id: assignmentId }, include: { offering: true } });
+  const user = await requireManage(assignment.offeringId);
+  const { t, term } = await getI18n();
+
+  const pastId = String(fd.get("pastAssignmentId") ?? "");
+  const past = await db.assignment.findUnique({ where: { id: pastId }, include: { offering: { include: { course: true, term: true } } } });
+  // Only the same course in another term or section (never this section's own assignments).
+  if (!past || past.offeringId === assignment.offeringId || past.offering.courseId !== assignment.offering.courseId) return { error: t("common.invalid") };
+  if (await db.similaritySource.findFirst({ where: { assignmentId, pastAssignmentId: pastId } })) return { error: t("src.err.duplicate") };
+
+  const title = `${past.offering.course.code} · ${term(past.offering.term)} · ${t("tc.section")} ${past.offering.section} — ${past.title}`;
+  await db.similaritySource.create({ data: { assignmentId, kind: "PAST_ASSIGNMENT", title: title.slice(0, 200), pastAssignmentId: pastId, createdById: user.id } });
+  await recheckAssignment(assignmentId);
+  await audit({ actorId: user.id, action: "similarity.source_added", targetType: "Assignment", targetId: assignmentId, details: { title, kind: "PAST_ASSIGNMENT", pastAssignmentId: pastId } });
+  revalidatePath(`/courses/${assignment.offeringId}/assignments/${assignmentId}`, "layout");
+  return { success: t("src.added") };
+}
+
+export async function removeReferenceAction(fd: FormData): Promise<void> {
+  const source = await db.similaritySource.findUniqueOrThrow({ where: { id: String(fd.get("sourceId")) }, include: { assignment: true } });
+  const user = await requireManage(source.assignment.offeringId);
+  await db.similaritySource.delete({ where: { id: source.id } });
+  await recheckAssignment(source.assignmentId);
+  await audit({ actorId: user.id, action: "similarity.source_removed", targetType: "Assignment", targetId: source.assignmentId, details: { title: source.title } });
+  revalidatePath(`/courses/${source.assignment.offeringId}/assignments/${source.assignmentId}`, "layout");
 }

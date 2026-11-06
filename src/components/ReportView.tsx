@@ -6,7 +6,14 @@ import type { Piece } from "@/lib/similarity/highlight";
 import { useI18n } from "@/lib/i18n/client";
 import { HighlightedContent } from "./HighlightedContent";
 
-export type ReportSource = { label: string; share: number; compareHref?: string };
+export type ReportSource = {
+  label: string;
+  share: number;
+  /** peer = another cadet in this assignment; past = an earlier term's submission; document = reference text. */
+  kind?: "peer" | "past" | "document";
+  compareHref?: string;
+  url?: string;
+};
 
 /** Interactive report: source list on the side, click a source to show only its highlights. */
 export function ReportView({ pieces, sources }: { pieces: Piece[]; sources: ReportSource[] }) {
@@ -49,11 +56,17 @@ export function ReportView({ pieces, sources }: { pieces: Piece[]; sources: Repo
                     data-testid="source"
                   >
                     <span className={`sw-${i % 6} h-2.5 w-2.5 shrink-0 rounded-full`} />
-                    <span className="min-w-0 flex-1 truncate">{s.label}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate">{s.label}</span>
+                      {s.kind && s.kind !== "peer" && <span className="block text-[11px] text-subtle">{t(s.kind === "past" ? "src.kind.past" : "src.kind.doc")}</span>}
+                    </span>
                     <span className="font-mono text-xs text-muted">{pct(s.share)}</span>
                   </button>
                   {s.compareHref && active === i && (
                     <Link href={s.compareHref} className="ml-7 text-xs text-accent hover:underline">{t("asg.compare")} →</Link>
+                  )}
+                  {s.url && active === i && (
+                    <a href={s.url} target="_blank" rel="noreferrer noopener" className="ml-7 block truncate text-xs text-accent hover:underline">{s.url}</a>
                   )}
                 </li>
               ))}

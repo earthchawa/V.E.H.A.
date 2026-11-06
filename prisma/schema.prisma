@@ -38,39 +38,40 @@ enum ReportVisibility {
 }
 
 model User {
-  id                    String    @id @default(cuid())
+  id                    String      @id @default(cuid())
   /// Student ID / staff ID — what people type to log in.
-  username              String    @unique
+  username              String      @unique
   fullName              String
   /// Optional; required for self-service "forgot password".
-  email                 String?   @unique
-  role                  Role      @default(STUDENT)
+  email                 String?     @unique
+  role                  Role        @default(STUDENT)
   passwordHash          String
   /// True for initial and admin-reset passwords: user must set their own on next login.
-  mustChangePassword    Boolean   @default(true)
+  mustChangePassword    Boolean     @default(true)
   /// A temporary password stops working after this time.
   tempPasswordExpiresAt DateTime?
-  failedLoginCount      Int       @default(0)
+  failedLoginCount      Int         @default(0)
   lockedUntil           DateTime?
-  isActive              Boolean   @default(true)
+  isActive              Boolean     @default(true)
   /// Home department (cadets: programme; staff: affiliation). Optional.
   departmentId          String?
   department            Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   lastLoginAt           DateTime?
   passwordChangedAt     DateTime?
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
 
-  sessions    Session[]
-  resetTokens PasswordResetToken[]
-  enrollments Enrollment[]
-  materials   Material[]
-  auditLogs   AuditLog[]
-  assignments Assignment[]
-  submissions Submission[]
-  grades      Grade[]
-  quizzes     Quiz[]
-  attempts    QuizAttempt[]
+  sessions          Session[]
+  resetTokens       PasswordResetToken[]
+  enrollments       Enrollment[]
+  materials         Material[]
+  auditLogs         AuditLog[]
+  assignments       Assignment[]
+  similaritySources SimilaritySource[]
+  submissions       Submission[]
+  grades            Grade[]
+  quizzes           Quiz[]
+  attempts          QuizAttempt[]
 }
 
 model Session {
@@ -116,16 +117,16 @@ model Term {
 }
 
 model Course {
-  id          String   @id @default(cuid())
+  id           String      @id @default(cuid())
   /// e.g. CS201
-  code        String   @unique
-  title       String
-  titleTh     String?
-  credits     Int?
-  description String?
+  code         String      @unique
+  title        String
+  titleTh      String?
+  credits      Int?
+  description  String?
   departmentId String?
   department   Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
-  createdAt   DateTime @default(now())
+  createdAt    DateTime    @default(now())
 
   offerings CourseOffering[]
 }
@@ -140,16 +141,16 @@ model CourseOffering {
   section   String   @default("1")
   createdAt DateTime @default(now())
 
-  enrollments Enrollment[]
-  materials   Material[]
-  assignments Assignment[]
-  gradeCategories GradeCategory[]
-  gradeItems      GradeItem[]
-  quizzes         Quiz[]
+  enrollments         Enrollment[]
+  materials           Material[]
+  assignments         Assignment[]
+  gradeCategories     GradeCategory[]
+  gradeItems          GradeItem[]
+  quizzes             Quiz[]
   /// [{ letter, min }] sorted by min, high → low. Null = academy default (A ≥ 80 … F).
   gradeScale          Json?
   /// Whether cadets see their running total and letter grade (from released items).
-  showTotalToStudents Boolean @default(true)
+  showTotalToStudents Boolean         @default(true)
 
   @@unique([courseId, termId, section])
   @@index([termId])
@@ -194,19 +195,19 @@ model Material {
 }
 
 model AuditLog {
-  id         String   @id @default(cuid())
-  actorId    String?
-  actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
-  action     String
-  targetType String?
-  targetId   String?
-  details    Json?
-  ip         String?
+  id           String   @id @default(cuid())
+  actorId      String?
+  actor        User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  action       String
+  targetType   String?
+  targetId     String?
+  details      Json?
+  ip           String?
   /// Course section the entry concerns (resolved from the target when written). No FK: logs outlive deletions.
   offeringId   String?
   /// Department/subject area the entry concerns: the course's, else the actor's (or target user's).
   departmentId String?
-  createdAt  DateTime @default(now())
+  createdAt    DateTime @default(now())
 
   @@index([createdAt])
   @@index([actorId])
@@ -238,6 +239,10 @@ model Assignment {
   submissions Submission[]
   matches     SimilarityMatch[]
   gradeItem   GradeItem?
+  /// Reference library this assignment is also checked against.
+  sources     SimilaritySource[] @relation("SourceOf")
+  /// Other assignments that use this one's submissions as a reference (e.g. next year's run).
+  reusedBy    SimilaritySource[] @relation("PastAssignment")
 
   @@index([offeringId])
 }
@@ -261,9 +266,10 @@ model Submission {
   similarity   Float?
   checkedAt    DateTime?
 
-  files    SubmissionFile[]
-  matchesA SimilarityMatch[] @relation("MatchA")
-  matchesB SimilarityMatch[] @relation("MatchB")
+  files         SubmissionFile[]
+  sourceMatches SourceMatch[]
+  matchesA      SimilarityMatch[] @relation("MatchA")
+  matchesB      SimilarityMatch[] @relation("MatchB")
 
   @@unique([assignmentId, studentId])
 }
@@ -421,23 +427,23 @@ model Quiz {
 }
 
 model QuizQuestion {
-  id        String       @id @default(cuid())
-  quizId    String
-  quiz      Quiz         @relation(fields: [quizId], references: [id], onDelete: Cascade)
-  type      QuestionType
-  prompt    String
-  points    Float
-  position  Int          @default(0)
+  id         String       @id @default(cuid())
+  quizId     String
+  quiz       Quiz         @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  type       QuestionType
+  prompt     String
+  points     Float
+  position   Int          @default(0)
   /// SINGLE/MULTIPLE: [{ id, text, correct }]
-  options   Json         @default("[]")
+  options    Json         @default("[]")
   /// SHORT: accepted answers, compared case-/space-insensitively.
-  accepted  Json         @default("[]")
+  accepted   Json         @default("[]")
   /// ESSAY: monospace answer box for code.
-  codeAnswer Boolean     @default(false)
+  codeAnswer Boolean      @default(false)
   /// CODE: "python" | "javascript" | "web" (see lib/code.ts).
   language   String?
   /// CODE: starter files shown to cadets, { [fileName]: content }.
-  starter    Json        @default("{}")
+  starter    Json         @default("{}")
 
   answers QuizAnswer[]
 
@@ -445,24 +451,24 @@ model QuizQuestion {
 }
 
 model QuizAttempt {
-  id           String        @id @default(cuid())
-  quizId       String
-  quiz         Quiz          @relation(fields: [quizId], references: [id], onDelete: Cascade)
-  studentId    String
-  student      User          @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  status       AttemptStatus @default(IN_PROGRESS)
-  startedAt    DateTime      @default(now())
+  id            String        @id @default(cuid())
+  quizId        String
+  quiz          Quiz          @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  studentId     String
+  student       User          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  status        AttemptStatus @default(IN_PROGRESS)
+  startedAt     DateTime      @default(now())
   /// Server-side deadline: start + time limit, capped at the quiz's close time.
-  deadlineAt   DateTime?
-  submittedAt  DateTime?
-  autoSubmitted Boolean      @default(false)
+  deadlineAt    DateTime?
+  submittedAt   DateTime?
+  autoSubmitted Boolean       @default(false)
   /// This attempt's question order and option order: { questions: [id], options: { [qid]: [optId] } }
-  layout       Json
+  layout        Json
   /// Sum of awarded points; null until every answer is graded.
-  score        Float?
-  maxScore     Float         @default(0)
-  ip           String?
-  userAgent    String?
+  score         Float?
+  maxScore      Float         @default(0)
+  ip            String?
+  userAgent     String?
 
   answers QuizAnswer[]
   events  QuizEvent[]
@@ -540,4 +546,51 @@ model AppSetting {
   key       String   @id
   value     String
   updatedAt DateTime @updatedAt
+}
+
+enum SourceKind {
+  /// Text the instructor adds: a web page, a textbook passage, a model answer, answers an AI chatbot gave.
+  DOCUMENT
+  /// Every submission to an assignment of an earlier term or another section.
+  PAST_ASSIGNMENT
+}
+
+/// In-house reference library: an assignment's submissions are also compared with these (one way only).
+model SimilaritySource {
+  id               String      @id @default(cuid())
+  assignmentId     String
+  assignment       Assignment  @relation("SourceOf", fields: [assignmentId], references: [id], onDelete: Cascade)
+  kind             SourceKind
+  title            String
+  url              String?
+  /// DOCUMENT: analysed text and its segments (same shape as Submission.content/segments).
+  content          String      @default("")
+  segments         Json        @default("[]")
+  /// PAST_ASSIGNMENT: whose submissions to compare with.
+  pastAssignmentId String?
+  pastAssignment   Assignment? @relation("PastAssignment", fields: [pastAssignmentId], references: [id], onDelete: Cascade)
+  createdById      String
+  createdBy        User        @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt        DateTime    @default(now())
+
+  matches SourceMatch[]
+
+  @@unique([assignmentId, pastAssignmentId])
+  @@index([assignmentId])
+}
+
+/// How much of a submission a reference covers. For PAST_ASSIGNMENT, refSubmissionId says which past submission.
+model SourceMatch {
+  id              String           @id @default(cuid())
+  submissionId    String
+  submission      Submission       @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  sourceId        String
+  source          SimilaritySource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  /// No FK: the past submission may be deleted later; the match is then cleared on the next check.
+  refSubmissionId String?
+  score           Float
+  spans           Json
+
+  @@index([submissionId])
+  @@index([sourceId])
 }

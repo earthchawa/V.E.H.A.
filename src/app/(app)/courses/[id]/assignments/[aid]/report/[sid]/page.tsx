@@ -46,14 +46,40 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
     .filter((s) => s.share > 0)
     .sort((x, y) => y.share - x.share);
 
+  // Reference library matches (past terms' submissions, documents the instructor added). Past cadets stay anonymous.
+  const refRows = (
+    await db.sourceMatch.findMany({ where: { submissionId: sid }, include: { source: { select: { kind: true, title: true, url: true } } } })
+  )
+    .filter((m) => m.score > 0)
+    .sort((x, y) => y.score - x.score);
+  let docN = 0;
+  let pastN = 0;
+  const refSources: (ReportSource & { spans: Span[] })[] = refRows.map((m) => {
+    const isDoc = m.source.kind === "DOCUMENT";
+    const n = isDoc ? ++docN : ++pastN;
+    const label = canManage
+      ? isDoc
+        ? t("rep.refDocNamed", { title: m.source.title })
+        : t("rep.pastNamed", { title: m.source.title, n })
+      : t(isDoc ? "rep.refDoc" : "rep.pastWork", { n });
+    return { label, share: m.score, kind: isDoc ? "document" : "past", url: canManage && isDoc ? (m.source.url ?? undefined) : undefined, spans: m.spans as Span[] };
+  });
+
   const base = `/courses/${offering.id}/assignments/${aid}`;
-  const sources: ReportSource[] = sides.map((s, i) => ({
+  const peerSources: ReportSource[] = sides.map((s, i) => ({
     label: canManage ? `${s.other.student.fullName} (${s.other.student.username})` : t("rep.peer", { n: i + 1 }),
     share: s.share,
+    kind: "peer",
     compareHref: canManage ? `${base}/compare?a=${sid}&b=${s.other.id}` : undefined,
   }));
+  // Strongest first across all kinds; highlights follow the same order.
+  const all = [
+    ...peerSources.map((s, i) => ({ ...s, spans: sides[i].spans })),
+    ...refSources,
+  ].sort((x, y) => y.share - x.share);
+  const sources: ReportSource[] = all.map(({ spans: _spans, ...s }) => s);
   const pieces = submission.content
-    ? buildPieces(submission.content, submission.segments as Segment[], sides.map((s) => s.spans))
+    ? buildPieces(submission.content, submission.segments as Segment[], all.map((s) => s.spans))
     : [];
   const grade =
     canGrade && assignment.gradeItem

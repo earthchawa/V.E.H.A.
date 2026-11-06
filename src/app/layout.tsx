@@ -11,7 +11,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n();
   return {
     title: { default: brand.name, template: `%s · ${brand.name}` },
-    description: `${t("app.tagline")} — ${t("app.org")}`,
+    description: `${brand.fullName} — ${t("app.tagline")} · ${t("app.org")}`,
   };
 }
 

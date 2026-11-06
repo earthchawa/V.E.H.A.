@@ -89,6 +89,8 @@ export type CheckOutput = {
   /** Union coverage per submission. */
   similarity: Map<string, number>;
   matches: { aId: string; bId: string; scoreA: number; scoreB: number; spansA: Span[]; spansB: Span[] }[];
+  /** One-way matches against the reference library: how much of submission `subId` reference `refId` covers. */
+  refMatches: { subId: string; refId: string; score: number; spans: Span[] }[];
 };
 
 /** Compare every submission with every other one (n is a class, so n² is fine). */
@@ -98,7 +100,7 @@ export const COMMON_MIN_SUBMISSIONS = 4;
 export function checkAll(
   subs: CheckInput[],
   ignoreText?: string | null,
-  opts: { ignoreCommon?: boolean } = {},
+  opts: { ignoreCommon?: boolean; refs?: CheckInput[] } = {},
 ): CheckOutput {
   const ignore = ignoredGrams(ignoreText);
   const docs = subs.map((s) => buildDoc(s.content, s.segments));
@@ -129,7 +131,19 @@ export function checkAll(
       });
     }
   }
-  return { similarity: new Map(subs.map((s, i) => [s.id, share(union[i])])), matches };
+  // Reference library (past submissions, documents the instructor added). Only the submission's side counts.
+  const refMatches: CheckOutput["refMatches"] = [];
+  for (const ref of opts.refs ?? []) {
+    const refDoc = buildDoc(ref.content, ref.segments);
+    if (!refDoc.grams.size) continue;
+    for (let i = 0; i < subs.length; i++) {
+      const r = comparePair(docs[i], refDoc, ignore);
+      if (r.scoreA === 0) continue;
+      r.coveredA.forEach((c, t) => c && (union[i][t] = 1));
+      refMatches.push({ subId: subs[i].id, refId: ref.id, score: r.scoreA, spans: toSpans(docs[i].tokens, r.coveredA) });
+    }
+  }
+  return { similarity: new Map(subs.map((s, i) => [s.id, share(union[i])])), matches, refMatches };
 }
 
 export { level, type Level } from "./level";

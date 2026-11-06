@@ -1,4 +1,4 @@
-# SkyCampus — NKRAFA Learning Portal
+# V.E.H.A. — Virtual Educational Hangar for Air-cadets (NKRAFA online classroom)
 
 In-house online classroom for Navaminda Kasatriyadhiraj Royal Thai Air Force Academy (NKRAFA).
 Started with Computer Science cadets (~20 per year, ~80 total), meant to grow to other divisions.
@@ -45,7 +45,8 @@ src/components/   Modal, KeepForm, FileDropzone, SubmitButton, ReportView, Answe
 src/lib/
   auth/           password policy, sessions (hashed tokens), lockout, reset links
   i18n/           en.ts (source of keys), th.ts (must cover every key), server.ts/client.tsx
-  similarity/     tokenizer (Thai via Intl.Segmenter), k-gram engine, file text extraction, highlights
+  similarity/     tokenizer (Thai via Intl.Segmenter), k-gram engine, file text extraction, highlights,
+                  reference library (sources.ts; one-way matches against SimilaritySource → SourceMatch)
   quiz.ts         pure quiz logic (auto-grading, layout, deadlines, IP/SEB checks)  + quiz-server.ts (DB side)
   grades.ts       pure gradebook maths; sections.ts copy between sections; todo.ts dashboard queries
   access.ts       offeringAccess (manage/view) and canGrade (course instructors only)
@@ -84,7 +85,7 @@ src/lib/
 - **Organisation:** two levels — department (กองวิชา, e.g. "Department of Computer Science" (CS),
   "Department of Mathematics and Computer Science" (MC)) and subject area (สาขาวิชา, e.g. MA under MC, PH and CH
   under MS); in code both are `Department` rows (`parentId` = level 2). Keep the English "Department of …" naming.
-  The brand (name SkyCampus + Academic Faculty logo, transparent; `logoDark` variant with light lettering for the
+  The brand (name V.E.H.A. = Virtual Educational Hangar for Air-cadets, formerly SkyCampus/AeroClass, + Academic Faculty logo, transparent; `logoDark` variant with light lettering for the
   dark theme — no white plate) lives in `lib/brand.ts`.
 - **Department branding:** each unit has a colour and a logo (bundled under `public/logos/`, or
   uploaded — PNG/JPG/WebP ≤ 1 MB, served by `/api/department-logo/[id]`). Subject areas inherit their department's
@@ -121,5 +122,9 @@ Commit every migration; Vercel applies them during build.
 
 Phases 1–4 done, plus quiz code questions (Python, JavaScript, HTML/CSS/JS; hand-marked): accounts, terms/courses/sections, materials, assignments + similarity reports (peer
 copying only), gradebook, online quizzes with integrity log / Safe Exam Browser / exam rooms, divisions &
-departments with logos and colours. Not done: internet plagiarism and AI-writing detection (would need Copyleaks; AI hints should
-be a yellow, instructor-only "for review" highlight — never an accusation), department-level admins.
+departments with logos and colours. In-house "reference library" per assignment: instructors add earlier terms' / other sections' runs of the
+same course (past cadets anonymised in reports) and reference texts (web pages, model answers, AI-chatbot answers;
+pasted text is tokenised as prose and as code). It feeds the overall similarity score.
+Not done: automatic internet search and AI-writing detection (would need Copyleaks or similar, deferred until
+there is a budget; plug it in as another source kind feeding SourceMatch; AI hints must be a yellow,
+instructor-only "for review" highlight — never an accusation), department-level admins.
