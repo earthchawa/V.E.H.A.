@@ -16,6 +16,7 @@ describe("parseSchedule", () => {
   it("maps Thai prefixes and rejects unknown ones", () => {
     expect(parseSchedule("2569,1,คต 231,,,,,x_user").rows[0].code).toBe("CS231");
     expect(parseSchedule("2569,1,คณ 111,,,,,x_user").rows[0].code).toBe("MA111");
+    expect(parseSchedule("2569,1,สศ 405,,,,,x_user").rows[0].code).toBe("SS405");
     expect(parseSchedule("2569,1,มศ 101,,,,,x_user").errors[0].key).toBe("sched.badCode");
   });
 

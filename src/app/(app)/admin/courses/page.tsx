@@ -211,6 +211,12 @@ export default async function AdminCoursesPage({ searchParams }: { searchParams:
                           <CourseDepartmentSelect courseId={c.id} value={c.departmentId ?? ""} options={deptOptions} noneLabel={t("dep.unassigned")} ariaLabel={`${t("dep.field")} ${c.code}`} />
                         </span>
                       )}
+                      <Modal label={t("qz.edit")} title={`${t("tc.editCourse")} · ${c.code}`} buttonClassName="btn-secondary" size="lg" testId="edit-course">
+                        <CreateCourseForm
+                          departments={deptOptions}
+                          course={{ id: c.id, code: c.code, title: c.title, titleTh: c.titleTh, credits: c.credits, description: c.description, departmentId: c.departmentId }}
+                        />
+                      </Modal>
                     </li>
                   ))}
                 </ul>

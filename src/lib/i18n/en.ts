@@ -888,6 +888,8 @@ export const en = {
   "nav.backTo.semesters": "Back to semesters & courses",
   "nav.backTo.page": "Back",
   "tc.offerHelp": "A course from the catalogue only becomes a class when it is offered in a semester: that creates the course page (materials, assignments, quizzes, gradebook) for one section. Then add its instructors and cadets with Manage roster. Offer the same course again with section 2, 3… for separate groups. Importing a teaching schedule does this for many courses at once.",
+  "tc.editCourse": "Edit course",
+  "log.course.updated": "Course edited",
 } as const;
 
 export type Key = keyof typeof en;

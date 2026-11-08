@@ -7,7 +7,7 @@ import { requireRole } from "@/lib/auth/session";
 import { issueTempPassword } from "@/lib/auth/account";
 import { generateTempPassword, hashPassword, tempPasswordExpiry } from "@/lib/auth/password";
 import { parseUserImport, type UserImportRow } from "@/lib/csv";
-import { codeArea, parseSchedule } from "@/lib/schedule-import";
+import { AREA_DEPARTMENT, codeArea, parseSchedule } from "@/lib/schedule-import";
 import { config } from "@/lib/config";
 import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
@@ -226,6 +226,39 @@ export async function createCourseAction(_: FormState, fd: FormData): Promise<Fo
   return { success: t("ok.courseAdded", { code: course.code }) };
 }
 
+/** Edit a catalogue course (code, titles, credits, description, subject area). Audited with old → new values. */
+export async function updateCourseAction(courseId: string, _: FormState, fd: FormData): Promise<FormState> {
+  const me = await admin();
+  const { t } = await getI18n();
+  const course = await db.course.findUniqueOrThrow({ where: { id: courseId } });
+  const parsed = courseSchema.safeParse({
+    code: fd.get("code"),
+    title: fd.get("title"),
+    titleTh: fd.get("titleTh") || undefined,
+    credits: fd.get("credits") || undefined,
+    description: fd.get("description") || undefined,
+    departmentId: fd.get("departmentId") || undefined,
+  });
+  if (!parsed.success) {
+    const field = parsed.error.issues[0]?.path[0];
+    return { error: t(field === "code" ? "err.courseCode" : field === "title" ? "err.courseTitle" : "common.invalid") };
+  }
+  const d = parsed.data;
+  if (d.code !== course.code && (await db.course.findUnique({ where: { code: d.code } }))) return { error: t("err.courseExists") };
+  const dept = d.departmentId ? await db.department.findUnique({ where: { id: d.departmentId } }) : null;
+  const next = { code: d.code, title: d.title, titleTh: d.titleTh ?? null, credits: d.credits ?? null, description: d.description ?? null, departmentId: dept?.id ?? null };
+  const changed = Object.fromEntries(
+    (Object.keys(next) as (keyof typeof next)[])
+      .filter((k) => (course[k] ?? null) !== next[k])
+      .map((k) => [k, { from: course[k] ?? null, to: next[k] }]),
+  );
+  if (!Object.keys(changed).length) return { success: t("ok.saved") };
+  await db.course.update({ where: { id: course.id }, data: next });
+  await audit({ actorId: me.id, action: "course.updated", targetType: "Course", targetId: course.id, details: changed });
+  revalidatePath("/admin/courses");
+  return { success: t("ok.saved") };
+}
+
 export async function createOfferingAction(_: FormState, fd: FormData): Promise<FormState> {
   const me = await admin();
   const { t } = await getI18n();
@@ -284,7 +317,7 @@ export async function importScheduleAction(_: FormState, fd: FormData): Promise<
           title: r.titleEn ?? r.titleTh ?? r.code,
           titleTh: r.titleTh,
           credits: r.credits,
-          departmentId: depts.get(codeArea(r.code)) ?? null,
+          departmentId: depts.get(codeArea(r.code)) ?? depts.get(AREA_DEPARTMENT[codeArea(r.code)] ?? "") ?? null,
         },
       });
       count.courses++;

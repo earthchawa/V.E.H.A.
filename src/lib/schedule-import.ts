@@ -27,7 +27,10 @@ const CODE_RE = /^[A-Z]{2,4}\d{3}[A-Z]?$/;
 const USER_RE = /^[A-Za-z0-9._-]{3,32}$/;
 
 /** Thai subject prefixes used in the curriculum book and timetables → the codes used here. */
-export const THAI_CODE_PREFIX: Record<string, string> = { คต: "CS", คณ: "MA", ฟส: "PH", คม: "CH" };
+export const THAI_CODE_PREFIX: Record<string, string> = { คต: "CS", คณ: "MA", ฟส: "PH", คม: "CH", สศ: "SS" };
+
+/** Code prefixes with no department of the same code: which department their courses belong to. */
+export const AREA_DEPARTMENT: Record<string, string> = { SS: "HS" };
 
 /** "CS 231", "cs231", "คต 231" → "CS231". */
 export function normaliseCourseCode(raw: string): string {
