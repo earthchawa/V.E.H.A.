@@ -132,6 +132,12 @@ npx prisma migrate deploy && npx prisma generate
 
 Commit every migration; Vercel applies them during build.
 
+## Documentation
+
+`docs/` holds the software documentation (Thai): `technical/` (software design, operations, developer guide) and
+`manual/` (cadet, instructor, admin). Manuals quote the Thai UI labels from `th.ts`; when a flow or label changes,
+update the matching manual (and the SDD for design changes) in the same commit. No real names, IDs or passwords.
+
 ## Testing
 
 - `npm test` covers pure logic (auth policy, CSV, similarity incl. Thai Q&A, grades, quiz logic, i18n parity).
