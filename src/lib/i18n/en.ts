@@ -436,7 +436,7 @@ export const en = {
   // Report
   "rep.title": "Similarity report",
   "rep.overall": "Overall similarity",
-  "rep.overallHint": "Share of this submission that also appears in other submissions or in the reference library.",
+  "rep.overallHint": "Share of this submission that also appears elsewhere, split below by source: classmates' work, earlier semesters' work and reference texts (web pages, model answers, AI-chatbot answers the instructor added). A passage can match more than one source, so the parts can add up to more than the total. Automatic internet search and AI-writing detection are not included (they need a paid service).",
   "rep.sources": "Matched sources",
   "src.title.card": "Reference library",
   "src.cardHint": "Also compare submissions with earlier semesters' work and with texts you add (web pages, model answers, answers an AI chatbot gives to this task). Free and in-house; nothing leaves the academy.",
@@ -890,6 +890,10 @@ export const en = {
   "tc.offerHelp": "A course from the catalogue only becomes a class when it is offered in a semester: that creates the course page (materials, assignments, quizzes, gradebook) for one section. Then add its instructors and cadets with Manage roster. Offer the same course again with section 2, 3… for separate groups. Importing a teaching schedule does this for many courses at once.",
   "tc.editCourse": "Edit course",
   "log.course.updated": "Course edited",
+  "forgot.contactAdmin": "To reset your password, please contact the system administrator. They will give you a new temporary password, which you change when you sign in.",
+  "rep.kind.peer": "Classmates",
+  "rep.kind.past": "Earlier semesters",
+  "rep.kind.document": "Reference texts",
 } as const;
 
 export type Key = keyof typeof en;

@@ -25,6 +25,13 @@ export const config = {
   maxResetRequestsPerHour: 3,
   /** Largest upload per request. Vercel functions accept at most 4.5 MB request bodies. */
   maxUploadMb: Number(process.env.MAX_UPLOAD_MB ?? (onVercel ? 4 : 50)),
+  /**
+   * Self-service password reset by email works only once an SMTP server is configured. Until then the
+   * "Forgot password?" page tells people to contact an administrator (who resets it on the Users page).
+   */
+  get emailReset() {
+    return !!process.env.SMTP_HOST;
+  },
   smtp: {
     host: process.env.SMTP_HOST ?? "",
     port: Number(process.env.SMTP_PORT ?? 587),

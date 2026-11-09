@@ -6,6 +6,7 @@ import { studentCanSeeReport } from "@/lib/assignments";
 import { K, type Segment, type Span } from "@/lib/similarity/engine";
 import { level } from "@/lib/similarity/level";
 import { buildPieces } from "@/lib/similarity/highlight";
+import { shareByKind } from "@/lib/similarity/breakdown";
 import { ReportView, type ReportSource } from "@/components/ReportView";
 import { GradePanel } from "./GradePanel";
 import { InfoTip } from "@/components/InfoTip";
@@ -86,6 +87,8 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
       ? await db.grade.findUnique({ where: { itemId_studentId: { itemId: assignment.gradeItem.id, studentId: submission.studentId } } })
       : null;
   const score = submission.similarity ?? 0;
+  // The overall score split by where the matches come from.
+  const byKind = shareByKind(submission.content, submission.segments as Segment[], all.map((s) => ({ kind: s.kind ?? "peer", spans: s.spans })));
   const lv = level(score);
 
   return (
@@ -98,11 +101,23 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
             {submission.checkedAt && <> · {t("rep.checkedAt", { date: date(submission.checkedAt) })}</>}
           </p>
         </div>
-        <div className="flex items-center gap-4 rounded-xl border border-border bg-surface px-5 py-3">
-          <div className={`font-mono text-3xl font-semibold ${RING[lv]}`} data-testid="overall">{submission.similarity == null ? "—" : pct(score)}</div>
-          <div className="text-xs">
-            <div className="font-medium">{t("rep.overall")} · <span className={RING[lv]}>{t(`rep.level.${lv}`)}</span> <InfoTip text={t("rep.overallHint")} align="end" /></div>
+        <div className="rounded-xl border border-border bg-surface px-5 py-3">
+          <div className="flex items-center gap-4">
+            <div className={`font-mono text-3xl font-semibold ${RING[lv]}`} data-testid="overall">{submission.similarity == null ? "—" : pct(score)}</div>
+            <div className="text-xs">
+              <div className="font-medium">{t("rep.overall")} · <span className={RING[lv]}>{t(`rep.level.${lv}`)}</span> <InfoTip text={t("rep.overallHint")} align="end" /></div>
+            </div>
           </div>
+          {submission.similarity != null && (
+            <dl className="mt-2.5 grid grid-cols-3 gap-3 border-t border-border pt-2.5 text-xs" data-testid="similarity-breakdown">
+              {(["peer", "past", "document"] as const).map((k) => (
+                <div key={k} data-kind={k}>
+                  <dt className="text-subtle">{t(`rep.kind.${k}`)}</dt>
+                  <dd className={`font-mono text-sm ${byKind[k] > 0 ? "text-fg" : "text-subtle"}`}>{pct(byKind[k])}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
         </div>
       </div>
       {canGrade && assignment.gradeItem && (

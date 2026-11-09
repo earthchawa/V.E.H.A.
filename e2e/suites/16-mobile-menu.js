@@ -1,0 +1,24 @@
+const { chromium } = require('playwright');
+const fs = require('fs');
+const { OUT: S, FIXTURES: F, BASE: B, PW, sql } = require('../lib');
+const ok = (c, m) => { if (!c) throw new Error('FAIL: ' + m); console.log('PASS', m); };
+(async () => {
+  const b = await chromium.launch();
+  const p = await (await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true })).newPage();
+  await p.goto(B + '/login'); await p.fill('#username', 'admin'); await p.fill('#password', PW.admin);
+  await p.click('button[type=submit]'); await p.waitForURL(/change-password/);
+  await p.fill('#currentPassword', PW.admin); await p.fill('#newPassword', 'Strong9Pass'); await p.fill('#confirmPassword', 'Strong9Pass');
+  await p.click('button[type=submit]'); await p.waitForURL(B + '/');
+  ok(!(await p.getByTestId('desktop-nav').isVisible()), 'desktop nav hidden on phone');
+  await p.getByTestId('menu-toggle').tap();
+  ok(await p.getByTestId('mobile-menu').isVisible(), 'menu opens');
+  await p.screenshot({ path: S + '/r8-menu.png' });
+  await p.getByTestId('mobile-menu').getByRole('link', { name: 'Activity' }).tap();
+  await p.waitForURL(/admin\/audit/);
+  ok(await p.getByTestId('mobile-menu').count() === 0, 'menu closes after navigating');
+  await p.getByTestId('menu-toggle').tap();
+  await p.getByTestId('mobile-menu').getByRole('button', { name: 'Sign out' }).tap();
+  await p.waitForURL(/login/);
+  ok(true, 'sign out from menu');
+  await b.close(); console.log('ALL OK');
+})().catch((e) => { console.error(e); process.exit(1); });

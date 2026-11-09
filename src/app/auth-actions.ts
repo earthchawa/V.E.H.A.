@@ -1,5 +1,6 @@
 "use server";
 
+import { config } from "@/lib/config";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import type { FormState } from "@/lib/form";
@@ -56,6 +57,7 @@ export async function changePasswordAction(_: FormState, fd: FormData): Promise<
 
 export async function forgotPasswordAction(_: FormState, fd: FormData): Promise<FormState> {
   const { t, lang } = await getI18n();
+  if (!config.emailReset) return { error: t("forgot.contactAdmin") }; // no email server: an admin resets passwords
   await requestPasswordReset(str(fd, "username"), lang);
   return { success: t("forgot.sent") };
 }

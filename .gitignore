@@ -10,3 +10,6 @@ coverage/
 
 # Python runtime copied from node_modules/pyodide (scripts/copy-pyodide.mjs)
 public/pyodide/
+
+# End-to-end screenshots and scratch output
+e2e/.out/

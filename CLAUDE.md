@@ -135,10 +135,10 @@ Commit every migration; Vercel applies them during build.
 ## Testing
 
 - `npm test` covers pure logic (auth policy, CSV, similarity incl. Thai Q&A, grades, quiz logic, i18n parity).
-- End-to-end checks were run with Playwright scripts against `next start` + a seeded local Postgres
-  (login/first-password flow, materials, assignments + similarity reports, gradebook, sections, quizzes,
-  admin features). Those scripts are not in the repo yet; re-create them when changing user flows, and
-  reseed with `npm run db:seed:demo` before each run (first logins change demo passwords).
+- End-to-end suites live in `e2e/` (`npm run build && npm run test:e2e`, see `e2e/README.md`): 20 Playwright suites
+  (~290 checks) against `next start` + the local Postgres, reseeded before each suite with `DEMO_PASSWORD`.
+  **Keep them in the repo and up to date**: when a user flow changes, update/add a suite in the same commit and run
+  the affected suites (all of them before a larger push). Fixtures are synthetic — never real people or passwords.
 - In the cloud container Postgres may need restarting after the container restarts.
 
 ## Status

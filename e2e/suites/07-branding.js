@@ -1,0 +1,72 @@
+const { chromium } = require('playwright');
+const fs = require('fs');
+const { OUT: S, FIXTURES: F, BASE: B, PW, sql } = require('../lib');
+const ok = (c, m) => { if (!c) throw new Error('FAIL: ' + m); console.log('PASS', m); };
+(async () => {
+  const browser = await chromium.launch();
+  const firstLogin = async (u, np) => {
+    const p = await (await browser.newContext({ viewport: { width: 1360, height: 900 }, deviceScaleFactor: 2 })).newPage();
+    await p.goto(B + '/login'); await p.fill('#username', u); await p.fill('#password', PW[u]);
+    await p.click('button[type=submit]'); await p.waitForURL(/change-password/);
+    await p.fill('#currentPassword', PW[u]); await p.fill('#newPassword', np); await p.fill('#confirmPassword', np);
+    await p.click('button[type=submit]'); await p.waitForURL(B + '/'); return p;
+  };
+  const lp = await (await browser.newContext({ viewport: { width: 1280, height: 860 }, deviceScaleFactor: 2 })).newPage();
+  await lp.goto(B + '/login');
+  ok(await lp.getByTestId('faculty-logo').locator('img:visible').evaluate((img) => img.complete && img.naturalWidth > 0), 'academic faculty logo on sign-in');
+  ok((await lp.getByTestId('brand-name').textContent()) === 'V.E.H.A.', 'brand name V.E.H.A.');
+  ok(await lp.locator('[data-testid=login-scene] canvas').count() === 1, '3D scene rendered');
+  await lp.screenshot({ path: S + '/b-login.png' });
+
+  const tp = await firstLogin('T0001', 'Teach3rPass');
+  const logos = tp.getByTestId('group-logo');
+  ok(await logos.count() === 2, 'department groups show their division logo');
+  ok(await logos.first().evaluate((img) => img.complete && img.naturalWidth > 0), 'logo image loads');
+  const cs201 = tp.locator('ul.grid a', { hasText: 'CS201' }).first();
+  const ma101 = tp.locator('ul.grid a', { hasText: 'MA101' });
+  const cc = (el) => el.evaluate((e) => getComputedStyle(e).getPropertyValue('--cc').trim());
+  ok((await cc(cs201)) === '#9ca3af', 'computer science courses are grey');
+  ok((await cc(ma101)) === '#9ca3af', 'mathematics (MA) shares the department colour');
+  await tp.screenshot({ path: S + '/b-dashboard-dark.png', fullPage: true });
+  await tp.getByTestId('theme-toggle').click();
+  await tp.screenshot({ path: S + '/b-dashboard-light.png', fullPage: true });
+  await tp.getByTestId('theme-toggle').click();
+  await cs201.click(); await tp.waitForURL(/courses\/[^/]+$/);
+  ok(/Computer Science\s*·?\s*Department of Mathematics and Computer Science/.test(await tp.getByTestId('course-dept').textContent()), 'course header shows subject area CS under Mathematics and Computer Science');
+
+  const ad = await firstLogin('admin', 'Strong9Pass');
+  await ad.goto(B + '/admin/departments');
+  ok(await ad.getByTestId('division').count() === 9, 'all 9 academy departments seeded (CS back under MC)');
+  ok(await ad.getByTestId('dep-logo').count() >= 9, 'division logos shown');
+  await ad.screenshot({ path: S + '/b-departments.png', fullPage: true });
+  // Edit CS: own colour, then upload a custom logo for MATH
+  const cs = ad.locator('li', { hasText: 'ภาควิชาคอมพิวเตอร์' });
+  await cs.getByRole('button', { name: 'Edit' }).click();
+  await ad.getByLabel("Use the department's colour").uncheck();
+  await ad.getByLabel('Theme colour (hex)').fill('#64748b');
+  ok((await ad.getByTestId('dep-preview').evaluate((e) => getComputedStyle(e).getPropertyValue('--cc').trim())) === '#64748b', 'live preview follows the colour');
+  await ad.screenshot({ path: S + '/b-dep-form.png' });
+  await ad.getByRole('dialog').getByRole('button', { name: 'Save' }).click();
+  await ad.locator('dialog[open]').waitFor({ state: 'hidden' });
+  const math = ad.locator('li', { hasText: 'ภาควิชาคณิตศาสตร์' });
+  await math.getByRole('button', { name: 'Edit' }).click();
+  await ad.selectOption('#dep-logo', 'upload');
+  const png = fs.readFileSync('/home/user/nkrafa-ai-classroom/public/logos/ms.webp');
+  await ad.setInputFiles('#dep-logo-file', { name: 'math.webp', mimeType: 'image/webp', buffer: png });
+  await ad.getByRole('dialog').getByRole('button', { name: 'Save' }).click();
+  await ad.locator('dialog[open]').waitFor({ state: 'hidden' });
+  const src = await math.getByTestId('dep-logo').getAttribute('src');
+  ok(src.startsWith('/api/department-logo/'), 'uploaded logo is used');
+  const r = await ad.context().request.get(B + src);
+  ok(r.status() === 200 && r.headers()['content-type'] === 'image/webp', 'uploaded logo served');
+  // bad upload rejected
+  await math.getByRole('button', { name: 'Edit' }).click();
+  await ad.selectOption('#dep-logo', 'upload');
+  await ad.setInputFiles('#dep-logo-file', { name: 'x.svg', mimeType: 'image/svg+xml', buffer: Buffer.from('<svg/>') });
+  await ad.getByRole('dialog').getByRole('button', { name: 'Save' }).click();
+  await ad.getByText('Logo must be a PNG, JPG or WebP image up to 1 MB.').waitFor();
+  ok(true, 'SVG / non-image logo rejected');
+  await tp.goto(B + '/');
+  ok((await cc(tp.locator('ul.grid a', { hasText: 'CS201' }).first())) === '#64748b', 'courses pick up the new department colour');
+  await browser.close(); console.log('ALL OK');
+})().catch((e) => { console.error(e); process.exit(1); });
