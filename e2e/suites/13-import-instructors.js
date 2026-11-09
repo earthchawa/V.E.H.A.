@@ -28,7 +28,7 @@ const ok = (c, m) => { if (!c) throw new Error('FAIL: ' + m); console.log('PASS'
   await ad.locator('#csv-file').setInputFiles(F + '/instructors.csv');
   await ad.getByRole('dialog').getByRole('button', { name: /Import/ }).last().click();
   await ad.getByText('fixture-pass-1').first().waitFor();
-  ok(sql(`select count(*) from "User" u join "Department" d on d.id=u."departmentId" where u.role='INSTRUCTOR' and d.code='CS' and u.username like '%\\_%' and u."mustChangePassword"`) === '15', '15 instructors created in CS, must change password');
+  ok(sql(`select count(*) from "User" u join "Department" d on d.id=u."departmentId" where u.role='INSTRUCTOR' and d.code='CS' and u.username like 'teacher%' and u."mustChangePassword"`) === '15', '15 instructors created in CS, must change password');
   await ad.keyboard.press('Escape');
 
   // 2. Teaching schedule
