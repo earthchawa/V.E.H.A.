@@ -132,6 +132,14 @@ src/lib/
   (`brand.mark`); the full faculty badge is only for the sign-in page.
 - Demo seed must stay **idempotent** (it runs on every Vercel build when `DEMO_SEED=true`).
 
+## Git
+
+- Before the first commit in a session, set the author to the owner's GitHub noreply address so commits count
+  as their contributions (keep the Co-Authored-By trailer):
+  `git config user.name "earthchawa" && git config user.email "257072870+earthchawa@users.noreply.github.com"`
+- `main` is the default branch and Vercel's production branch (demo: https://veha-nkrafa.vercel.app; the old
+  nkrafa-ai-classroom.vercel.app redirects there). Work on a feature branch and merge into `main` to deploy.
+
 ## Migrations
 
 `prisma migrate dev` refuses to run non-interactively when it has warnings. Instead generate SQL from the
