@@ -1,4 +1,4 @@
-// NKRAFA AI Classroom — data model
+// V.E.H.A. (Virtual Educational Hangar for Air-cadets) — data model
 // Phase 1: accounts, terms, courses, course offerings, enrollment, materials, audit log.
 // Phase 2: assignments, submissions, similarity checking.
 // Phase 3: gradebook (categories, items, grades, grade scale).

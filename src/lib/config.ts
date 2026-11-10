@@ -37,6 +37,6 @@ export const config = {
     port: Number(process.env.SMTP_PORT ?? 587),
     user: process.env.SMTP_USER ?? "",
     pass: process.env.SMTP_PASS ?? "",
-    from: process.env.SMTP_FROM ?? "NKRAFA Classroom <no-reply@localhost>",
+    from: process.env.SMTP_FROM ?? "V.E.H.A. <no-reply@localhost>",
   },
 };

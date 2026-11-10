@@ -154,13 +154,15 @@ docker compose logs -f app        # ตรวจว่าเริ่มได�
 
 ## 6. Demo บน Vercel
 
-1. [vercel.com/new](https://vercel.com/new) → Import repo
+1. [vercel.com/new](https://vercel.com/new) → Import repo `earthchawa/V.E.H.A.` (ชื่อโปรเจกต์ เช่น `veha`)
 2. Environment Variables: `DEMO_SEED=true`, `DEMO_PASSWORD=<รหัสตัวอย่าง>`
 3. Deploy ครั้งแรกจะไม่ผ่านเพราะยังไม่มีฐานข้อมูล (ปกติ)
 4. Storage → Create Database → Neon (Singapore) → Connect กับโปรเจกต์ (ตั้ง `DATABASE_URL`, `DATABASE_URL_UNPOOLED` ให้)
 5. Deployments → Redeploy
 
 `npm run vercel-build` (`scripts/vercel-build.ts`) ทำงานตามลำดับ: หา connection string → `prisma migrate deploy` ผ่าน connection ตรง → (ถ้า `DEMO_SEED=true`) seed ข้อมูลตัวอย่าง (idempotent) → คัดลอก Pyodide → `next build` และ `vercel.json` ตั้ง region `sin1`
+
+> เปลี่ยนชื่อ repo บน GitHub ภายหลัง: Vercel ผูกตาม ID ของ repo จึงยัง deploy ต่อได้ ตรวจที่ Settings → Git ว่าเห็นชื่อใหม่ (ถ้าไม่ deploy ให้ Disconnect แล้ว Connect ใหม่ ค่า env และฐานข้อมูลยังอยู่) เปลี่ยนชื่อโปรเจกต์/โดเมนได้ที่ Settings → General และ Domains แล้วแก้ `APP_URL` ให้ตรง
 
 > ถ้าเริ่มใช้ระบบบน Vercel กับข้อมูลจริง ต้อง**ปิด `DEMO_SEED`** และลบบัญชี demo ก่อน
 

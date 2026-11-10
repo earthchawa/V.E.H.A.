@@ -54,7 +54,7 @@ export const DEFAULT_STARTER: Record<CodeLanguage, CodeFiles> = {
 // ---------- web preview document ----------
 
 /** Message tag used by the preview iframe to talk to the page. */
-export const PREVIEW_TAG = "skycampus-run";
+export const PREVIEW_TAG = "veha-run";
 
 /**
  * Builds the srcdoc for an HTML/CSS/JS answer. A small script captures console output and errors and
