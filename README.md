@@ -196,7 +196,7 @@ docker compose exec app npx tsx prisma/seed.ts     # สร้างบัญช
 
 ใช้สำหรับเปิดให้คนลองใช้ก่อนติดตั้งจริงในสถาบัน **อย่าใส่ข้อมูลจริงของ นนอ.** เพราะเป็นเว็บสาธารณะและบัญชี demo ใช้รหัสผ่านเริ่มต้นเดียวกัน
 
-1. ไปที่ [vercel.com/new](https://vercel.com/new) → **Import** repo `earthchawa/V.E.H.A.` (ตั้งชื่อโปรเจกต์ เช่น `veha` จะได้ URL `veha.vercel.app`)
+1. ไปที่ [vercel.com/new](https://vercel.com/new) → **Import** repo `earthchawa/V.E.H.A.` (ตั้งชื่อโปรเจกต์ `veha`; `veha.vercel.app` มีทีมอื่นใช้แล้ว demo จึงใช้ `veha-nkrafa.vercel.app`)
 2. ในหน้า Configure เพิ่ม Environment Variables:
    - `DEMO_SEED` = `true`
    - `DEMO_PASSWORD` = รหัสผ่านเริ่มต้นของบัญชี demo (ตั้งเองได้)
@@ -213,8 +213,8 @@ docker compose exec app npx tsx prisma/seed.ts     # สร้างบัญช
 
 **ถ้าเปลี่ยนชื่อ repo บน GitHub หลังจากเชื่อม Vercel แล้ว** (เช่นจาก `nkrafa-ai-classroom` เป็น `V.E.H.A.`) Vercel ผูกกับ repo ตาม ID จึงยัง deploy ต่อได้ ให้ตรวจและปรับดังนี้
 1. โปรเจกต์บน Vercel → **Settings** → **Git** ต้องเห็น `earthchawa/V.E.H.A.` ถ้ายังเป็นชื่อเก่าหรือ push แล้วไม่ deploy ให้กด **Disconnect** แล้ว **Connect** repo ใหม่ (Environment Variables และฐานข้อมูล Neon ยังอยู่ครบ)
-2. (ไม่บังคับ) **Settings** → **General** → **Project Name** เปลี่ยนเป็น `veha` แล้วเพิ่มโดเมน `veha.vercel.app` ที่ **Settings** → **Domains** ถ้าชื่อนี้ยังว่าง โดเมนเดิมจะใช้ต่อได้จนกว่าจะลบ
-3. ถ้าตั้ง `APP_URL` ไว้ ให้แก้เป็นโดเมนใหม่ แล้ว **Redeploy**
+2. (ไม่บังคับ) **Settings** → **General** → **Project Name** เปลี่ยนเป็น `veha` แล้วเพิ่มโดเมนใหม่ที่ **Settings** → **Domains** (การเปลี่ยนชื่อโปรเจกต์ไม่เปลี่ยนโดเมนให้) demo ใช้ `veha-nkrafa.vercel.app` และตั้งโดเมนเดิม `nkrafa-ai-classroom.vercel.app` ให้ redirect มาที่นี่ ลิงก์เก่าจึงยังใช้ได้
+3. ตั้ง `APP_URL` = `https://veha-nkrafa.vercel.app` (ลิงก์รีเซ็ตรหัสผ่านในอีเมล ถ้าไม่ตั้งจะใช้โดเมน production ที่ Vercel เลือกให้) แล้ว **Redeploy**
 4. ในเครื่องที่ clone ไว้: `git remote set-url origin https://github.com/earthchawa/V.E.H.A.git`
 
 ## โครงสร้างโค้ด

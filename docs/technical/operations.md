@@ -154,7 +154,7 @@ docker compose logs -f app        # ตรวจว่าเริ่มได�
 
 ## 6. Demo บน Vercel
 
-1. [vercel.com/new](https://vercel.com/new) → Import repo `earthchawa/V.E.H.A.` (ชื่อโปรเจกต์ เช่น `veha`)
+1. [vercel.com/new](https://vercel.com/new) → Import repo `earthchawa/V.E.H.A.` (ชื่อโปรเจกต์ `veha`, โดเมน demo `veha-nkrafa.vercel.app`; โดเมนเดิม `nkrafa-ai-classroom.vercel.app` redirect มาที่นี่)
 2. Environment Variables: `DEMO_SEED=true`, `DEMO_PASSWORD=<รหัสตัวอย่าง>`
 3. Deploy ครั้งแรกจะไม่ผ่านเพราะยังไม่มีฐานข้อมูล (ปกติ)
 4. Storage → Create Database → Neon (Singapore) → Connect กับโปรเจกต์ (ตั้ง `DATABASE_URL`, `DATABASE_URL_UNPOOLED` ให้)
