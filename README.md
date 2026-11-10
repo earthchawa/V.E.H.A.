@@ -196,7 +196,7 @@ docker compose exec app npx tsx prisma/seed.ts     # สร้างบัญช
 
 ใช้สำหรับเปิดให้คนลองใช้ก่อนติดตั้งจริงในสถาบัน **อย่าใส่ข้อมูลจริงของ นนอ.** เพราะเป็นเว็บสาธารณะและบัญชี demo ใช้รหัสผ่านเริ่มต้นเดียวกัน
 
-1. ไปที่ [vercel.com/new](https://vercel.com/new) → **Import** repo `nkrafa-ai-classroom`
+1. ไปที่ [vercel.com/new](https://vercel.com/new) → **Import** repo `veha`
 2. ในหน้า Configure เพิ่ม Environment Variables:
    - `DEMO_SEED` = `true`
    - `DEMO_PASSWORD` = รหัสผ่านเริ่มต้นของบัญชี demo (ตั้งเองได้)

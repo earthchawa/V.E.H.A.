@@ -51,7 +51,7 @@ const ok = (c, m) => { if (!c) throw new Error('FAIL: ' + m); console.log('PASS'
   const math = ad.locator('li', { hasText: 'ภาควิชาคณิตศาสตร์' });
   await math.getByRole('button', { name: 'Edit' }).click();
   await ad.selectOption('#dep-logo', 'upload');
-  const png = fs.readFileSync('/home/user/nkrafa-ai-classroom/public/logos/ms.webp');
+  const png = fs.readFileSync(require('path').join(__dirname, '../../public/logos/ms.webp'));
   await ad.setInputFiles('#dep-logo-file', { name: 'math.webp', mimeType: 'image/webp', buffer: png });
   await ad.getByRole('dialog').getByRole('button', { name: 'Save' }).click();
   await ad.locator('dialog[open]').waitFor({ state: 'hidden' });
