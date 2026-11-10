@@ -1,6 +1,6 @@
 const { chromium } = require('playwright');
 const fs = require('fs');
-const { OUT: S, FIXTURES: F, BASE: B, PW, sql } = require('../lib');
+const { OUT: S, FIXTURES: F, BASE: B, PW, sql , copyToSections } = require('../lib');
 const ok = (c, m) => { if (!c) throw new Error('FAIL: ' + m); console.log('PASS', m); };
 
 (async () => {
@@ -43,10 +43,7 @@ const ok = (c, m) => { if (!c) throw new Error('FAIL: ' + m); console.log('PASS'
   // Copy existing assignment from Sec 1 → Sec 2
   await tp.goto(B + sec1Href + '/assignments');
   await tp.getByText('Lab 3: Linked list (Python)').click(); await tp.waitForURL(/assignments\/[^/]+$/);
-  await tp.locator('summary', { hasText: 'Copy to…' }).click();
-  await tp.getByLabel('Sec 2').check();
-  await tp.getByRole('button', { name: 'Copy', exact: true }).click();
-  await tp.getByText('Copied to Sec 2.').waitFor();
+  await copyToSections(tp, 'assignment');
   await tp.goto(B + sec2Href + '/assignments');
   await tp.getByText('Lab 3: Linked list (Python)').click(); await tp.waitForURL(/assignments\/[^/]+$/);
   ok(await tp.getByText('0/2 submitted').count() >= 1, 'copied assignment has no submissions in Sec 2');
@@ -64,10 +61,7 @@ const ok = (c, m) => { if (!c) throw new Error('FAIL: ' + m); console.log('PASS'
 
   // Copy gradebook setup → Sec 2 gets categories; linked items present
   await tp.goto(B + sec1Href + '/grades');
-  await tp.locator('summary', { hasText: 'Copy setup to other sections' }).click();
-  await tp.getByLabel('Sec 2').check();
-  await tp.getByRole('button', { name: 'Copy', exact: true }).click();
-  await tp.getByText('Copied to Sec 2.').waitFor();
+  await copyToSections(tp, 'gradebook');
   await tp.goto(B + sec2Href + '/grades');
   const th = tp.locator('[data-testid=gradebook] th');
   ok(await th.filter({ hasText: 'Midterm exam' }).count() === 1 && await th.filter({ hasText: 'Lab 3' }).count() === 1 && await th.filter({ hasText: 'Lab 4' }).count() === 1, 'Sec 2 gradebook has copied items');

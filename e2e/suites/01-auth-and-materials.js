@@ -1,6 +1,6 @@
 const { chromium } = require('playwright');
 const fs = require('fs');
-const { OUT: S, FIXTURES: F, BASE: B, PW, sql } = require('../lib');
+const { OUT: S, FIXTURES: F, BASE: B, PW, sql , confirmOk } = require('../lib');
 const P = { admin: PW.admin, T0001: PW.T0001, s1: PW['6601001'], s2: PW['6601002'] };
 const ok = (c, m) => { if (!c) throw new Error('FAIL: ' + m); console.log('PASS', m); };
 
@@ -101,9 +101,9 @@ const ok = (c, m) => { if (!c) throw new Error('FAIL: ' + m); console.log('PASS'
 
   // 8. Admin resets a user's password -> forced change again
   await a.goto(B + '/admin/users?q=6601001');
-  a.once('dialog', (d) => d.accept());
   await a.locator('[data-testid=user-row][data-username="6601001"]').getByTestId('manage-user').click();
-  await a.getByRole('dialog').getByRole('button', { name: 'Reset password' }).click();
+  await a.locator('dialog[open]').getByRole('button', { name: 'Reset password' }).click();
+  await confirmOk(a);
   const tmp = (await a.locator('span.badge.font-mono').first().textContent({ timeout: 10000 })).trim();
   const g = await ctx(); await login(g, '6601001', tmp);
   ok(g.url().endsWith('/change-password'), 'admin reset forces change on next login');

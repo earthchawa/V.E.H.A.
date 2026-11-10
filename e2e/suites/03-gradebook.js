@@ -93,7 +93,7 @@ const ok = (c, m) => { if (!c) throw new Error('FAIL: ' + m); console.log('PASS'
   // hide total
   await tp.goto(course + '/grades');
   await tp.getByTestId('tab-setup').click();
-  await tp.getByRole('button', { name: 'Show cadets their running total and grade' }).click();
+  await tp.getByRole('switch', { name: 'Show cadets their running total and grade' }).click();
   await tp.waitForTimeout(800);
   await c4.goto(course + '/grades');
   ok(await c4.getByTestId('my-letter').count() === 0, 'running total can be hidden from cadets');

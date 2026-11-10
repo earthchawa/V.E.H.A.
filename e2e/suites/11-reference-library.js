@@ -1,7 +1,7 @@
 const { chromium } = require('playwright');
 const fs = require('fs');
 const { execSync } = require('child_process');
-const { OUT: S, FIXTURES: F, BASE: B, PW, sql } = require('../lib');
+const { OUT: S, FIXTURES: F, BASE: B, PW, sql , confirmOk, copyToSections } = require('../lib');
 const ok = (c, m) => { if (!c) throw new Error('FAIL: ' + m); console.log('PASS', m); };
 // Demo submissions hold their analysed content directly: drop the "▌ file name" header line.
 const fileText = (user) => sql(`select s.content from "Submission" s join "User" u on u.id=s."studentId" join "Assignment" a on a.id=s."assignmentId" where u.username='${user}' and a.title like 'Lab 3%' limit 1`).split('\n').slice(1).join('\n');
@@ -36,10 +36,7 @@ const fileText = (user) => sql(`select s.content from "Submission" s join "User"
   await tp.getByTestId('add-reference-past').click();
   ok(await tp.getByText('No other run of this course has submissions yet.').count() === 1, 'no earlier runs yet');
   await tp.keyboard.press('Escape');
-  await tp.locator('summary', { hasText: 'Copy to…' }).click();
-  await tp.getByLabel('Sec 2').check();
-  await tp.getByRole('button', { name: 'Copy', exact: true }).click();
-  await tp.getByText('Copied to Sec 2.').waitFor();
+  await copyToSections(tp, 'assignment');
 
   const c6 = await firstLogin('6601006', 'Cadet6pass9');
   await c6.getByTestId('cadet-todo').getByText('Lab 3: Linked list (Python)').click(); await c6.waitForURL(/assignments\/[^/]+$/);
@@ -97,8 +94,8 @@ const fileText = (user) => sql(`select s.content from "Submission" s join "User"
 
   // ---------- Remove + audit ----------
   await tp.goto(lab3);
-  tp.once('dialog', (d) => d.accept());
   await tp.getByTestId('reference').filter({ hasText: 'GeeksforGeeks' }).getByRole('button', { name: 'Remove' }).click();
+  await confirmOk(tp);
   await tp.getByTestId('reference').filter({ hasText: 'GeeksforGeeks' }).waitFor({ state: 'detached' });
   ok(await tp.getByTestId('reference').count() === 1, 'reference removed');
   ok(Number(sql(`select count(*) from "AuditLog" where action='similarity.source_added'`)) === 2, 'adding references is audited');
