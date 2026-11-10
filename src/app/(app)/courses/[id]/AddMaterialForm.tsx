@@ -64,7 +64,7 @@ export function AddMaterialForm({ offeringId, maxMb, sections = [] }: { offering
         <textarea id="description" name="description" rows={2} className="input" maxLength={2000} />
       </div>
       <label className="flex items-center gap-2 text-sm text-muted">
-        <input type="checkbox" name="isPublished" defaultChecked className="accent-accent" /> {t("mat.visible")}
+        <input type="checkbox" name="isPublished" defaultChecked role="switch" className="toggle" /> {t("mat.visible")}
       </label>
       <SectionCheckboxes sections={sections} />
       <FormMessage state={clientError ? { error: clientError } : state} />

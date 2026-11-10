@@ -1,5 +1,7 @@
 "use client";
 
+import { ConfirmForm } from "@/components/ConfirmForm";
+
 /** A small destructive-action form that asks for confirmation first. */
 export function ConfirmButton({
   action,
@@ -15,9 +17,9 @@ export function ConfirmButton({
   label: string;
 }) {
   return (
-    <form action={action} onSubmit={(e) => { if (!confirm(message)) e.preventDefault(); }}>
+    <ConfirmForm action={action} message={message} confirmLabel={label}>
       <input type="hidden" name={name} value={value} />
       <button className="btn-danger h-8">{label}</button>
-    </form>
+    </ConfirmForm>
   );
 }

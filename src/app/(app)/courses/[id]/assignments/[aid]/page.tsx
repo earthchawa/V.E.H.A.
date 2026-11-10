@@ -166,7 +166,8 @@ export default async function AssignmentPage({
                 action={copyAssignmentAction}
                 itemId={assignment.id}
                 sections={siblings}
-                hint={t("sec.copyAssignmentHint")}
+                kind="assignment"
+                itemTitle={assignment.title}
               />
             )}
             <Modal

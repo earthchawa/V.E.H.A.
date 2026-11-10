@@ -60,7 +60,21 @@ src/lib/
   translator (Bangkok time; Thai mode shows Buddhist-era dates).
 - **Forms:** use `useActionState` + `<KeepForm>` (not `<form action>`): React 19 resets forms after an action,
   which would wipe typed input on validation errors. `resetOnSuccess` / `closeOnSuccess` as needed.
-- **Create/edit UIs open in `<Modal>`** (native `<dialog>`). File inputs use `<FileDropzone>`.
+- **Create/edit UIs open in `<Modal>`** (native `<dialog>`, animated in/out via `dialog.modal` in globals.css). File
+  inputs use `<FileDropzone>`. On/off settings are switches: `<input type="checkbox" role="switch" className="toggle">`
+  (plain checkboxes only for picking several items). Destructive actions ask with `<ConfirmForm>` — never
+  `window.confirm()`. A form that closes its modal on success confirms with `toast()` (`<Toaster>` in the app shell).
+- **Lists that open something** (assignments, quizzes) are cards whose title link covers the card (`after:absolute
+  after:inset-0`), with explicit action buttons on top (`relative z-[1]`). A quiz has two big tabs, Questions | Results
+  (`<QuizTabs>`).
+- **Copy between sections** goes through `<CopyToSections kind=…>`: a dialog that names the item, shows each other
+  section with its instructor and cadet count, and lists what is and is not copied.
+- **Year levels:** `CadetYear` holds one row per cadet per academic year (history is kept). `currentAcademicYear()` =
+  the current semester's year. Set from the user CSV (7th column `year`, which also fills it in for existing cadets),
+  the create form or the Manage dialog; "Move cadets up a year" (`promoteCadetsAction`, pure `planPromotion`) adds next
+  year's rows, graduates the final year (default 4) and is safe to run twice.
+- **Deleting a section** (`deleteOfferingAction`, admin, roster page): type the course code to confirm; audit first,
+  then delete, then remove stored files.
 - **Permissions are checked in every server action**, not just hidden in the UI:
   - `offeringAccess` → `"manage"` (admin or course instructor) / `"view"` (enrolled cadet) / null.
   - `canGrade` → only the course's own instructors may change grades, gradebook setup, report grading,
@@ -98,7 +112,7 @@ src/lib/
   numbered "xxx" left out). `db:seed` creates missing ones; existing databases got them from the
   `*_curriculum_cs_ma` migration (generated from the list; a test keeps them in step). Add other departments'
   courses the same way: extend the list and add a new data migration. Demo courses CS201/CS202/MA101 are demo-only.
-- **Bulk set-up (admin):** Users → Import from CSV (`username, fullName, role, email, department, password`; the
+- **Bulk set-up (admin):** Users → Import from CSV (`username, fullName, role, email, department, password, year`; the
   optional starting password must still be changed at first sign-in) and Terms & courses → Import teaching
   schedule (`year, semester, code, title_th, title_en, credits, section, instructors`; Thai codes such as คต 231
   map to CS231; creates missing terms/courses/sections, enrols instructors, never changes existing rows, so
@@ -140,9 +154,9 @@ update the matching manual (and the SDD for design changes) in the same commit. 
 
 ## Testing
 
-- `npm test` covers pure logic (auth policy, CSV, similarity incl. Thai Q&A, grades, quiz logic, i18n parity).
-- End-to-end suites live in `e2e/` (`npm run build && npm run test:e2e`, see `e2e/README.md`): 20 Playwright suites
-  (~290 checks) against `next start` + the local Postgres, reseeded before each suite with `DEMO_PASSWORD`.
+- `npm test` covers pure logic (auth policy, CSV, similarity incl. Thai Q&A, grades, quiz logic, year levels, i18n parity).
+- End-to-end suites live in `e2e/` (`npm run build && npm run test:e2e`, see `e2e/README.md`): 21 Playwright suites
+  (~330 checks) against `next start` + the local Postgres, reseeded before each suite with `DEMO_PASSWORD`.
   **Keep them in the repo and up to date**: when a user flow changes, update/add a suite in the same commit and run
   the affected suites (all of them before a larger push). Fixtures are synthetic — never real people or passwords.
 - In the cloud container Postgres may need restarting after the container restarts.

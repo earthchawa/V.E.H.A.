@@ -144,7 +144,7 @@ export default async function GradesPage({ params, searchParams }: { params: Pro
           </nav>
         )}
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          {canGrade && <CopyToSections action={copyGradebookSetupAction} itemId={offering.id} sections={siblings} label={t("sec.copySetup")} hint={t("sec.copySetupHint")} />}
+          {canGrade && <CopyToSections action={copyGradebookSetupAction} itemId={offering.id} sections={siblings} kind="gradebook" />}
           <a href={`/api/offerings/${offering.id}/grades`} className="btn-secondary h-9">{t("gr.export")}</a>
         </div>
       </div>
@@ -247,10 +247,8 @@ export default async function GradesPage({ params, searchParams }: { params: Pro
             <ScaleForm offeringId={offering.id} scale={scale} />
             <form action={toggleShowTotalAction} className="mt-5 border-t border-border pt-4">
               <input type="hidden" name="offeringId" value={offering.id} />
-              <button className="flex items-center gap-2 text-left text-sm text-muted hover:text-fg">
-                <span className={`grid h-4 w-4 shrink-0 place-items-center rounded border ${offering.showTotalToStudents ? "border-accent bg-accent text-accent-fg" : "border-border-strong"}`}>
-                  {offering.showTotalToStudents && "✓"}
-                </span>
+              <button role="switch" aria-checked={offering.showTotalToStudents} className="flex items-center gap-2.5 text-left text-sm text-muted hover:text-fg" data-testid="show-total">
+                <span className="toggle" data-on={offering.showTotalToStudents} />
                 {t("gr.showTotal")}
               </button>
             </form>

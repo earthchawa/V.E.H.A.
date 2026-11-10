@@ -7,23 +7,31 @@ import { readStoredFile, saveBuffer } from "./storage";
  * Other sections of the same course in the same term that this user can manage
  * (admins: all; instructors: the ones they teach).
  */
-export async function siblingSections(user: SessionUser, offeringId: string): Promise<{ id: string; section: string }[]> {
+export type SiblingSection = { id: string; section: string; instructors: string[]; cadets: number };
+
+export async function siblingSections(user: SessionUser, offeringId: string): Promise<SiblingSection[]> {
   const o = await db.courseOffering.findUnique({ where: { id: offeringId }, select: { courseId: true, termId: true } });
   if (!o) return [];
-  return db.courseOffering.findMany({
+  const rows = await db.courseOffering.findMany({
     where: {
       courseId: o.courseId,
       termId: o.termId,
       NOT: { id: offeringId },
       ...(user.role === "ADMIN" ? {} : { enrollments: { some: { userId: user.id, role: "INSTRUCTOR" } } }),
     },
-    select: { id: true, section: true },
+    select: {
+      id: true,
+      section: true,
+      enrollments: { where: { role: "INSTRUCTOR" }, select: { user: { select: { fullName: true } } } },
+      _count: { select: { enrollments: { where: { role: "STUDENT" } } } },
+    },
     orderBy: { section: "asc" },
   });
+  return rows.map((r) => ({ id: r.id, section: r.section, instructors: r.enrollments.map((e) => e.user.fullName), cadets: r._count.enrollments }));
 }
 
 /** Keep only target ids that really are manageable sibling sections. */
-export async function validTargets(user: SessionUser, offeringId: string, raw: FormDataEntryValue[]): Promise<{ id: string; section: string }[]> {
+export async function validTargets(user: SessionUser, offeringId: string, raw: FormDataEntryValue[]): Promise<SiblingSection[]> {
   const wanted = new Set(raw.map(String));
   return (await siblingSections(user, offeringId)).filter((s) => wanted.has(s.id));
 }

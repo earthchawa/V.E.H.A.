@@ -1,5 +1,6 @@
 "use client";
 
+import { ConfirmForm } from "@/components/ConfirmForm";
 import { useEffect, useState, useTransition } from "react";
 import { useI18n } from "@/lib/i18n/client";
 import { Modal } from "@/components/Modal";
@@ -78,10 +79,10 @@ export function QuestionList({ quizId, questions }: { quizId: string; questions:
               <Modal label={t("qz.edit")} title={t("qz.question", { n: i + 1 })} buttonClassName="btn-secondary h-7" size="lg">
                 <QuestionEditor quizId={quizId} draft={q} closeOnSuccess />
               </Modal>
-              <form action={deleteQuestionAction} onSubmit={(e) => { if (!confirm(t("qz.deleteQuestionConfirm"))) e.preventDefault(); }}>
+              <ConfirmForm action={deleteQuestionAction} message={t("qz.deleteQuestionConfirm")} confirmLabel={t("qz.delete")}>
                 <input type="hidden" name="questionId" value={q.id} />
                 <button className="btn-danger h-7">{t("qz.delete")}</button>
-              </form>
+              </ConfirmForm>
             </div>
           </div>
           <p className="mt-2 whitespace-pre-wrap text-sm">{q.prompt}</p>

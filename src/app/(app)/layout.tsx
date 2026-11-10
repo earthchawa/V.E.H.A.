@@ -6,6 +6,7 @@ import { Logo } from "@/components/Logo";
 import { NavLink } from "@/components/NavLink";
 import { MobileMenu } from "@/components/MobileMenu";
 import { BackButton } from "@/components/BackButton";
+import { Toaster } from "@/components/Toaster";
 import { logoutAction } from "../auth-actions";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -67,6 +68,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <BackButton placement="shell" />
         {children}
       </main>
+      <Toaster />
     </div>
   );
 }

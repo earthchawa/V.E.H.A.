@@ -75,7 +75,7 @@ export function QuizForm({
   );
   const check = (name: keyof QuizDefaults, label: string) => (
     <label className="flex items-center gap-2">
-      <input type="checkbox" name={name} defaultChecked={d[name] as boolean} className="accent-accent" /> {label}
+      <input type="checkbox" name={name} defaultChecked={d[name] as boolean} role="switch" className="toggle" /> {label}
     </label>
   );
   return (

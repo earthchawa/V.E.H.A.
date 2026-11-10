@@ -1,7 +1,10 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useI18n } from "@/lib/i18n/client";
+
+/** Matches the modal-out animation in globals.css. */
+export const CLOSE_MS = 140;
 
 const ModalContext = createContext<{ close: () => void } | null>(null);
 /** Inside a <Modal>: close it (e.g. after a successful save). */
@@ -37,6 +40,18 @@ export function Modal({
     if (!open && d.open) d.close();
   }, [open]);
 
+  // Play the closing animation (globals.css, dialog.modal[data-closing]) before the dialog really closes.
+  const close = useCallback(() => {
+    const d = ref.current;
+    if (!d?.open || d.dataset.closing) return;
+    d.dataset.closing = "1";
+    setTimeout(() => {
+      delete d.dataset.closing;
+      setOpen(false);
+    }, CLOSE_MS);
+  }, []);
+  const ctx = useMemo(() => ({ close }), [close]);
+
   return (
     <>
       <button type="button" className={buttonClassName} onClick={() => setOpen(true)} data-testid={testId}>
@@ -45,16 +60,21 @@ export function Modal({
       <dialog
         ref={ref}
         onClose={() => setOpen(false)}
+        // Esc: animate out instead of closing at once.
+        onCancel={(e) => {
+          e.preventDefault();
+          close();
+        }}
         // Click on the backdrop (outside the panel) closes.
-        onMouseDown={(e) => e.target === ref.current && setOpen(false)}
-        className={`m-auto w-[calc(100%-2rem)] ${size === "lg" ? "max-w-2xl" : "max-w-lg"} rounded-2xl border border-border bg-surface p-0 text-fg shadow-2xl backdrop:bg-black/60 backdrop:backdrop-blur-sm`}
+        onMouseDown={(e) => e.target === ref.current && close()}
+        className={`modal m-auto w-[calc(100%-2rem)] text-left ${size === "lg" ? "max-w-2xl" : "max-w-lg"} rounded-2xl border border-border bg-surface p-0 text-fg shadow-2xl backdrop:bg-black/60 backdrop:backdrop-blur-sm`}
         aria-label={title}
       >
         {open && (
-          <ModalContext.Provider value={{ close: () => setOpen(false) }}>
+          <ModalContext.Provider value={ctx}>
             <div className="flex items-center justify-between border-b border-border px-5 py-3.5">
               <h2 className="text-sm font-semibold">{title}</h2>
-              <button type="button" onClick={() => setOpen(false)} className="grid h-7 w-7 place-items-center rounded-md text-muted hover:bg-surface-3 hover:text-fg" aria-label={t("common.close")}>
+              <button type="button" onClick={close} className="grid h-7 w-7 place-items-center rounded-md text-muted hover:bg-surface-3 hover:text-fg" aria-label={t("common.close")}>
                 ✕
               </button>
             </div>

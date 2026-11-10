@@ -1,6 +1,5 @@
 import { config } from "@/lib/config";
 import { sebRequired } from "@/lib/quiz-server";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { loadCourse } from "@/lib/course";
 import { db } from "@/lib/db";
@@ -17,6 +16,7 @@ import { StartButton } from "../StartButton";
 import { deleteQuizAction } from "../actions";
 import { ConfirmButton } from "../../grades/ConfirmButton";
 import { Modal } from "@/components/Modal";
+import { QuizTabs } from "../QuizTabs";
 
 export default async function QuizPage({
   params,
@@ -27,7 +27,7 @@ export default async function QuizPage({
 }) {
   const { id, qid } = await params;
   const { auto } = await searchParams;
-  const { user, offering, canManage } = await loadCourse(id);
+  const { user, offering, canManage, students } = await loadCourse(id);
   const { t, tn, date } = await getI18n();
 
   const quiz = await db.quiz.findUnique({
@@ -100,14 +100,21 @@ export default async function QuizPage({
     return (
       <div>
         {header}
-        <div className="-mt-3 mb-6 flex flex-wrap gap-2">
+        <QuizTabs
+          base={base}
+          active="questions"
+          questions={quiz.questions.length}
+          started={quiz._count.attempts}
+          total={students.length}
+          toGrade={await db.quizAnswer.count({ where: { points: null, attempt: { quizId: quiz.id, status: "SUBMITTED" } } })}
+        />
+        <div className="mb-6 flex flex-wrap gap-2">
           <Modal label={`+ ${t("qz.addQuestion")}`} title={t("qz.addQuestion")} size="lg" testId="add-question">
             <QuestionEditor quizId={quiz.id} closeOnSuccess />
           </Modal>
-          <Modal label={t("qz.f.settings")} title={t("qz.f.settings")} buttonClassName="btn-secondary h-9" size="lg" testId="quiz-settings">
+          <Modal label={<><span aria-hidden>⚙</span> {t("qz.f.settings")}</>} title={t("qz.f.settings")} buttonClassName="btn-secondary h-9" size="lg" testId="quiz-settings">
             {settingsForm}
           </Modal>
-          <Link href={`${base}/results`} className="btn-secondary h-9">{t("qz.results")}</Link>
         </div>
         {quiz._count.attempts > 0 && (
           <p className="mb-4 rounded-lg border border-amber-500/25 bg-amber-500/5 px-3 py-2 text-sm text-warning">{t("qz.startedWarning")}</p>

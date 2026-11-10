@@ -55,6 +55,14 @@ async function main() {
     for (let i = 1; i <= 5; i++) {
       students.push(await ensureUser(`66010${String(i).padStart(2, "0")}`, `Cadet Demo ${i}`, "STUDENT"));
     }
+    // Year levels with a little history (year 1 in 2568, year 2 in 2569); never overwrites an admin's edits.
+    await db.cadetYear.createMany({
+      data: students.flatMap((s) => [
+        { userId: s.id, academicYear: 2568, yearLevel: 1 },
+        { userId: s.id, academicYear: 2569, yearLevel: 2 },
+      ]),
+      skipDuplicates: true,
+    });
     for (const c of courses) {
       const course = await db.course.upsert({ where: { code: c.code }, create: c, update: {} });
       const offering = await db.courseOffering.upsert({

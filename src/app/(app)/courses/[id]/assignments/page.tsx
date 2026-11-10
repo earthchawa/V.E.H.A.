@@ -40,28 +40,44 @@ export default async function AssignmentsPage({ params }: { params: Promise<{ id
         {assignments.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border-strong px-6 py-12 text-center text-sm text-muted">{t("asg.none")}</div>
         ) : (
-          <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface">
+          <ul className="space-y-3" data-testid="assignment-list">
             {assignments.map((a) => {
               const mine = canManage ? null : a.submissions?.[0];
+              const href = `/courses/${offering.id}/assignments/${a.id}`;
+              const status = canManage ? null : submissionStatus(a, mine);
               return (
-                <li key={a.id}>
-                  <Link href={`/courses/${offering.id}/assignments/${a.id}`} className="flex flex-wrap items-center gap-3 px-4 py-3.5 transition hover:bg-surface-2">
+                <li key={a.id} className="row-link relative rounded-xl border border-border bg-surface" data-testid="assignment-row">
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-3 px-4 py-4 sm:px-5">
+                    <span className="grid h-10 w-10 flex-none place-items-center rounded-lg bg-accent/10 text-lg text-accent" aria-hidden>▣</span>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-medium">{a.title}</span>
+                        <Link href={href} className="text-base font-semibold after:absolute after:inset-0 after:rounded-xl">{a.title}</Link>
                         {!a.isPublished && <span className="badge bg-surface-3 text-muted">{t("asg.draft")}</span>}
                       </div>
-                      <div className="mt-0.5 text-xs text-subtle">{a.dueAt ? t("asg.due", { date: date(a.dueAt) }) : t("asg.noDue")}</div>
+                      <div className="mt-1 text-xs text-muted">{a.dueAt ? t("asg.due", { date: date(a.dueAt) }) : t("asg.noDue")}</div>
                     </div>
                     {canManage ? (
-                      <span className="text-xs text-muted">{t("asg.submittedCount", { n: a._count.submissions, total: students.length })}</span>
+                      <div className="flex items-center gap-4">
+                        <div className="w-28" title={t("asg.submittedCount", { n: a._count.submissions, total: students.length })}>
+                          <div className="mb-1 text-right text-xs text-muted">{t("asg.submittedCount", { n: a._count.submissions, total: students.length })}</div>
+                          <div className="h-1.5 overflow-hidden rounded-full bg-surface-3">
+                            <div className="h-full rounded-full bg-accent" style={{ width: `${students.length ? Math.round((a._count.submissions / students.length) * 100) : 0}%` }} />
+                          </div>
+                        </div>
+                        <span className="btn h-9 px-3.5" aria-hidden>
+                          {t("asg.submissions")} <span className="row-chevron">›</span>
+                        </span>
+                      </div>
                     ) : (
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-3">
                         {mine && studentCanSeeReport(a) && <SimilarityBadge score={mine.similarity} />}
-                        <StatusBadge status={submissionStatus(a, mine)} />
+                        <StatusBadge status={status!} />
+                        <span className={`${mine ? "btn-secondary" : "btn"} h-9 px-3.5 text-sm`} aria-hidden>
+                          {t(mine ? "row.open" : "asg.submit")} <span className="row-chevron">›</span>
+                        </span>
                       </div>
                     )}
-                  </Link>
+                  </div>
                 </li>
               );
             })}

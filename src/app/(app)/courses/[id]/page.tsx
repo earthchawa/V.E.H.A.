@@ -8,6 +8,7 @@ import { CopyToSections } from "@/components/CopyToSections";
 import { Modal } from "@/components/Modal";
 import { getI18n } from "@/lib/i18n/server";
 import { AddMaterialForm } from "./AddMaterialForm";
+import { ConfirmButton } from "./grades/ConfirmButton";
 import { copyMaterialAction, deleteMaterialAction, toggleMaterialAction } from "./actions";
 
 export default async function CourseMaterialsPage({ params }: { params: Promise<{ id: string }> }) {
@@ -72,16 +73,16 @@ export default async function CourseMaterialsPage({ params }: { params: Promise<
                         </p>
                       </div>
                       {canManage && (
-                        <div className="flex gap-2">
-                          <CopyToSections action={copyMaterialAction} itemId={m.id} sections={siblings} />
+                        <div className="flex flex-wrap items-center gap-2">
+                          <CopyToSections action={copyMaterialAction} itemId={m.id} sections={siblings} kind="material" itemTitle={m.title} />
                           <form action={toggleMaterialAction}>
                             <input type="hidden" name="materialId" value={m.id} />
-                            <button className="btn-secondary">{t(m.isPublished ? "course.hide" : "course.publish")}</button>
+                            <button role="switch" aria-checked={m.isPublished} className="flex h-8 items-center gap-2 rounded-lg px-1.5 text-xs text-muted transition hover:text-fg" data-testid="material-visible">
+                              <span className="toggle" data-on={m.isPublished} />
+                              {t("mat.visible")}
+                            </button>
                           </form>
-                          <form action={deleteMaterialAction}>
-                            <input type="hidden" name="materialId" value={m.id} />
-                            <button className="btn-danger">{t("course.delete")}</button>
-                          </form>
+                          <ConfirmButton action={deleteMaterialAction} name="materialId" value={m.id} message={t("mat.deleteConfirm", { title: m.title })} label={t("course.delete")} />
                         </div>
                       )}
                     </li>

@@ -72,6 +72,7 @@ model User {
   grades            Grade[]
   quizzes           Quiz[]
   attempts          QuizAttempt[]
+  cadetYears        CadetYear[]
 }
 
 model Session {
@@ -593,4 +594,20 @@ model SourceMatch {
 
   @@index([submissionId])
   @@index([sourceId])
+}
+
+/// A cadet's year level (ชั้นปี) in one academic year. One row per academic year keeps the history
+/// when cadets move up at the end of the year.
+model CadetYear {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Buddhist-era academic year, e.g. 2569.
+  academicYear Int
+  /// 1–5.
+  yearLevel    Int
+  createdAt    DateTime @default(now())
+
+  @@unique([userId, academicYear])
+  @@index([academicYear, yearLevel])
 }

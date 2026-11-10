@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useRef, useTransition, type FormHTMLAttributes } from "react";
 import type { FormState } from "@/lib/form";
 import { useModal } from "./Modal";
+import { toast } from "./Toaster";
 
 const PendingContext = createContext<boolean | null>(null);
 export const useKeepFormPending = () => useContext(PendingContext);
@@ -39,7 +40,11 @@ export function KeepForm({
   useEffect(() => {
     if (!state?.success) return;
     if (resetOnSuccess) ref.current?.reset();
-    if (closeOnSuccess) modal?.close();
+    if (closeOnSuccess && modal) {
+      // The dialog (and its inline message) is about to go: confirm with a toast instead.
+      toast(state.success);
+      modal.close();
+    }
   }, [state, resetOnSuccess, closeOnSuccess, modal]);
 
   return (

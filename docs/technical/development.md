@@ -67,6 +67,7 @@ export async function doSomethingAction(_: State, form: FormData): Promise<State
 ### 2.3 ฟอร์มและหน้าจอ
 - ฟอร์มใช้ `useActionState` + `<KeepForm>` ไม่ใช่ `<form action>` ตรงๆ (React 19 ล้างฟอร์มหลัง action) ใช้ `resetOnSuccess` / `closeOnSuccess` ตามต้องการ
 - การสร้าง/แก้ไขเปิดใน `<Modal>`, ไฟล์ใช้ `<FileDropzone>`, คำอธิบายใช้ `<InfoTip>` (ไม่ใช่ย่อหน้า)
+- การตั้งค่าเปิด/ปิดใช้ `<input type="checkbox" role="switch" className="toggle">`, การลบ/รีเซ็ตใช้ `<ConfirmForm>` (ห้ามใช้ `window.confirm()`), แจ้งผลหลังหน้าต่างปิดด้วย `toast()`
 - เวลาที่ผู้ใช้กรอกเป็นเวลาไทย ใช้ `parseBangkokLocal` / `toBangkokLocal` (`lib/assignments.ts`)
 - สีใช้ semantic token (`bg-surface`, `text-muted`, `text-danger`) ไม่ hard-code สีของข้อความ, สีของวิชาใช้ `courseTheme()` + `cc-bar`/`cc-text`/`cc-tint`
 - ทุกหน้าต้องใช้ได้ที่ 360–390 px ไม่มี horizontal scroll ตารางกว้างใส่ใน `overflow-x-auto`
@@ -103,7 +104,7 @@ npx prisma migrate deploy && npx prisma generate
 
 ### 4.1 Unit tests (`npm test`)
 
-ครอบคลุม pure logic: นโยบายรหัสผ่าน, lockout, token, CSV, การนำเข้าตารางสอน, similarity (รวมภาษาไทยและคำถาม-คำตอบ), การแยกความคล้ายตามแหล่ง, คำนวณเกรด, logic แบบทดสอบ, หลักสูตร, การนำทาง, ความครบของ i18n (ปัจจุบัน 101 tests) ไฟล์ test อยู่ข้างไฟล์ที่ทดสอบ (`*.test.ts`)
+ครอบคลุม pure logic: นโยบายรหัสผ่าน, lockout, token, CSV, การนำเข้าตารางสอน, similarity (รวมภาษาไทยและคำถาม-คำตอบ), การแยกความคล้ายตามแหล่ง, คำนวณเกรด, logic แบบทดสอบ, หลักสูตร, การนำทาง, ความครบของ i18n (ปัจจุบัน 108 tests) ไฟล์ test อยู่ข้างไฟล์ที่ทดสอบ (`*.test.ts`)
 
 ### 4.2 End-to-end (`e2e/`)
 
@@ -129,6 +130,7 @@ npm run test:e2e -- 05-quiz 10-code-questions     # เฉพาะบางช�
 | 13/14/15-import-* | นำเข้าอาจารย์, นนอ., ตารางสอน (fixture สมมติ) |
 | 16-mobile-menu / 19-layout / 20-mobile-overflow | หน้าจอมือถือ (360/390/1024 px) |
 | 18-info-tips | ⓘ คำอธิบาย |
+| 21-year-levels-and-ux | ชั้นปีและการเลื่อนชั้น, ลบกลุ่มเรียน, สวิตช์, หน้าต่างคัดลอก/ยืนยัน, toast, การ์ดรายการ, ธีมสว่าง |
 
 - **ทุกชุดล้างฐานข้อมูลก่อนเริ่ม** ใช้ฐานข้อมูลทดสอบในเครื่องเท่านั้น (ตัวรันปฏิเสธฐานข้อมูลบน cloud ถ้าไม่ตั้ง `E2E_ALLOW_REMOTE_DB=1`)
 - fixture ใน `e2e/fixtures/` เป็นข้อมูลสมมติที่มีรูปแบบเหมือนของจริง

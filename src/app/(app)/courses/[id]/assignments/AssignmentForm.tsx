@@ -84,10 +84,10 @@ export function AssignmentForm({
         </div>
       </div>
       <div className="space-y-2 text-sm text-muted">
-        <label className="flex items-center gap-2"><input type="checkbox" name="allowLate" defaultChecked={d.allowLate} className="accent-accent" /> {t("asg.f.allowLate")}</label>
-        <label className="flex items-center gap-2"><input type="checkbox" name="isPublished" defaultChecked={d.isPublished} className="accent-accent" /> {t("asg.f.published")}</label>
-        <label className="flex items-center gap-2"><input type="checkbox" name="checkSimilarity" defaultChecked={d.checkSimilarity} className="accent-accent" /> {t("asg.f.check")}</label>
-        <label className="flex items-start gap-2 pl-5"><input type="checkbox" name="ignoreCommon" defaultChecked={d.ignoreCommon} className="mt-1 accent-accent" /> <span className="inline-flex items-center gap-1.5">{t("asg.f.ignoreCommon")} <InfoTip text={t("asg.f.ignoreCommonHint")} /></span></label>
+        <label className="flex items-center gap-2"><input type="checkbox" name="allowLate" defaultChecked={d.allowLate} role="switch" className="toggle" /> {t("asg.f.allowLate")}</label>
+        <label className="flex items-center gap-2"><input type="checkbox" name="isPublished" defaultChecked={d.isPublished} role="switch" className="toggle" /> {t("asg.f.published")}</label>
+        <label className="flex items-center gap-2"><input type="checkbox" name="checkSimilarity" defaultChecked={d.checkSimilarity} role="switch" className="toggle" /> {t("asg.f.check")}</label>
+        <label className="flex items-center gap-2 pl-5"><input type="checkbox" name="ignoreCommon" defaultChecked={d.ignoreCommon} role="switch" className="toggle" /> <span className="inline-flex items-center gap-1.5">{t("asg.f.ignoreCommon")} <InfoTip text={t("asg.f.ignoreCommonHint")} /></span></label>
       </div>
       <div>
         <label className="label" htmlFor="a-vis">{t("asg.f.reportVis")}</label>

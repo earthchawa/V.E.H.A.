@@ -1,4 +1,5 @@
 import { msg, type Msg } from "./i18n";
+import { parseYearLevel } from "./year-level";
 
 /** Minimal CSV parser (RFC 4180 quoting) — enough for spreadsheet exports from Excel / Google Sheets. */
 export function parseCsv(input: string): string[][] {
@@ -51,6 +52,8 @@ export type UserImportRow = {
   department: string | null;
   /** Starting password (optional 6th column); otherwise a random one is issued. Must still be changed at first sign-in. */
   password: string | null;
+  /** Year level 1–5 for cadets (optional 7th column), recorded for the current academic year. */
+  yearLevel: number | null;
 };
 
 const ROLE_ALIASES: Record<string, UserImportRow["role"]> = {
@@ -66,7 +69,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const USERNAME_RE = /^[A-Za-z0-9._-]{3,32}$/;
 
 /**
- * Columns: username, fullName, role (optional, default student), email (optional).
+ * Columns: username, fullName, role (optional, default student), email, department, password, year (all optional).
  * A header row is detected and skipped.
  */
 export function parseUserImport(text: string): { rows: UserImportRow[]; errors: Msg[] } {
@@ -76,7 +79,7 @@ export function parseUserImport(text: string): { rows: UserImportRow[]; errors: 
 
   parseCsv(text).forEach((cols, idx) => {
     const line = idx + 1;
-    const [username = "", fullName = "", roleRaw = "", emailRaw = "", deptRaw = "", passwordRaw = ""] = cols;
+    const [username = "", fullName = "", roleRaw = "", emailRaw = "", deptRaw = "", passwordRaw = "", yearRaw = ""] = cols;
     if (idx === 0 && /^(username|id|student_?id|รหัส.*)$/i.test(username)) return;
 
     if (!USERNAME_RE.test(username)) {
@@ -95,9 +98,11 @@ export function parseUserImport(text: string): { rows: UserImportRow[]; errors: 
       errors.push(msg("csv.badPassword", { line, n: START_PASSWORD_MIN }));
       return;
     }
+    const yearLevel = parseYearLevel(yearRaw);
+    if (yearRaw.trim() && (yearLevel == null || role !== "STUDENT")) { errors.push(msg("csv.badYear", { line, value: yearRaw })); return; }
     if (seen.has(username)) { errors.push(msg("csv.dupId", { line, id: username })); return; }
     seen.add(username);
-    rows.push({ line, username, fullName, role, email, department: deptRaw ? deptRaw.toUpperCase() : null, password: passwordRaw || null });
+    rows.push({ line, username, fullName, role, email, department: deptRaw ? deptRaw.toUpperCase() : null, password: passwordRaw || null, yearLevel });
   });
   return { rows, errors };
 }

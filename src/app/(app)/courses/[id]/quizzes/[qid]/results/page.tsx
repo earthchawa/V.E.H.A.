@@ -6,6 +6,7 @@ import { getI18n } from "@/lib/i18n/server";
 import { formatPoints } from "@/lib/grades";
 import { attemptTotals } from "@/lib/quiz";
 import { closeExpiredAttempts } from "@/lib/quiz-server";
+import { QuizTabs } from "../../QuizTabs";
 
 export default async function QuizResultsPage({ params }: { params: Promise<{ id: string; qid: string }> }) {
   const { id, qid } = await params;
@@ -27,12 +28,33 @@ export default async function QuizResultsPage({ params }: { params: Promise<{ id
     if (a.status === "SUBMITTED")
       for (const ans of a.answers) if (ans.points == null) pendingByQuestion.set(ans.questionId, (pendingByQuestion.get(ans.questionId) ?? 0) + 1);
   const base = `/courses/${offering.id}/quizzes/${quiz.id}`;
+  const submitted = attempts.filter((a) => a.status === "SUBMITTED").length;
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="mt-2 text-xl font-semibold tracking-tight">{t("qz.results")}</h2>
-        <p className="mt-1 text-sm text-muted">{t("qz.started", { n: attempts.length, total: students.length })}</p>
+        <h2 className="mb-4 mt-2 text-xl font-semibold tracking-tight">{quiz.title}</h2>
+        <QuizTabs
+          base={base}
+          active="results"
+          questions={quiz.questions.length}
+          started={attempts.length}
+          total={students.length}
+          toGrade={[...pendingByQuestion.values()].reduce((n, x) => n + x, 0)}
+        />
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4" data-testid="results-summary">
+          {[
+            [t("qz.status.submitted"), `${submitted}/${students.length}`],
+            [t("qz.status.inProgress"), String(attempts.length - submitted)],
+            [t("qz.status.notStarted"), String(students.length - attempts.length)],
+            [t("qz.col.toGrade"), String([...pendingByQuestion.values()].reduce((n, x) => n + x, 0))],
+          ].map(([label, value]) => (
+            <div key={label} className="rounded-xl border border-border bg-surface px-4 py-3">
+              <div className="text-xs text-muted">{label}</div>
+              <div className="mt-0.5 font-mono text-xl font-semibold">{value}</div>
+            </div>
+          ))}
+        </div>
       </div>
 
       <section className="overflow-hidden rounded-xl border border-border bg-surface">
@@ -96,7 +118,7 @@ export default async function QuizResultsPage({ params }: { params: Promise<{ id
                       {a && a._count.events > 0 ? <span className="text-warning" data-testid="attempt-events">{tn("qz.events", a._count.events)}</span> : <span className="text-subtle">—</span>}
                     </td>
                     <td className="pr-5 text-right">
-                      {a && <Link href={`${base}/attempts/${a.id}`} className="btn-secondary">{t("qz.review")}</Link>}
+                      {a && <Link href={`${base}/attempts/${a.id}`} className="btn-secondary">{t("qz.review")} <span aria-hidden>›</span></Link>}
                     </td>
                   </tr>
                 );

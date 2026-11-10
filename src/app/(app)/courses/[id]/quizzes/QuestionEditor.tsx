@@ -148,7 +148,7 @@ export function QuestionEditor({ quizId, draft = NEW_QUESTION, onDone, closeOnSu
       )}
       {type === "ESSAY" && (
         <label className="flex items-center gap-2 text-sm text-muted">
-          <input type="checkbox" name="codeAnswer" defaultChecked={draft.codeAnswer} className="accent-accent" /> {t("qz.codeAnswer")}
+          <input type="checkbox" name="codeAnswer" defaultChecked={draft.codeAnswer} role="switch" className="toggle" /> {t("qz.codeAnswer")}
         </label>
       )}
       {type === "CODE" && (

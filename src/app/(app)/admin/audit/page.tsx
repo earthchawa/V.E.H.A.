@@ -144,7 +144,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
             </Link>
           ))}
           <label className="ml-auto inline-flex items-center gap-2 text-xs text-muted">
-            <input type="checkbox" name="problems" value="1" defaultChecked={f.problems} />
+            <input type="checkbox" role="switch" className="toggle" name="problems" value="1" defaultChecked={f.problems} />
             {t("act.f.problems")}
           </label>
         </div>

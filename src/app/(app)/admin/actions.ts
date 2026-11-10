@@ -15,6 +15,9 @@ import { getI18n } from "@/lib/i18n/server";
 import { SETTING, setSetting } from "@/lib/settings";
 import { BUNDLED_LOGOS, isHexColor } from "@/lib/departments";
 import { deleteStoredFile, saveFile } from "@/lib/storage";
+import { DEFAULT_FINAL_YEAR, MAX_YEAR_LEVEL, parseYearLevel, planPromotion } from "@/lib/year-level";
+import { currentAcademicYear, setYearLevel } from "@/lib/year-level-server";
+import { redirect } from "next/navigation";
 
 const LOGO_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
 import type { Translator } from "@/lib/i18n";
@@ -26,10 +29,11 @@ const admin = () => requireRole("ADMIN");
 // ---------- Users ----------
 
 async function createUsers(actorId: string, rows: UserImportRow[], t: Translator["t"]) {
-  const existing = new Set(
-    (await db.user.findMany({ where: { username: { in: rows.map((r) => r.username) } }, select: { username: true } }))
-      .map((u) => u.username),
+  const existing = new Map(
+    (await db.user.findMany({ where: { username: { in: rows.map((r) => r.username) } }, select: { username: true, id: true, role: true } }))
+      .map((u) => [u.username, u]),
   );
+  const academicYear = rows.some((r) => r.yearLevel != null) ? await currentAcademicYear() : 0;
   const emails = rows.map((r) => r.email).filter((e): e is string => !!e);
   const takenEmails = new Set(
     (await db.user.findMany({ where: { email: { in: emails } }, select: { email: true } })).map((u) => u.email),
@@ -40,12 +44,21 @@ async function createUsers(actorId: string, rows: UserImportRow[], t: Translator
   );
   const issued: IssuedPassword[] = [];
   const skipped: string[] = [];
+  /** Existing cadets whose year level was set from the file (the account itself is never changed). */
+  const yearSet: string[] = [];
   for (const r of rows) {
     if (r.department && !depts.has(r.department)) { skipped.push(t("users.skip.dept", { id: r.username, code: r.department })); continue; }
-    if (existing.has(r.username)) { skipped.push(t("users.skip.exists", { id: r.username })); continue; }
+    const found = existing.get(r.username);
+    if (found) {
+      // A re-import with a year column fills in year levels for accounts that already exist.
+      if (r.yearLevel != null && found.role === "STUDENT") {
+        if ((await setYearLevel(found.id, academicYear, r.yearLevel)) !== r.yearLevel) yearSet.push(r.username);
+      } else skipped.push(t("users.skip.exists", { id: r.username }));
+      continue;
+    }
     if (r.email && takenEmails.has(r.email)) { skipped.push(t("users.skip.email", { id: r.username })); continue; }
     const password = r.password ?? generateTempPassword();
-    await db.user.create({
+    const created = await db.user.create({
       data: {
         username: r.username,
         fullName: r.fullName,
@@ -57,17 +70,20 @@ async function createUsers(actorId: string, rows: UserImportRow[], t: Translator
         tempPasswordExpiresAt: tempPasswordExpiry(config.tempPasswordDays),
       },
     });
+    if (r.yearLevel != null) await db.cadetYear.create({ data: { userId: created.id, academicYear, yearLevel: r.yearLevel } });
     issued.push({ username: r.username, fullName: r.fullName, password });
   }
+  if (yearSet.length)
+    await audit({ actorId, action: "user.yearSet", details: { academicYear, usernames: yearSet } });
   if (issued.length)
     await audit({ actorId, action: "user.created", details: { usernames: issued.map((i) => i.username) } });
-  return { issued, skipped };
+  return { issued, skipped, yearSet, academicYear };
 }
 
 export async function createUserAction(_: FormState, fd: FormData): Promise<FormState> {
   const me = await admin();
   const { t, tm } = await getI18n();
-  const line = [fd.get("username"), fd.get("fullName"), fd.get("role"), fd.get("email"), fd.get("department")]
+  const line = [fd.get("username"), fd.get("fullName"), fd.get("role"), fd.get("email"), fd.get("department"), "", fd.get("role") === "STUDENT" ? fd.get("yearLevel") : ""]
     .map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`)
     .join(",");
   const { rows, errors } = parseUserImport(line);
@@ -86,11 +102,12 @@ export async function importUsersAction(_: FormState, fd: FormData): Promise<For
   if (!text.trim()) return { error: t("err.csvMissing") };
   const { rows, errors } = parseUserImport(text);
   if (errors.length) return { error: t("err.csvRows", { rows: errors.slice(0, 10).map(tm).join("\n") }) };
-  const { issued, skipped } = await createUsers(me.id, rows, t);
+  const { issued, skipped, yearSet, academicYear } = await createUsers(me.id, rows, t);
   revalidatePath("/admin/users");
   return {
     success:
       tn("ok.imported", issued.length) +
+      (yearSet.length ? t("ok.importYearSet", { n: yearSet.length, year: academicYear }) : "") +
       (skipped.length ? t("ok.importSkipped", { n: skipped.length, list: skipped.join(", ") }) : ""),
     data: issued,
   };
@@ -144,9 +161,15 @@ export async function updateUserAction(userId: string, _: FormState, fd: FormDat
   if (email && email !== user.email && (await db.user.findUnique({ where: { email } }))) return { error: t("users.err.emailTaken") };
   const dept = deptCode ? await db.department.findUnique({ where: { code: deptCode } }) : null;
   if (deptCode && !dept) return { error: t("common.invalid") };
+  // Year level (cadets only), for the academic year shown in the form.
+  const yearRaw = String(fd.get("yearLevel") ?? "").trim();
+  const academicYear = Number(fd.get("academicYear")) || (await currentAcademicYear());
+  const yearLevel = role === "STUDENT" ? parseYearLevel(yearRaw) : null;
+  if (role === "STUDENT" && yearRaw && yearLevel == null) return { error: t("common.invalid") };
+  const yearBefore = (await db.cadetYear.findUnique({ where: { userId_academicYear: { userId: user.id, academicYear } } }))?.yearLevel ?? null;
 
-  const before = { username: user.username, fullName: user.fullName, role: user.role, email: user.email, department: user.department?.code ?? null };
-  const after = { username, fullName, role, email, department: dept?.code ?? null };
+  const before = { username: user.username, fullName: user.fullName, role: user.role, email: user.email, department: user.department?.code ?? null, yearLevel: yearBefore };
+  const after = { username, fullName, role, email, department: dept?.code ?? null, yearLevel: fd.has("yearLevel") || role !== "STUDENT" ? yearLevel : yearBefore };
   const changed = Object.fromEntries(
     Object.keys(after)
       .filter((k) => before[k as keyof typeof before] !== after[k as keyof typeof after])
@@ -155,11 +178,50 @@ export async function updateUserAction(userId: string, _: FormState, fd: FormDat
   if (!Object.keys(changed).length) return { success: t("ok.saved") };
 
   await db.user.update({ where: { id: user.id }, data: { username, fullName, role, email, departmentId: dept?.id ?? null } });
+  if (changed.yearLevel) await setYearLevel(user.id, academicYear, after.yearLevel);
   // Sign them out after a role change so menus and permissions match at once (admins can't change their own role).
   if (changed.role) await db.session.deleteMany({ where: { userId: user.id } });
-  await audit({ actorId: me.id, action: "user.updated", targetType: "User", targetId: user.id, details: changed });
+  await audit({ actorId: me.id, action: "user.updated", targetType: "User", targetId: user.id, details: changed.yearLevel ? { ...changed, academicYear } : changed });
   revalidatePath("/admin/users");
   return { success: t("ok.saved") };
+}
+
+/**
+ * End of the academic year: every cadet with a year level in `from` gets a row for the next year, one level up.
+ * The final year graduates (no new row; optionally the accounts are disabled). Rows of earlier years stay as
+ * the history, and cadets who already have a row in the next year are left alone, so it is safe to run twice.
+ */
+export async function promoteCadetsAction(_: FormState, fd: FormData): Promise<FormState> {
+  const me = await admin();
+  const { t } = await getI18n();
+  const from = Number(fd.get("from"));
+  const finalYear = Number(fd.get("finalYear") ?? DEFAULT_FINAL_YEAR);
+  if (!Number.isInteger(from) || from < 2500 || from > 2700) return { error: t("common.invalid") };
+  if (!Number.isInteger(finalYear) || finalYear < 1 || finalYear > MAX_YEAR_LEVEL) return { error: t("common.invalid") };
+  const to = from + 1;
+  const [current, next] = await Promise.all([
+    db.cadetYear.findMany({ where: { academicYear: from, user: { role: "STUDENT", isActive: true } }, select: { userId: true, yearLevel: true } }),
+    db.cadetYear.findMany({ where: { academicYear: to }, select: { userId: true } }),
+  ]);
+  if (!current.length) return { error: t("promo.err.none", { year: from }) };
+  const plan = planPromotion(current, next.map((r) => r.userId), finalYear);
+  const disable = fd.get("disableGraduates") === "on" && plan.graduate.length > 0;
+  await db.$transaction([
+    db.cadetYear.createMany({ data: plan.promote.map((r) => ({ ...r, academicYear: to })), skipDuplicates: true }),
+    ...(disable
+      ? [
+          db.user.updateMany({ where: { id: { in: plan.graduate } }, data: { isActive: false } }),
+          db.session.deleteMany({ where: { userId: { in: plan.graduate } } }),
+        ]
+      : []),
+  ]);
+  await audit({
+    actorId: me.id,
+    action: "user.promoted",
+    details: { from, to, finalYear, promoted: plan.promote.length, graduated: plan.graduate.length, disabledGraduates: disable, alreadyDone: plan.skipped },
+  });
+  revalidatePath("/admin/users");
+  return { success: t("promo.ok", { to, promoted: plan.promote.length, graduated: plan.graduate.length, skipped: plan.skipped }) };
 }
 
 // ---------- Terms / courses / offerings ----------
@@ -384,6 +446,45 @@ export async function enrollAction(offeringId: string, _: FormState, fd: FormDat
   return notes.length
     ? { error: t("roster.addedWithNotes", { n: toEnroll.length, notes: notes.join(" · ") }) }
     : { success: t("ok.added", { n: toEnroll.length }) };
+}
+
+/**
+ * Delete a course section with everything in it (materials, assignments and submissions, quizzes, grades).
+ * The admin must type the course code to confirm. The course in the catalogue and the semester stay.
+ */
+export async function deleteOfferingAction(offeringId: string, _: FormState, fd: FormData): Promise<FormState> {
+  const me = await admin();
+  const { t } = await getI18n();
+  const o = await db.courseOffering.findUnique({
+    where: { id: offeringId },
+    include: {
+      course: { select: { code: true } },
+      term: { select: { academicYear: true, semester: true } },
+      materials: { select: { storageKey: true } },
+      assignments: { select: { submissions: { select: { files: { select: { storageKey: true } } } } } },
+      _count: { select: { enrollments: true, materials: true, assignments: true, quizzes: true, gradeItems: true } },
+    },
+  });
+  if (!o) return { error: t("common.invalid") };
+  const typed = String(fd.get("confirm") ?? "").replace(/\s+/g, "").toUpperCase();
+  if (typed !== o.course.code.toUpperCase()) return { error: t("off.del.mismatch", { code: o.course.code }) };
+
+  const keys = [
+    ...o.materials.map((m) => m.storageKey),
+    ...o.assignments.flatMap((a) => a.submissions.flatMap((s) => s.files.map((f) => f.storageKey))),
+  ].filter((k): k is string => !!k);
+  // Log first: the entry's department is resolved from the section, which is about to go.
+  await audit({
+    actorId: me.id,
+    action: "offering.deleted",
+    targetType: "CourseOffering",
+    targetId: o.id,
+    details: { course: o.course.code, term: `${o.term.semester}/${o.term.academicYear}`, section: o.section, ...o._count },
+  });
+  await db.courseOffering.delete({ where: { id: o.id } });
+  for (const k of keys) await deleteStoredFile(k).catch(() => undefined);
+  revalidatePath("/admin/courses");
+  redirect(`/admin/courses?s=${o.termId}`);
 }
 
 export async function unenrollAction(fd: FormData): Promise<void> {

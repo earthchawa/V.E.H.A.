@@ -6,6 +6,8 @@ import { PageHeader } from "@/components/PageHeader";
 import { unenrollAction } from "../../actions";
 import { EnrollForm } from "./EnrollForm";
 import { Modal } from "@/components/Modal";
+import { DeleteOfferingForm } from "./DeleteOfferingForm";
+import { ConfirmButton } from "../../../courses/[id]/grades/ConfirmButton";
 
 export default async function OfferingAdminPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -18,9 +20,11 @@ export default async function OfferingAdminPage({ params }: { params: Promise<{ 
         include: { user: { select: { username: true, fullName: true } } },
         orderBy: [{ role: "desc" }, { user: { username: "asc" } }],
       },
+      _count: { select: { materials: true, assignments: true, quizzes: true, gradeItems: true } },
     },
   });
   if (!offering) notFound();
+  const submissions = await db.submission.count({ where: { assignment: { offeringId: offering.id } } });
   const { t, term: termLabel, role } = await getI18n();
 
   return (
@@ -58,16 +62,27 @@ export default async function OfferingAdminPage({ params }: { params: Promise<{ 
                       </span>
                     </td>
                     <td className="pr-5 text-right">
-                      <form action={unenrollAction}>
-                        <input type="hidden" name="enrollmentId" value={e.id} />
-                        <button className="btn-danger">{t("roster.remove")}</button>
-                      </form>
+                      <ConfirmButton action={unenrollAction} name="enrollmentId" value={e.id} message={t("roster.removeConfirm", { name: e.user.fullName })} label={t("roster.remove")} />
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+        </section>
+
+        <section className="mt-8 flex flex-wrap items-center gap-3 rounded-xl border border-red-500/20 px-5 py-4" data-testid="danger-zone">
+          <div className="min-w-0 flex-1">
+            <h2 className="text-sm font-semibold">{t("off.del.title")}</h2>
+            <p className="mt-0.5 text-xs text-muted">{t("off.del.desc")}</p>
+          </div>
+          <Modal label={t("off.del.title")} title={`${t("off.del.title")} · ${offering.course.code} ${t("dash.section", { s: offering.section })}`} buttonClassName="btn-danger" testId="delete-offering">
+            <DeleteOfferingForm
+              offeringId={offering.id}
+              code={offering.course.code}
+              counts={{ people: offering.enrollments.length, ...offering._count, submissions }}
+            />
+          </Modal>
         </section>
       </div>
     </div>

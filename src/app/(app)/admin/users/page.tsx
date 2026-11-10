@@ -5,7 +5,9 @@ import { db } from "@/lib/db";
 import { getI18n } from "@/lib/i18n/server";
 import { PageHeader } from "@/components/PageHeader";
 import { FilterBar } from "@/components/FilterBar";
-import { CreateUserForm, ImportUsersForm, ManageUserForm } from "./forms";
+import { CreateUserForm, ImportUsersForm, ManageUserForm, PromoteForm } from "./forms";
+import { YEAR_LEVELS } from "@/lib/year-level";
+import { currentAcademicYear } from "@/lib/year-level-server";
 import { Modal } from "@/components/Modal";
 import { deptColor } from "@/lib/departments";
 
@@ -23,13 +25,16 @@ const TABS = [
   { role: "ADMIN", key: "users.tab.admins" },
 ] as const;
 
-export default async function UsersPage({ searchParams }: { searchParams: Promise<{ q?: string; role?: string; dept?: string }> }) {
+export default async function UsersPage({ searchParams }: { searchParams: Promise<{ q?: string; role?: string; dept?: string; year?: string }> }) {
   const me = await requireRole("ADMIN");
   const sp = await searchParams;
   const q = (sp.q ?? "").trim();
   const dept = sp.dept ?? "";
   const role = TABS.some((x) => x.role === sp.role) ? (sp.role as Role) : null;
   const { t, date, role: roleLabel, lang } = await getI18n();
+  const academicYear = await currentAcademicYear();
+  // "3" = that year level this academic year; "none" = cadets without one.
+  const year = sp.year === "none" || YEAR_LEVELS.includes(Number(sp.year)) ? sp.year! : "";
 
   const departments = await db.department.findMany({
     orderBy: [{ parentId: { sort: "asc", nulls: "first" } }, { position: "asc" }, { code: "asc" }],
@@ -41,13 +46,18 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
   const filter: Prisma.UserWhereInput = {
     ...(q ? { OR: [{ username: { contains: q, mode: "insensitive" } }, { fullName: { contains: q, mode: "insensitive" } }] } : {}),
     ...(dept === "none" ? { departmentId: null } : dept ? { departmentId: dept } : {}),
+    ...(year === "none"
+      ? { role: "STUDENT" as const, cadetYears: { none: { academicYear } } }
+      : year
+        ? { cadetYears: { some: { academicYear, yearLevel: Number(year) } } }
+        : {}),
   };
   const [users, counts] = await Promise.all([
     db.user.findMany({
       where: { ...filter, ...(role ? { role } : {}) },
       orderBy: [{ role: "asc" }, { username: "asc" }],
       take: 1000,
-      include: { department: { include: { parent: true } } },
+      include: { department: { include: { parent: true } }, cadetYears: { orderBy: { academicYear: "asc" }, select: { academicYear: true, yearLevel: true } } },
     }),
     db.user.groupBy({ by: ["role"], where: filter, _count: { _all: true } }),
   ]);
@@ -61,6 +71,14 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
     groups.set(k, [...(groups.get(k) ?? []), u]);
   }
   const groupKeys = [...groups.keys()].sort((a, b) => (a ? order.get(a) ?? 0 : 1e9) - (b ? order.get(b) ?? 0 : 1e9));
+
+  // For the promotion dialog: cadets per year level in each academic year on record.
+  const yearCounts = await db.cadetYear.groupBy({ by: ["academicYear", "yearLevel"], where: { user: { role: "STUDENT", isActive: true } }, _count: { _all: true } });
+  const promoCounts: Record<number, Record<number, number>> = {};
+  for (const r of yearCounts) (promoCounts[r.academicYear] ??= {})[r.yearLevel] = r._count._all;
+  const promoYears = Object.keys(promoCounts).map(Number).sort((a, b) => b - a);
+  const levelOf = (u: (typeof users)[number]) => u.cadetYears.find((y) => y.academicYear === academicYear)?.yearLevel ?? null;
+  const showYear = role !== "INSTRUCTOR" && role !== "ADMIN";
 
   const now = new Date();
   const statusOf = (u: (typeof users)[number]) =>
@@ -79,6 +97,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
     if (r) p.set("role", r);
     if (q) p.set("q", q);
     if (dept) p.set("dept", dept);
+    if (year && (!r || r === "STUDENT")) p.set("year", year);
     const s = p.toString();
     return `/admin/users${s ? `?${s}` : ""}`;
   };
@@ -93,11 +112,16 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
         actions={
           <div className="flex flex-wrap gap-2">
             <Modal label={`+ ${t("users.new")}`} title={t("users.new")} testId="new-user">
-              <CreateUserForm departments={deptOptions} />
+              <CreateUserForm departments={deptOptions} academicYear={academicYear} />
             </Modal>
             <Modal label={t("users.import")} title={t("users.import")} buttonClassName="btn-secondary h-9" size="lg" testId="import-users">
               <ImportUsersForm />
             </Modal>
+            {promoYears.length > 0 && (
+              <Modal label={<><span aria-hidden>⇧</span> {t("promo.title")}</>} title={t("promo.title")} buttonClassName="btn-secondary h-9" size="lg" testId="promote">
+                <PromoteForm years={promoYears} counts={promoCounts} />
+              </Modal>
+            )}
           </div>
         }
       />
@@ -119,6 +143,13 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
             {departments.map((d) => <option key={d.id} value={d.id}>{`${d.parent ? "— " : ""}${d.code} ${name(d)}`}</option>)}
             <option value="none">{t("dep.unassigned")}</option>
           </select>
+          {showYear && (
+            <select name="year" defaultValue={year} className="input h-9 w-full py-0 sm:w-auto" aria-label={t("yl.label")} data-testid="year-filter">
+              <option value="">{t("yl.all", { year: academicYear })}</option>
+              {YEAR_LEVELS.map((n) => <option key={n} value={n}>{t("yl.level", { n })}</option>)}
+              <option value="none">{t("yl.none")}</option>
+            </select>
+          )}
           <span className="ml-auto pr-1 text-xs text-subtle" data-testid="user-count">{t("users.count", { n: users.length })}</span>
         </FilterBar>
 
@@ -132,6 +163,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
                   <th className="pl-5">{t("login.id")}</th>
                   <th>{t("users.fullName")}</th>
                   {!role && <th>{t("account.role")}</th>}
+                  {showYear && <th>{t("yl.label")}</th>}
                   <th>{t("users.status")}</th>
                   <th>{t("users.lastSignIn")}</th>
                   <th />
@@ -143,7 +175,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
                   const rows = groups.get(k)!;
                   return [
                     <tr key={`g-${k}`} className="bg-surface-2" data-testid="user-group">
-                      <td colSpan={role ? 5 : 6} className="pl-5 text-xs font-semibold text-muted">
+                      <td colSpan={(role ? 5 : 6) + (showYear ? 1 : 0)} className="pl-5 text-xs font-semibold text-muted">
                         {d ? (
                           <span className="cc inline-flex items-center gap-2" style={{ ["--cc" as string]: deptColor({ ...d, parent: d.parent }) ?? "var(--color-accent)" }}>
                             <span className="cc-bar h-3 w-1 rounded" />
@@ -166,14 +198,20 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
                             {u.email && <div className="text-xs text-subtle">{u.email}</div>}
                           </td>
                           {!role && <td className="whitespace-nowrap text-muted">{roleLabel(u.role)}</td>}
+                          {showYear && (
+                            <td className="whitespace-nowrap" data-testid="user-year">
+                              {u.role !== "STUDENT" ? "" : levelOf(u) ? <span className="badge bg-accent/10 text-accent">{t("yl.level", { n: levelOf(u)! })}</span> : <span className="text-subtle">—</span>}
+                            </td>
+                          )}
                           <td><span className={`badge whitespace-nowrap ${status.cls}`}>{status.text}</span></td>
                           <td className="whitespace-nowrap text-xs text-subtle">{u.lastLoginAt ? date(u.lastLoginAt) : "—"}</td>
                           <td className="pr-5 text-right">
                             <Modal label={t("users.manage")} title={`${u.fullName} · ${u.username}`} buttonClassName="btn-secondary" size="lg" testId="manage-user">
                               <ManageUserForm
-                                user={{ id: u.id, username: u.username, fullName: u.fullName, role: u.role, email: u.email, department: u.department?.code ?? null, isActive: u.isActive }}
+                                user={{ id: u.id, username: u.username, fullName: u.fullName, role: u.role, email: u.email, department: u.department?.code ?? null, isActive: u.isActive, yearLevel: levelOf(u), years: u.cadetYears }}
                                 departments={deptOptions}
                                 isSelf={u.id === me.id}
+                                academicYear={academicYear}
                               />
                             </Modal>
                           </td>

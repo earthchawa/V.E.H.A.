@@ -2,6 +2,7 @@ import { ChangePasswordForm } from "@/components/ChangePasswordForm";
 import { UpdateEmailForm } from "@/components/UpdateEmailForm";
 import { PageHeader } from "@/components/PageHeader";
 import { requireUser } from "@/lib/auth/session";
+import { db } from "@/lib/db";
 import { getI18n } from "@/lib/i18n/server";
 import { InfoTip } from "@/components/InfoTip";
 
@@ -12,6 +13,7 @@ export async function generateMetadata() {
 export default async function AccountPage() {
   const user = await requireUser();
   const { t, role } = await getI18n();
+  const years = user.role === "STUDENT" ? await db.cadetYear.findMany({ where: { userId: user.id }, orderBy: { academicYear: "desc" } }) : [];
   return (
     <div className="mx-auto max-w-xl">
       <PageHeader title={t("account.title")} />
@@ -21,6 +23,14 @@ export default async function AccountPage() {
             <dt className="text-muted">{t("account.name")}</dt><dd>{user.fullName}</dd>
             <dt className="text-muted">{t("account.id")}</dt><dd className="font-mono">{user.username}</dd>
             <dt className="text-muted">{t("account.role")}</dt><dd>{role(user.role)}</dd>
+            {years.length > 0 && (
+              <>
+                <dt className="text-muted">{t("yl.label")}</dt>
+                <dd data-testid="my-year">
+                  {t("yl.level", { n: years[0].yearLevel })} <span className="text-subtle">{t("yl.forYear", { year: years[0].academicYear })}</span>
+                </dd>
+              </>
+            )}
             <dt className="text-muted">{t("account.email")}</dt><dd>{user.email ?? <span className="text-subtle">{t("account.notSet")}</span>}</dd>
           </dl>
         </section>

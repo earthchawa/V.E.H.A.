@@ -51,7 +51,7 @@ export function AddItemForm({ offeringId, categories }: { offeringId: string; ca
         </select>
       </div>
       <div className="flex items-center gap-4">
-        <label className="flex items-center gap-2 text-sm text-muted"><input type="checkbox" name="isReleased" className="accent-accent" /> {t("gr.released")}</label>
+        <label className="flex items-center gap-2 text-sm text-muted"><input type="checkbox" name="isReleased" role="switch" className="toggle" /> {t("gr.released")}</label>
         <SubmitButton className="btn-secondary">{t("gr.addItem")}</SubmitButton>
       </div>
       {state?.error && <FormMessage state={state} />}

@@ -36,10 +36,22 @@ describe("parseUserImport", () => {
   });
 
   it("skips a byte-order mark and reads an optional starting password", () => {
-    const { rows, errors } = parseUserImport("\uFEFFusername,fullName,role,email,department,password\nthewa_k,น.อ.เทวา กาญจนชม,instructor,,CS,csthebest\nx_y,X Y,instructor,,,\n");
+    const { rows, errors } = parseUserImport("\uFEFFusername,fullName,role,email,department,password\nsomchai_k,น.อ.สมชาย ตัวอย่าง,instructor,,CS,start-pass-1\nx_y,X Y,instructor,,,\n");
     expect(errors).toEqual([]);
-    expect(rows[0]).toMatchObject({ username: "thewa_k", role: "INSTRUCTOR", department: "CS", password: "csthebest" });
+    expect(rows[0]).toMatchObject({ username: "somchai_k", role: "INSTRUCTOR", department: "CS", password: "start-pass-1" });
     expect(rows[1].password).toBeNull();
     expect(parseUserImport("a_b,A B,instructor,,,abc").errors[0].key).toBe("csv.badPassword");
+  });
+});
+
+describe("year level column", () => {
+  it("reads the optional 7th column for cadets", () => {
+    const { rows, errors } = parseUserImport("9001,Cadet A,cadet,,CS,,3\n9002,Cadet B,,,,,ชั้นปีที่ 2\n9003,Cadet C");
+    expect(errors).toEqual([]);
+    expect(rows.map((r) => r.yearLevel)).toEqual([3, 2, null]);
+  });
+  it("rejects a bad year, and a year on a staff account", () => {
+    expect(parseUserImport("9001,Cadet A,cadet,,,,7").errors[0].key).toBe("csv.badYear");
+    expect(parseUserImport("t_a,Teacher A,instructor,,,,2").errors[0].key).toBe("csv.badYear");
   });
 });

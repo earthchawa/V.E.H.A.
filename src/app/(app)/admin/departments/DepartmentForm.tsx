@@ -76,7 +76,7 @@ export function DepartmentForm({
           <span className="label">{t("dep.color")}</span>
           {isDept && (
             <label className="mb-2 flex items-center gap-2 text-sm text-muted">
-              <input type="checkbox" name="inheritColor" checked={inherit} onChange={(e) => setInherit(e.target.checked)} className="accent-accent" />
+              <input type="checkbox" name="inheritColor" checked={inherit} onChange={(e) => setInherit(e.target.checked)} role="switch" className="toggle" />
               {t("dep.inheritColor")}
             </label>
           )}

@@ -2,16 +2,37 @@
 
 import { KeepForm } from "@/components/KeepForm";
 import { useActionState } from "react";
-import { createUserAction, importUsersAction, resetUserPasswordAction, toggleUserActiveAction, updateUserAction } from "../actions";
+import { useState } from "react";
+import { createUserAction, importUsersAction, promoteCadetsAction, resetUserPasswordAction, toggleUserActiveAction, updateUserAction } from "../actions";
+import { DEFAULT_FINAL_YEAR, YEAR_LEVELS } from "@/lib/year-level";
 import { FormMessage } from "@/components/FormMessage";
 import { SubmitButton } from "@/components/SubmitButton";
 import { IssuedPasswords, type Issued } from "@/components/IssuedPasswords";
 import { FileDropzone } from "@/components/FileDropzone";
 import { useI18n } from "@/lib/i18n/client";
 import { InfoTip } from "@/components/InfoTip";
+import { ConfirmForm } from "@/components/ConfirmForm";
 
-export function CreateUserForm({ departments = [] }: { departments?: { code: string; label: string }[] }) {
+/** Year level picker for cadets; `academicYear` tells which year the value is recorded for. */
+function YearLevelField({ id, academicYear, defaultValue }: { id: string; academicYear: number; defaultValue?: number | null }) {
+  const { t } = useI18n();
+  return (
+    <div>
+      <label className="label flex items-center gap-1.5" htmlFor={id}>
+        {t("yl.label")} <span className="text-subtle">{t("yl.forYear", { year: academicYear })}</span> <InfoTip text={t("yl.hint")} align="start" />
+      </label>
+      <select id={id} name="yearLevel" className="input" defaultValue={defaultValue ?? ""} data-testid="year-level">
+        <option value="">{t("yl.none")}</option>
+        {YEAR_LEVELS.map((n) => <option key={n} value={n}>{t("yl.level", { n })}</option>)}
+      </select>
+      <input type="hidden" name="academicYear" value={academicYear} />
+    </div>
+  );
+}
+
+export function CreateUserForm({ departments = [], academicYear }: { departments?: { code: string; label: string }[]; academicYear: number }) {
   const [state, action, pending] = useActionState(createUserAction, undefined);
+  const [role, setRole] = useState("STUDENT");
   const { t } = useI18n();
   return (
     <KeepForm action={action} pending={pending} state={state} resetOnSuccess className="space-y-4">
@@ -22,7 +43,7 @@ export function CreateUserForm({ departments = [] }: { departments?: { code: str
         </div>
         <div>
           <label className="label" htmlFor="cu-role">{t("account.role")}</label>
-          <select id="cu-role" name="role" className="input" defaultValue="STUDENT">
+          <select id="cu-role" name="role" className="input" value={role} onChange={(e) => setRole(e.target.value)}>
             <option value="STUDENT">{t("role.STUDENT")}</option>
             <option value="INSTRUCTOR">{t("role.INSTRUCTOR")}</option>
             <option value="ADMIN">{t("role.ADMIN")}</option>
@@ -42,6 +63,7 @@ export function CreateUserForm({ departments = [] }: { departments?: { code: str
           </select>
         </div>
       )}
+      {role === "STUDENT" && <YearLevelField id="cu-year" academicYear={academicYear} />}
       <div>
         <label className="label" htmlFor="cu-email">{t("users.email")} <span className="text-subtle">{t("common.optional")}</span></label>
         <input id="cu-email" name="email" type="email" className="input" />
@@ -79,13 +101,7 @@ export function ResetPasswordButton({ userId, username }: { userId: string; user
   const issued = (state?.data as Issued[] | undefined)?.[0];
   const { t } = useI18n();
   return (
-    <form
-      action={action}
-      onSubmit={(e) => {
-        if (!confirm(t("users.resetConfirm", { id: username })))
-          e.preventDefault();
-      }}
-    >
+    <ConfirmForm action={action} message={t("users.resetConfirm", { id: username })} confirmLabel={t("users.reset")} danger={false}>
       <input type="hidden" name="userId" value={userId} />
       {issued ? (
         <span className="badge bg-amber-500/10 px-2 py-1 font-mono text-sm text-warning" title={t("temp.shownOnce")}>
@@ -94,7 +110,7 @@ export function ResetPasswordButton({ userId, username }: { userId: string; user
       ) : (
         <SubmitButton className="btn-secondary" pendingText="…">{t("users.reset")}</SubmitButton>
       )}
-    </form>
+    </ConfirmForm>
   );
 }
 
@@ -106,11 +122,15 @@ export type ManagedUser = {
   email: string | null;
   department: string | null;
   isActive: boolean;
+  /** Year level in the current academic year, and every year on record (cadets). */
+  yearLevel: number | null;
+  years: { academicYear: number; yearLevel: number }[];
 };
 
 /** Everything about one account in one place: details, then password reset and disabling. */
-export function ManageUserForm({ user, departments, isSelf }: { user: ManagedUser; departments: { code: string; label: string }[]; isSelf: boolean }) {
+export function ManageUserForm({ user, departments, isSelf, academicYear }: { user: ManagedUser; departments: { code: string; label: string }[]; isSelf: boolean; academicYear: number }) {
   const [state, action, pending] = useActionState(updateUserAction.bind(null, user.id), undefined);
+  const [role, setRole] = useState<string>(user.role);
   const { t } = useI18n();
   const id = (f: string) => `mu-${user.id}-${f}`;
   return (
@@ -124,7 +144,7 @@ export function ManageUserForm({ user, departments, isSelf }: { user: ManagedUse
           </div>
           <div>
             <label className="label" htmlFor={id("role")}>{t("account.role")}</label>
-            <select id={id("role")} name="role" className="input" defaultValue={user.role} disabled={isSelf}>
+            <select id={id("role")} name="role" className="input" value={role} onChange={(e) => setRole(e.target.value)} disabled={isSelf}>
               <option value="STUDENT">{t("role.STUDENT")}</option>
               <option value="INSTRUCTOR">{t("role.INSTRUCTOR")}</option>
               <option value="ADMIN">{t("role.ADMIN")}</option>
@@ -149,6 +169,23 @@ export function ManageUserForm({ user, departments, isSelf }: { user: ManagedUse
             <input id={id("email")} name="email" type="email" className="input" defaultValue={user.email ?? ""} />
           </div>
         </div>
+        {role === "STUDENT" && (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <YearLevelField id={id("year")} academicYear={academicYear} defaultValue={user.yearLevel} />
+            {user.years.length > 0 && (
+              <div data-testid="year-history">
+                <span className="label">{t("yl.history")}</span>
+                <ul className="flex flex-wrap gap-1.5 text-xs">
+                  {user.years.map((y) => (
+                    <li key={y.academicYear} className={`badge px-2 py-1 ${y.academicYear === academicYear ? "bg-accent/15 text-accent" : "bg-surface-3 text-muted"}`}>
+                      {y.academicYear} · {t("yl.level", { n: y.yearLevel })}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
         <FormMessage state={state} />
         <SubmitButton>{t("users.saveChanges")}</SubmitButton>
       </KeepForm>
@@ -158,18 +195,62 @@ export function ManageUserForm({ user, departments, isSelf }: { user: ManagedUse
         <div className="flex flex-wrap items-center gap-3">
           <ResetPasswordButton userId={user.id} username={user.username} />
           {!isSelf && (
-            <form
-              action={toggleUserActiveAction}
-              onSubmit={(e) => {
-                if (user.isActive && !confirm(t("users.disableConfirm", { id: user.username }))) e.preventDefault();
-              }}
-            >
+            <ConfirmForm action={toggleUserActiveAction} enabled={user.isActive} message={t("users.disableConfirm", { id: user.username })} confirmLabel={t("users.disable")}>
               <input type="hidden" name="userId" value={user.id} />
               <button className={user.isActive ? "btn-danger" : "btn-secondary"}>{t(user.isActive ? "users.disable" : "users.enable")}</button>
-            </form>
+            </ConfirmForm>
           )}
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * End-of-year promotion: shows how many cadets are in each year of `from`, then moves everyone up into the
+ * next academic year. The final year graduates. Earlier years stay on each cadet's record.
+ */
+export function PromoteForm({ years, counts }: { years: number[]; counts: Record<number, Record<number, number>> }) {
+  const [state, action, pending] = useActionState(promoteCadetsAction, undefined);
+  const [from, setFrom] = useState(years[0]);
+  const [finalYear, setFinalYear] = useState(DEFAULT_FINAL_YEAR);
+  const { t } = useI18n();
+  const c = counts[from] ?? {};
+  const levels = YEAR_LEVELS.filter((n) => c[n]);
+  return (
+    <KeepForm action={action} pending={pending} state={state} className="space-y-4" data-testid="promote-form">
+      <p className="text-xs leading-relaxed text-muted">{t("promo.help")}</p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <label className="label" htmlFor="promo-from">{t("promo.from")}</label>
+          <select id="promo-from" name="from" className="input" value={from} onChange={(e) => setFrom(Number(e.target.value))}>
+            {years.map((y) => <option key={y} value={y}>{t("promo.fromTo", { from: y, to: y + 1 })}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="label flex items-center gap-1.5" htmlFor="promo-final">{t("promo.finalYear")} <InfoTip text={t("promo.finalYearHint")} align="start" /></label>
+          <select id="promo-final" name="finalYear" className="input" value={finalYear} onChange={(e) => setFinalYear(Number(e.target.value))}>
+            {YEAR_LEVELS.filter((n) => n >= 3).map((n) => <option key={n} value={n}>{t("yl.level", { n })}</option>)}
+          </select>
+        </div>
+      </div>
+      <ul className="divide-y divide-border rounded-lg border border-border text-sm" data-testid="promote-preview">
+        {levels.length === 0 && <li className="px-3 py-3 text-center text-muted">{t("promo.err.none", { year: from })}</li>}
+        {levels.map((n) => (
+          <li key={n} className="flex items-center gap-3 px-3 py-2">
+            <span className="w-24">{t("yl.level", { n })}</span>
+            <span className="font-mono text-xs text-muted">{t("promo.count", { n: c[n] })}</span>
+            <span className="ml-auto text-xs">
+              {n >= finalYear ? <span className="text-warning">→ {t("promo.graduates")}</span> : <span className="text-success">→ {t("yl.level", { n: n + 1 })}</span>}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <label className="flex items-center gap-2.5 text-sm text-muted">
+        <input type="checkbox" role="switch" name="disableGraduates" className="toggle" /> {t("promo.disableGraduates")}
+      </label>
+      <FormMessage state={state} />
+      <SubmitButton>{t("promo.submit", { to: from + 1 })}</SubmitButton>
+    </KeepForm>
   );
 }
