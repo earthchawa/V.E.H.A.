@@ -3,6 +3,7 @@ import { UpdateEmailForm } from "@/components/UpdateEmailForm";
 import { PageHeader } from "@/components/PageHeader";
 import { requireUser } from "@/lib/auth/session";
 import { db } from "@/lib/db";
+import { currentAcademicYear } from "@/lib/year-level-server";
 import { getI18n } from "@/lib/i18n/server";
 import { InfoTip } from "@/components/InfoTip";
 
@@ -13,7 +14,10 @@ export async function generateMetadata() {
 export default async function AccountPage() {
   const user = await requireUser();
   const { t, role } = await getI18n();
-  const years = user.role === "STUDENT" ? await db.cadetYear.findMany({ where: { userId: user.id }, orderBy: { academicYear: "desc" } }) : [];
+  // This academic year's level; before the new year's first semester is made current, promotion may already have added next year's.
+  const allYears = user.role === "STUDENT" ? await db.cadetYear.findMany({ where: { userId: user.id }, orderBy: { academicYear: "desc" } }) : [];
+  const thisYear = allYears.length ? await currentAcademicYear() : 0;
+  const years = [...allYears.filter((y) => y.academicYear === thisYear), ...allYears];
   return (
     <div className="mx-auto max-w-xl">
       <PageHeader title={t("account.title")} />

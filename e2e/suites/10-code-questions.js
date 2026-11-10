@@ -106,8 +106,7 @@ const ok = (c, m) => { if (!c) throw new Error('FAIL: ' + m); console.log('PASS'
   await tp.goto(B + '/');
   await tp.locator('ul.grid a', { hasText: 'CS201' }).first().click(); await tp.waitForURL(/courses\/[^/]+$/);
   await tp.getByRole('link', { name: 'Quizzes' }).first().click();
-  await tp.getByText('Quiz 2: Coding practice').click();
-  await tp.getByRole('link', { name: 'Results' }).click();
+  await tp.getByTestId('quiz-row').filter({ hasText: 'Quiz 2: Coding practice' }).getByTestId('row-results').click();
   await tp.locator('tr', { hasText: '6601001' }).getByRole('link', { name: 'Review' }).click();
   await tp.waitForURL(/attempts\//);
   const body = await tp.locator('main').textContent();
