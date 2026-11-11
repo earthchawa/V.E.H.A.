@@ -9,7 +9,7 @@ export function NavLink({ href, children, block = false }: { href: string; child
   return (
     <Link
       href={href}
-      className={`${block ? "block px-3 py-2.5" : "whitespace-nowrap px-2.5 py-1.5"} rounded-md text-sm transition ${
+      className={`${block ? "block px-3 py-2.5" : "whitespace-nowrap px-2 py-1.5 xl:px-2.5"} rounded-md text-sm transition ${
         active ? "bg-surface-3 text-fg" : "text-muted hover:text-fg"
       }`}
     >

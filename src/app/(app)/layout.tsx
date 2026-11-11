@@ -32,7 +32,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen">
       <header className="sticky top-0 z-10 border-b border-border bg-bg/80 backdrop-blur">
-        <div className="relative mx-auto flex h-14 max-w-6xl items-center gap-3 px-4 lg:gap-6">
+        <div className="relative mx-auto flex h-14 max-w-6xl items-center gap-3 px-4 xl:gap-6">
           <Link href="/" aria-label="Dashboard" className="shrink-0"><Logo /></Link>
           <nav className="hidden items-center gap-1 lg:flex" data-testid="desktop-nav">
             {links.map((l) => <NavLink key={l.href} href={l.href}>{l.label}</NavLink>)}
