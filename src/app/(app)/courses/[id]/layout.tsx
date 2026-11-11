@@ -27,9 +27,9 @@ export default async function CourseLayout({ params, children }: { params: Promi
           <div className="cc-text mb-1 font-mono text-xs" data-testid="course-meta">
             {[
               offering.course.code,
+              multiSection ? t("dash.section", { s: offering.section }) : null,
               // "ชั้นปีที่ 3 ภาคเรียนที่ 2/2569" when the curriculum note gives the year level.
               note ? `${t("yl.level", { n: note.year })} ${term(offering.term)}` : term(offering.term),
-              multiSection ? t("dash.section", { s: offering.section }) : null,
               note ? t("course.credits", { n: note.credits, h: note.hours }) : null,
             ]
               .filter(Boolean)
