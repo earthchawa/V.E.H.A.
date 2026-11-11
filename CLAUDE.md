@@ -67,14 +67,6 @@ src/lib/
 - **Lists that open something** (assignments, quizzes) are cards whose title link covers the card (`after:absolute
   after:inset-0`), with explicit action buttons on top (`relative z-[1]`). A quiz has two big tabs, Questions | Results
   (`<QuizTabs>`).
-- **Copy between sections** goes through `<CopyToSections kind=…>`: a dialog that names the item, shows each other
-  section with its instructor and cadet count, and lists what is and is not copied.
-- **Year levels:** `CadetYear` holds one row per cadet per academic year (history is kept). `currentAcademicYear()` =
-  the current semester's year. Set from the user CSV (7th column `year`, which also fills it in for existing cadets),
-  the create form or the Manage dialog; "Move cadets up a year" (`promoteCadetsAction`, pure `planPromotion`) adds next
-  year's rows, graduates the final year (default 4) and is safe to run twice.
-- **Deleting a section** (`deleteOfferingAction`, admin, roster page): type the course code to confirm; audit first,
-  then delete, then remove stored files.
 - **Permissions are checked in every server action**, not just hidden in the UI:
   - `offeringAccess` → `"manage"` (admin or course instructor) / `"view"` (enrolled cadet) / null.
   - `canGrade` → only the course's own instructors may change grades, gradebook setup, report grading,
@@ -96,34 +88,7 @@ src/lib/
   collapses into `<MobileMenu>`; wide tables sit in `overflow-x-auto`, or become stacked rows.
 - **Styling:** semantic tokens in `src/app/globals.css` (`bg-surface`, `text-muted`, `text-danger`, …) with a
   light theme under `[data-theme="light"]`. Don't hard-code palette colours for text.
-- **Organisation:** two levels — department (กองวิชา, e.g. "Department of Mathematics and Computer Science" (MC))
-  and subject area (ภาควิชา in Thai, e.g. CS ภาควิชาคอมพิวเตอร์ and MA ภาควิชาคณิตศาสตร์ under MC; PH and CH under MS);
-  in code both are `Department` rows (`parentId` = level 2). Keep the English "Department of …" naming.
-  The brand (name V.E.H.A. = Virtual Educational Hangar for Air-cadets, formerly SkyCampus/AeroClass; Academic
-  Faculty badge, transparent, `logoDark` variant with light lettering for the dark theme — no white plate; `mark`
-  = AF emblem for small sizes) lives in `lib/brand.ts`.
-- **Department branding:** each unit has a colour and a logo (bundled under `public/logos/`, or
-  uploaded — PNG/JPG/WebP ≤ 1 MB, served by `/api/department-logo/[id]`). Subject areas inherit their department's
-  colour/logo unless set. Use `courseTheme(code, department)` / `deptLogo()` from `lib/departments.ts`
-  (falls back to a stable `cc-N` colour); inside, use `cc-bar` / `cc-text` / `cc-tint` (`--cc-fg` keeps text
-  readable in both themes). The 10 academy departments live in `ACADEMY_DIVISIONS` (subject areas in
-  `ACADEMY_SUBJECT_AREAS`) and are seeded by `npm run db:seed` without overwriting admin edits. Mathematics & Computer is grey by the owner's request.
-- **Curriculum:** real courses from the curriculum book live in `lib/curriculum.ts` (คต → CS, คณ → MA; electives
-  numbered "xxx" left out). `db:seed` creates missing ones; existing databases got them from the
-  `*_curriculum_cs_ma` migration (generated from the list; a test keeps them in step). Add other departments'
-  courses the same way: extend the list and add a new data migration. Demo courses CS201/CS202/MA101 are demo-only.
-- **Bulk set-up (admin):** Users → Import from CSV (`username, fullName, role, email, department, password, year`; the
-  optional starting password must still be changed at first sign-in) and Terms & courses → Import teaching
-  schedule (`year, semester, code, title_th, title_en, credits, section, instructors`; Thai codes such as คต 231
-  map to CS231; creates missing terms/courses/sections, enrols instructors, never changes existing rows, so
-  re-importing is safe). Real staff/cadet lists are uploaded through these screens — never commit them.
 - **Wording:** English UI says "semester" (never "term"; the model is still `Term`); Thai says ภาคเรียน.
-- **Admin screens:** Users = role tabs + live filters (`<FilterBar>`), grouped by department, one "Manage" dialog per
-  person (edit username/name/role/email/department — audited as `user.updated` with from/to — reset password,
-  disable). Semesters & courses = semester chips (current / upcoming) with sections grouped by subject area, plus a
-  course-catalogue tab. Instructors see an "upcoming semester" notice on the dashboard to prepare ahead.
-- **Gradebook (instructor):** tabs Scores | Grading setup (`?view=setup`); setup is 3 steps: categories & weights
-  (template button when empty), graded work = score-table columns (`GradeItem`), letter grades.
 - **Help text:** explanations go in an `<InfoTip>` (ⓘ, hover/focus/tap) next to the title or label, or `PageHeader
   help=`, not as paragraphs. Keep only step-by-step instructions inside import dialogs visible.
 - **Navigation:** `<BackButton>` (history first, else `parentPath()` from `lib/nav.ts`; add new routes without their
@@ -158,7 +123,10 @@ Commit every migration; Vercel applies them during build.
 
 `docs/` holds the software documentation (Thai): `technical/` (software design, operations, developer guide) and
 `manual/` (cadet, instructor, admin). Manuals quote the Thai UI labels from `th.ts`; when a flow or label changes,
-update the matching manual (and the SDD for design changes) in the same commit. No real names, IDs or passwords.
+update the matching manual (and the SDD for design changes) only when the owner asks, or batch it at the end of a
+feature — not on every small change. No real names, IDs or passwords.
+Feature details (sections, year levels, organisation & branding, curriculum, bulk import, admin screens, gradebook,
+project status / what is not done) are in `docs/technical/feature-notes.md` — read the relevant part when working there.
 
 ## Testing
 
@@ -166,16 +134,13 @@ update the matching manual (and the SDD for design changes) in the same commit. 
 - End-to-end suites live in `e2e/` (`npm run build && npm run test:e2e`, see `e2e/README.md`): 21 Playwright suites
   (~330 checks) against `next start` + the local Postgres, reseeded before each suite with `DEMO_PASSWORD`.
   **Keep them in the repo and up to date**: when a user flow changes, update/add a suite in the same commit and run
-  the affected suites (all of them before a larger push). Fixtures are synthetic — never real people or passwords.
+  only the affected suites. Run the full set only when the owner asks. Fixtures are synthetic — never real people or passwords.
 - In the cloud container Postgres may need restarting after the container restarts.
 
-## Status
+## Keeping usage low
 
-Phases 1–4 done, plus quiz code questions (Python, JavaScript, HTML/CSS/JS; hand-marked): accounts, terms/courses/sections, materials, assignments + similarity reports (peer
-copying only), gradebook, online quizzes with integrity log / Safe Exam Browser / exam rooms, divisions &
-departments with logos and colours. In-house "reference library" per assignment: instructors add earlier terms' / other sections' runs of the
-same course (past cadets anonymised in reports) and reference texts (web pages, model answers, AI-chatbot answers;
-pasted text is tokenised as prose and as code). It feeds the overall similarity score.
-Not done: automatic internet search and AI-writing detection (would need Copyleaks or similar, deferred until
-there is a budget; plug it in as another source kind feeding SourceMatch; AI hints must be a yellow,
-instructor-only "for review" highlight — never an accusation), department-level admins.
+- Do only what was asked; don't widen the scope (extra refactors, docs, full test runs) without asking.
+- Send long command output to a file and show only the summary or failures, e.g.
+  `npm run build > /tmp/build.log 2>&1; tail -20 /tmp/build.log` and `npm test 2>&1 | tail -30`.
+- Prefer `npm run typecheck` / targeted `npx vitest run <file>` over a full build when that is enough.
+- Read files by the part you need (grep first) rather than whole large files; don't spawn subagents unless asked.
