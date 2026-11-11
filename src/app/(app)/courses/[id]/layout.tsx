@@ -2,6 +2,7 @@ import { loadCourse } from "@/lib/course";
 import { db } from "@/lib/db";
 import { courseTheme, deptLogo } from "@/lib/departments";
 import { getI18n } from "@/lib/i18n/server";
+import { parseCurriculumNote } from "@/lib/curriculum";
 import { BackButton } from "@/components/BackButton";
 import { CourseTabs } from "./CourseTabs";
 
@@ -17,16 +18,27 @@ export default async function CourseLayout({ params, children }: { params: Promi
   const theme = courseTheme(offering.course.code, dept);
   const logo = deptLogo(dept);
   const deptName = (d: { name: string; nameTh: string | null }) => (lang === "th" && d.nameTh ? d.nameTh : d.name);
+  const note = parseCurriculumNote(offering.course.description);
   const multiSection = (await db.courseOffering.count({ where: { courseId: offering.courseId, termId: offering.termId } })) > 1;
   return (
     <div className={theme.className} style={theme.style}>
       <header className="mb-6 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
         <div className="min-w-0">
-          <div className="cc-text mb-1 font-mono text-xs">
-            {`${offering.course.code} · ${term(offering.term)}${multiSection ? ` · ${t("dash.section", { s: offering.section })}` : ""}`}
+          <div className="cc-text mb-1 font-mono text-xs" data-testid="course-meta">
+            {[
+              offering.course.code,
+              // "ชั้นปีที่ 3 ภาคเรียนที่ 2/2569" when the curriculum note gives the year level.
+              note ? `${t("yl.level", { n: note.year })} ${term(offering.term)}` : term(offering.term),
+              multiSection ? t("dash.section", { s: offering.section }) : null,
+              note ? t("course.credits", { n: note.credits, h: note.hours }) : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
           </div>
           <h1 className="text-2xl font-semibold tracking-tight">{offering.course.title}</h1>
           {offering.course.titleTh && <div className="mt-1 text-sm text-muted">{offering.course.titleTh}</div>}
+          {/* A hand-written description (not a curriculum note, which goes into the top line). */}
+          {offering.course.description && !note && <div className="mt-1 text-xs text-subtle" data-testid="course-description">{offering.course.description}</div>}
         </div>
         <div className="flex shrink-0 items-center gap-3 md:flex-row-reverse md:text-right">
           {logo && (

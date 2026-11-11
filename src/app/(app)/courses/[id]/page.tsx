@@ -43,6 +43,8 @@ export default async function CourseMaterialsPage({ params }: { params: Promise<
     g.cadets.push(e.user);
     groupMap.set(key, g);
   }
+  const groupLabel = (g: { level: number | null; dept: string | null }) =>
+    `${g.level != null ? t("yl.level", { n: g.level }) : t("yl.none")} · ${g.dept ?? t("course.noDept")}`;
   const cadetGroups = [...groupMap.values()].sort((a, b) => a.key.localeCompare(b.key, undefined, { numeric: true }));
 
   const byWeek = new Map<number | null, Material[]>();
@@ -51,7 +53,6 @@ export default async function CourseMaterialsPage({ params }: { params: Promise<
 
   return (
     <div>
-      {offering.course.description && <p className="-mt-2 mb-6 max-w-3xl text-sm text-muted">{offering.course.description}</p>}
       {canManage && (
         <div className="mb-6">
           <Modal label={`+ ${t("course.addMaterial")}`} title={t("course.addMaterial")} testId="add-material">
@@ -106,13 +107,17 @@ export default async function CourseMaterialsPage({ params }: { params: Promise<
                               </button>
                             </form>
                           )}
-                          <a href={href} {...link} className="btn-secondary h-9 px-3" data-testid="material-download">
-                            <span aria-hidden>{m.type === "FILE" ? "↓" : "↗"}</span>
-                            <span className="hidden sm:inline">{t(m.type === "FILE" ? "mat.download" : "mat.openLink")}</span>
-                            <span className="sr-only sm:hidden">{t(m.type === "FILE" ? "mat.download" : "mat.openLink")}</span>
-                          </a>
+                          {!canManage && (
+                            <span className="grid h-9 w-9 place-items-center text-muted" aria-hidden>
+                              {m.type === "FILE" ? "↓" : "↗"}
+                            </span>
+                          )}
                           {canManage && (
                             <MoreMenu testId="material-more">
+                              <a href={href} {...link} className="menu-item" data-testid="material-download">
+                                <span className="menu-icon" aria-hidden>{m.type === "FILE" ? "↓" : "↗"}</span>
+                                {t(m.type === "FILE" ? "mat.download" : "mat.openLink")}
+                              </a>
                               <CopyToSections action={copyMaterialAction} itemId={m.id} sections={siblings} kind="material" itemTitle={m.title} menuItem />
                               <MenuConfirm
                                 action={deleteMaterialAction}
@@ -136,19 +141,21 @@ export default async function CourseMaterialsPage({ params }: { params: Promise<
         </section>
 
         {canManage && (
-          <aside className="space-y-6">
+          <aside className={`space-y-6 ${groups.length ? "lg:mt-6" : ""}`}>
             <section className="card" data-testid="course-cadets">
               <h2 className="card-title">{t("course.cadets")} <span className="font-normal text-subtle">{students.length}</span></h2>
-              <div className="max-h-96 space-y-4 overflow-y-auto text-sm">
+              {/* Year level (this semester's academic year) and programme: one line when everyone shares them,
+                  otherwise a heading with a count per group. */}
+              {cadetGroups.length === 1 && <p className="-mt-3 mb-3 text-xs text-muted" data-testid="cadet-group">{groupLabel(cadetGroups[0])}</p>}
+              <div className="max-h-96 space-y-4 overflow-y-auto pr-3 text-sm">
                 {cadetGroups.map((g) => (
                   <div key={g.key}>
-                    {/* Year level (this semester's academic year) and programme of this group of cadets. */}
-                    <h3 className="mb-1.5 flex flex-wrap items-baseline gap-x-1.5 border-b border-border pb-1 text-xs font-medium text-muted" data-testid="cadet-group">
-                      <span className="text-fg">{g.level != null ? t("yl.level", { n: g.level }) : t("yl.none")}</span>
-                      <span aria-hidden>·</span>
-                      <span>{g.dept ?? t("course.noDept")}</span>
-                      <span className="ml-auto font-normal text-subtle">{g.cadets.length}</span>
-                    </h3>
+                    {cadetGroups.length > 1 && (
+                      <h3 className="mb-1.5 flex items-baseline gap-2 border-b border-border pb-1 text-xs font-medium text-muted" data-testid="cadet-group">
+                        <span className="min-w-0 flex-1">{groupLabel(g)}</span>
+                        <span className="font-normal text-subtle">{g.cadets.length}</span>
+                      </h3>
+                    )}
                     <ul className="space-y-1.5">
                       {g.cadets.map((u) => (
                         <li key={u.id} className="flex gap-3">

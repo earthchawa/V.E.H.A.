@@ -161,18 +161,18 @@ const ok = (c, m) => { if (!c) throw new Error('FAIL: ' + m); console.log('PASS'
   await tp.waitForFunction(() => document.querySelector('[data-testid=material-visible]')?.getAttribute('aria-checked') === 'false');
   ok(sql(`select "isPublished" from "Material" where title = 'Switch test link'`) === 'f', 'switching it off hides the material');
   const mrow = tp.getByTestId('material-row').filter({ hasText: 'Switch test link' });
-  ok(await mrow.getByTestId('material-download').getAttribute('href') === 'https://example.org/x', 'material row has its own open/download button');
   ok(await mrow.locator('a').first().evaluate((e) => getComputedStyle(e, '::after').position === 'absolute'), 'the title link covers the whole material row');
-  // Copy and delete sit in the ⋯ menu; delete still asks first.
-  ok(await mrow.getByTestId('material-delete').count() === 0, 'delete is not shown on the row itself');
+  // Open/download, copy and delete sit in the ⋯ menu; delete still asks first.
+  ok(await mrow.getByTestId('material-delete').count() === 0 && await mrow.getByTestId('material-download').count() === 0, 'download and delete are not shown on the row itself');
   await mrow.getByTestId('material-more').click();
+  ok(await mrow.getByTestId('material-download').getAttribute('href') === 'https://example.org/x', 'the ⋯ menu opens the link');
   await mrow.getByTestId('material-delete').click();
   await tp.getByTestId('confirm-ok').click();
   await tp.waitForFunction(() => ![...document.querySelectorAll('[data-testid=material-row]')].some((r) => r.textContent.includes('Switch test link')));
   ok(sql(`select count(*) from "Material" where title = 'Switch test link'`) === '0', 'deleting from the ⋯ menu removes the material');
   // Cadets in the course, grouped by year level and programme.
   const groups = await tp.getByTestId('course-cadets').getByTestId('cadet-group').allInnerTexts();
-  ok(groups.length >= 1 && groups.every((g) => /(Year \d|No year level)\s*·\s*\S/.test(g)), 'cadet list says each group\'s year level and programme: ' + groups.join(' | '));
+  ok(groups.length >= 1 && groups.every((g) => /(Year \d|No year level) · \S/.test(g)), 'cadet list says each group\'s year level and programme: ' + groups.join(' | '));
 
   // Quiz list: the two views are buttons on the card; results has a summary and the big tabs.
   await tp.goto(`${B}/courses/${sec1}/quizzes`);
