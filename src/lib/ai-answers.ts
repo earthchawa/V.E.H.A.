@@ -13,7 +13,7 @@ import Anthropic from "@anthropic-ai/sdk";
  * ANTHROPIC_API_KEY is set.
  */
 export const aiAnswersEnabled = () => !!process.env.ANTHROPIC_API_KEY;
-export const aiAnswerModel = () => process.env.AI_ANSWER_MODEL || "claude-opus-5-5";
+export const aiAnswerModel = () => process.env.AI_ANSWER_MODEL || "claude-sonnet-5-5";
 /** How many answers one click asks for, and how many AI answers one assignment may hold. */
 export const AI_ANSWER_VARIANTS = 3;
 export const AI_ANSWER_LIMIT = 9;
