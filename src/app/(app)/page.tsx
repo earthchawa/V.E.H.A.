@@ -235,13 +235,14 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                     className={`${themeFor(it.courseId, it.courseCode).className} flex flex-wrap items-center gap-x-3 gap-y-1 overflow-hidden rounded-xl bg-surface py-3 pr-4 pl-0 text-sm shadow-sm transition hover:bg-surface-2`}
                   >
                     <span className="cc-bar h-8 w-1 self-stretch rounded-r" aria-hidden />
-                    <span className="cc-text w-32 shrink-0 font-mono text-xs font-semibold">
+                    <span className="cc-text shrink-0 font-mono text-xs font-semibold sm:w-32">
                       {it.courseCode}{it.section && multiSection.has(it.courseId) ? ` · ${t("dash.section", { s: it.section })}` : ""}
                     </span>
                     <span className="badge bg-surface-3 text-muted">{t(it.kind === "quiz" ? "todo.kind.quiz" : "todo.kind.assignment")}</span>
-                    <span className="min-w-0 flex-1 truncate font-medium">{it.title}</span>
+                    {/* Phones: the title gets its own line (last) instead of being squeezed to "L…". */}
+                    <span className="order-last min-w-0 basis-full truncate pl-4 font-medium sm:order-none sm:basis-0 sm:flex-1 sm:pl-0">{it.title}</span>
                     {it.badges.map((b) => <span key={b.text} className={`badge ${TONE[b.tone]}`}>{b.text}</span>)}
-                    {it.meta && <span className={`text-xs ${it.meta.warn ? "text-warning" : "text-subtle"}`}>{it.meta.text}</span>}
+                    {it.meta && <span className={`order-last basis-full pl-4 text-xs sm:order-none sm:basis-auto sm:pl-0 ${it.meta.warn ? "text-warning" : "text-subtle"}`}>{it.meta.text}</span>}
                   </Link>
                 </li>
               ))}
@@ -272,11 +273,11 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                   {g.color && <span className="cc-bar ml-2 h-px flex-1 opacity-40" aria-hidden />}
                 </div>
               )}
-              <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {g.offerings.map((o) => {
                   const initials = o.course.code.replace(/[^A-Z]/g, "").slice(0, 3) || o.course.code.slice(0, 2);
                   return (
-                    <li key={o.id}>
+                    <li key={o.id} className="min-w-0">
                       <Link
                         href={`/courses/${o.id}`}
                         style={themeFor(o.courseId, o.course.code).style}
@@ -294,7 +295,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                           <div className="mt-4 font-medium leading-snug">{o.course.title}</div>
                           {o.course.titleTh && <div className="mt-0.5 text-sm text-muted">{o.course.titleTh}</div>}
                           <div className="mt-auto flex items-center justify-between pt-6 text-xs text-subtle">
-                            <span className="truncate">{o.enrollments.map((e) => e.user.fullName).join(", ") || t("dash.noInstructor")}</span>
+                            <span className="min-w-0 truncate">{o.enrollments.map((e) => e.user.fullName).join(", ") || t("dash.noInstructor")}</span>
                             <span className="shrink-0 pl-2">{tn("dash.materials", o._count.materials)}</span>
                           </div>
                         </div>

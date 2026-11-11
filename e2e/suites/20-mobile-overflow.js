@@ -49,6 +49,8 @@ const SHOTS = process.env.SHOTS === '1';
   await lp.goto(B + '/login'); await check(lp, 'login');
   await lp.goto(B + '/forgot-password'); await check(lp, 'forgot-password');
 
+  // Real course cards list several instructors with long ranks and names: that must not widen the page.
+  sql(`update "User" set "fullName" = 'น.อ.หญิง ทดสอบชื่อยาวมาก นามสกุลยาวมากเป็นพิเศษ, ร.ท.ทดสอบ ชื่อยาวอีกคนหนึ่ง' where username = 'T0001'`);
   const tp = await firstLogin('T0001', 'Teach3rPass');
   await check(tp, 't-dashboard');
   await tp.locator('ul.grid a', { hasText: 'CS201' }).first().click(); await tp.waitForURL(/courses\/[^/]+$/);

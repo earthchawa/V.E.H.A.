@@ -129,6 +129,7 @@ export const th: Record<Key, string> = {
   "course.cadets": "นนอ. ในวิชา",
   "course.noDept": "ไม่ระบุสาขา",
   "course.credits": "{n} หน่วยกิต (บรรยาย-ปฏิบัติ-ทบทวน {h})",
+  "course.creditsOnly": "{n} หน่วยกิต",
   "mat.upload": "อัปโหลดไฟล์",
   "mat.link": "แปะลิงก์",
   "mat.title": "ชื่อเอกสาร",

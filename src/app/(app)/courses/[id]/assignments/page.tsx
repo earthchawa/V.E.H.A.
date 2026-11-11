@@ -57,8 +57,8 @@ export default async function AssignmentsPage({ params }: { params: Promise<{ id
                       <div className="mt-1 text-xs text-muted">{a.dueAt ? t("asg.due", { date: date(a.dueAt) }) : t("asg.noDue")}</div>
                     </div>
                     {canManage ? (
-                      <div className="flex items-center gap-4">
-                        <div className="w-28" title={t("asg.submittedCount", { n: a._count.submissions, total: students.length })}>
+                      <div className="flex w-full items-center gap-4 sm:w-auto">
+                        <div className="min-w-0 flex-1 sm:w-28 sm:flex-none" title={t("asg.submittedCount", { n: a._count.submissions, total: students.length })}>
                           <div className="mb-1 text-right text-xs text-muted">{t("asg.submittedCount", { n: a._count.submissions, total: students.length })}</div>
                           <div className="h-1.5 overflow-hidden rounded-full bg-surface-3">
                             <div className="h-full rounded-full bg-accent" style={{ width: `${students.length ? Math.round((a._count.submissions / students.length) * 100) : 0}%` }} />
