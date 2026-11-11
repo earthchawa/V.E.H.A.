@@ -3,10 +3,11 @@ import { loadCourse } from "@/lib/course";
 import { db } from "@/lib/db";
 import { getI18n } from "@/lib/i18n/server";
 import { formatPoints } from "@/lib/grades";
-import { attemptTotals, type Layout, type Response } from "@/lib/quiz";
+import { attemptTotals, awayMs, eventSeverity, integritySummary, splitDuration, type Layout, type Response } from "@/lib/quiz";
 import { asAccepted, asOptions, closeExpiredAttempts } from "@/lib/quiz-server";
 import type { Key } from "@/lib/i18n";
 import { AnswerView } from "@/components/AnswerView";
+import { InfoTip } from "@/components/InfoTip";
 import { GradeAnswers } from "../../../GradeAnswers";
 import { resetAttemptAction } from "../../../actions";
 import { ConfirmButton } from "../../../../grades/ConfirmButton";
@@ -15,7 +16,7 @@ export default async function AttemptPage({ params }: { params: Promise<{ id: st
   const { id, qid, attemptId } = await params;
   const { offering, canManage, canGrade } = await loadCourse(id);
   if (!canManage) notFound();
-  const { t, date } = await getI18n();
+  const { t, tn, date } = await getI18n();
   await closeExpiredAttempts(qid);
 
   const attempt = await db.quizAttempt.findUnique({
@@ -34,7 +35,11 @@ export default async function AttemptPage({ params }: { params: Promise<{ id: st
   const totals = attemptTotals(attempt.answers, attempt.maxScore);
   const base = `/courses/${offering.id}/quizzes/${qid}`;
   const labels = { noAnswer: t("qz.noAnswer"), correctAnswer: t("qz.correctAnswer") };
-  const flagged = (type: string) => !["start", "submit", "autosubmit"].includes(type);
+  const integrity = integritySummary(attempt.events);
+  const dur = (ms: number) => {
+    const { m, s } = splitDuration(ms);
+    return m ? t("qz.dur.ms", { m, s }) : t("qz.dur.s", { s });
+  };
 
   return (
     <div>
@@ -86,19 +91,34 @@ export default async function AttemptPage({ params }: { params: Promise<{ id: st
         </section>
         <aside className="space-y-6">
           <section className="card">
-            <h3 className="card-title">{t("qz.integrityLog")}</h3>
+            <h3 className="card-title flex items-center gap-1.5">{t("qz.integrityLog")} <InfoTip text={t("qz.integrityHelp")} align="end" /></h3>
+            {integrity.total > 0 && (
+              <p className={`mb-3 text-sm ${integrity.level === "red" ? "font-medium text-danger" : "text-warning"}`} data-testid="integrity-summary">
+                {integrity.level === "red" && <span aria-hidden>⚠ </span>}
+                {tn("qz.events", integrity.total)}
+                {integrity.red > 0 && <> · {t("qz.serious", { n: integrity.red })}</>}
+                {integrity.awayMs > 0 && <> · {t("qz.awayTotal", { d: dur(integrity.awayMs) })}</>}
+              </p>
+            )}
             {attempt.events.length === 0 ? (
               <p className="text-sm text-muted">{t("qz.noEvents")}</p>
             ) : (
               <ol className="space-y-2 text-sm" data-testid="event-log">
-                {attempt.events.map((e) => (
-                  <li key={e.id} className="flex gap-3">
-                    <span className="shrink-0 font-mono text-xs text-subtle">
-                      {e.at.toLocaleTimeString("en-GB", { timeZone: "Asia/Bangkok" })}
-                    </span>
-                    <span className={flagged(e.type) ? "text-warning" : "text-muted"}>{t(`qz.ev.${e.type}` as Key)}</span>
-                  </li>
-                ))}
+                {attempt.events.map((e) => {
+                  const sev = eventSeverity(e.type, e.details);
+                  const ms = awayMs(e.details);
+                  return (
+                    <li key={e.id} className="flex gap-3" data-severity={sev ?? undefined}>
+                      <span className="shrink-0 font-mono text-xs text-subtle">
+                        {e.at.toLocaleTimeString("en-GB", { timeZone: "Asia/Bangkok" })}
+                      </span>
+                      <span className={sev === "red" ? "font-medium text-danger" : sev === "yellow" ? "text-warning" : "text-muted"}>
+                        {t(`qz.ev.${e.type}` as Key)}
+                        {ms > 0 && <span className="text-muted"> · {dur(ms)}</span>}
+                      </span>
+                    </li>
+                  );
+                })}
               </ol>
             )}
           </section>

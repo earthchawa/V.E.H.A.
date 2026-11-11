@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { createHash } from "node:crypto";
-import { attemptDeadline, attemptTotals, autoGrade, buildLayout, ipAllowed, normaliseShort, quizPhase, resultsVisible, sebOk } from "./quiz";
+import {
+  attemptDeadline, attemptTotals, autoGrade, buildLayout, eventSeverity, integritySummary, ipAllowed, normaliseShort, presence, quizPhase,
+  resultsVisible, sebOk, splitDuration,
+} from "./quiz";
 
 const opts = [
   { id: "a", text: "A", correct: true },
@@ -90,5 +93,41 @@ describe("access restrictions", () => {
     expect(sebOk({ url, userAgent: "SEB/3.10", configKeyHash: "bad", keys: key })).toBe(false);
     expect(sebOk({ url, userAgent: "Mozilla/5.0 SEB/3.10.1", configKeyHash: null, keys: "" })).toBe(true);
     expect(sebOk({ url, userAgent: "Mozilla/5.0 Chrome", configKeyHash: null, keys: "" })).toBe(false);
+  });
+});
+
+describe("exam integrity", () => {
+  it("rates events red or yellow", () => {
+    expect(eventSeverity("hidden")).toBe("red");
+    expect(eventSeverity("fullscreen_exit")).toBe("red");
+    expect(eventSeverity("device")).toBe("red");
+    expect(eventSeverity("blur", { ms: 2000 })).toBe("yellow");
+    expect(eventSeverity("blur", { ms: 15000 })).toBe("red");
+    expect(eventSeverity("blur")).toBe("yellow");
+    expect(eventSeverity("paste")).toBe("yellow");
+    expect(eventSeverity("resume")).toBe("yellow");
+    expect(eventSeverity("start")).toBeNull();
+    expect(eventSeverity("submit")).toBeNull();
+  });
+  it("summarises an attempt", () => {
+    expect(integritySummary([{ type: "start" }, { type: "submit" }])).toEqual({ total: 0, red: 0, yellow: 0, awayMs: 0, level: null });
+    expect(integritySummary([{ type: "paste" }, { type: "blur", details: { ms: 3000 } }]).level).toBe("yellow");
+    expect(integritySummary([{ type: "paste" }, { type: "copy" }, { type: "contextmenu" }]).level).toBe("red");
+    const s = integritySummary([{ type: "hidden", details: { ms: 65000 } }, { type: "blur", details: { ms: 4000 } }, { type: "paste" }]);
+    expect(s).toEqual({ total: 3, red: 1, yellow: 2, awayMs: 69000, level: "red" });
+  });
+  it("works out live presence", () => {
+    const now = new Date("2026-01-01T10:00:00Z");
+    const ago = (s: number) => new Date(now.getTime() - s * 1000);
+    expect(presence(null, now)).toBe("notStarted");
+    expect(presence({ status: "SUBMITTED", lastSeenAt: null, awayAt: null }, now)).toBe("submitted");
+    expect(presence({ status: "IN_PROGRESS", lastSeenAt: ago(5), awayAt: null }, now)).toBe("active");
+    expect(presence({ status: "IN_PROGRESS", lastSeenAt: ago(60), awayAt: null }, now)).toBe("offline");
+    expect(presence({ status: "IN_PROGRESS", lastSeenAt: null, awayAt: null }, now)).toBe("offline");
+    expect(presence({ status: "IN_PROGRESS", lastSeenAt: ago(60), awayAt: ago(60) }, now)).toBe("away");
+  });
+  it("splits durations", () => {
+    expect(splitDuration(65_400)).toEqual({ m: 1, s: 5 });
+    expect(splitDuration(-5)).toEqual({ m: 0, s: 0 });
   });
 });

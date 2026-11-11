@@ -57,6 +57,9 @@ export default async function ExamPage({ params }: { params: Promise<{ attemptId
     });
     if (moved) await db.quizAttempt.update({ where: { id: attempt.id }, data: { ip, userAgent } });
   }
+  // The cadet is on the page now (live view), and the warning banner continues their count of times away.
+  await db.quizAttempt.update({ where: { id: attempt.id }, data: { lastSeenAt: new Date(), awayAt: null } });
+  const timesAway = await db.quizEvent.count({ where: { attemptId: attempt.id, type: { in: ["blur", "hidden", "fullscreen_exit"] } } });
 
   const layout = attempt.layout as Layout;
   const byId = new Map(quiz.questions.map((q) => [q.id, q]));
@@ -105,6 +108,7 @@ export default async function ExamPage({ params }: { params: Promise<{ attemptId
         deadline={attempt.deadlineAt?.toISOString() ?? null}
         serverNow={new Date().toISOString()}
         doneHref={quizHref}
+        timesAway={timesAway}
       />
     </main>
   );

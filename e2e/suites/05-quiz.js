@@ -43,7 +43,17 @@ const ok = (c, m) => { if (!c) throw new Error('FAIL: ' + m); console.log('PASS'
   await c1.getByTestId('save-state').filter({ hasText: 'Saved' }).waitFor();
   ok(true, 'answers autosaved');
   // integrity events
-  await c1.evaluate(() => { window.dispatchEvent(new Event('blur')); document.dispatchEvent(new Event('paste', { cancelable: true })); });
+  await c1.evaluate(() => document.dispatchEvent(new Event('paste', { cancelable: true })));
+  await c1.locator('[data-testid=integrity-warning][data-kind=blocked]').waitFor({ timeout: 3000 });
+  ok(true, 'blocked paste shows a yellow note to the cadet');
+  await c1.evaluate(() => window.dispatchEvent(new Event('blur')));
+  await c1.waitForTimeout(1500);
+  await c1.evaluate(() => window.dispatchEvent(new Event('focus')));
+  const warnLeft = c1.locator('[data-testid=integrity-warning][data-kind=left]');
+  await warnLeft.waitFor({ timeout: 3000 });
+  ok((await warnLeft.textContent()).includes('time 1'), 'coming back shows a red warning with the count');
+  await warnLeft.getByRole('button', { name: 'I understand' }).click();
+  ok(await warnLeft.count() === 0, 'red warning dismissed');
   await c1.waitForTimeout(4500);
   // reload keeps answers
   await c1.reload();
@@ -65,6 +75,20 @@ const ok = (c, m) => { if (!c) throw new Error('FAIL: ' + m); console.log('PASS'
   await enterFs(c2);
   await q(c2, 'inserting at the head').getByLabel('O(n)', { exact: true }).check();
   await c2.getByTestId('save-state').filter({ hasText: 'Saved' }).waitFor();
+
+  // ---------- Instructor watches live while cadet 2 is in the quiz ----------
+  const tp = await firstLogin('T0001', 'Teach3rPass');
+  const resultsUrl = c1.url().split('?')[0] + '/results';
+  await tp.goto(resultsUrl);
+  const liveRow = tp.locator('[data-testid=quiz-results] tr', { hasText: '6601002' });
+  ok(await tp.getByTestId('live-refresh').count() === 1, 'results page updates live while a cadet is in the quiz');
+  ok((await liveRow.getByTestId('presence').getAttribute('data-presence')) === 'active', 'live: cadet shown on the quiz page');
+  await c2.evaluate(() => window.dispatchEvent(new Event('blur')));
+  await liveRow.locator('[data-testid=presence][data-presence=away]').waitFor({ timeout: 12000 });
+  ok((await liveRow.getByTestId('presence').textContent()).includes('Away from the quiz'), 'live: cadet away shown in red without reloading');
+  await c2.evaluate(() => window.dispatchEvent(new Event('focus')));
+  await liveRow.locator('[data-testid=presence][data-presence=active]').waitFor({ timeout: 12000 });
+  ok(true, 'live: back on the quiz page');
   // other cadet cannot open this exam page
   const stolen = await c1.goto(exam2); ok(stolen.status() === 404, 'another cadet cannot open someone else\'s exam');
   // force the deadline into the past → auto-submit on next load
@@ -75,13 +99,15 @@ const ok = (c, m) => { if (!c) throw new Error('FAIL: ' + m); console.log('PASS'
   ok(await c2.getByText('Time ran out').count() === 1, 'expired attempt auto-submitted');
 
   // ---------- Instructor grades ----------
-  const tp = await firstLogin('T0001', 'Teach3rPass');
+  await tp.goto(B + '/');
   ok(await tp.getByTestId('instructor-todo').getByText('1 quiz answer to grade').count() === 1, 'dashboard: quiz answers to grade');
   await tp.getByTestId('instructor-todo').getByText('Quiz 1: Linked lists').click(); await tp.waitForURL(/results$/);
   const quizBase = tp.url().replace(/\/results$/, '');
   const row1 = tp.locator('[data-testid=quiz-results] tr', { hasText: '6601001' });
   ok((await row1.getByTestId('attempt-score').textContent()).trim() === '5* / 10', 'auto-graded 5/10, essay pending (*)');
   ok((await row1.getByTestId('attempt-events').textContent()).includes('event'), 'integrity events counted');
+  ok((await row1.getAttribute('data-level')) === 'red', 'three or more minor events mark the row red');
+  ok(await tp.getByTestId('live-refresh').count() === 0, 'no live updates once nobody is in the quiz');
   const row2 = tp.locator('[data-testid=quiz-results] tr', { hasText: '6601002' });
   ok((await row2.getByTestId('attempt-score').textContent()).trim() === '0 / 10', 'timed-out attempt scored (blank essay = 0)');
   await tp.screenshot({ path: S + '/q-results.png', fullPage: true });
@@ -104,6 +130,9 @@ const ok = (c, m) => { if (!c) throw new Error('FAIL: ' + m); console.log('PASS'
   const log = await tp.getByTestId('event-log').textContent();
   ok(log.includes('Left the quiz window') && log.includes('Pasted text') && log.includes('Opened the quiz page again'), 'integrity log lists blur, paste and reload');
   ok((log.match(/Left the quiz window/g) || []).length === 1, 'submitting does not log a false focus loss');
+  ok(/Left the quiz window · \d+ s/.test(log), 'time away recorded: ' + log);
+  ok(!log.includes('Switched tab'), 'reloading the page is not logged as switching tab');
+  ok((await tp.getByTestId('integrity-summary').textContent()).includes('away'), 'integrity summary shows total time away');
   await tp.screenshot({ path: S + '/q-attempt.png', fullPage: true });
 
   // gradebook got the score

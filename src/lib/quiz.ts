@@ -143,3 +143,69 @@ export function sebOk(opts: { url: string; userAgent: string | null; configKeyHa
   const url = opts.url.split("#")[0];
   return keys.some((k) => createHash("sha256").update(url + k).digest("hex") === got);
 }
+
+// ---------- Exam integrity: severity, summaries, live presence ----------
+
+export type Severity = "red" | "yellow";
+/** Leaving the window for at least this long counts as serious. */
+export const LONG_AWAY_MS = 10_000;
+/** This many minor events together count as serious. */
+export const MINOR_LIMIT = 3;
+/** No heartbeat for this long = not connected. The exam page sends one every 10 s. */
+export const OFFLINE_MS = 30_000;
+/** Event types the exam page records (sent by the browser; "device"/"resume" come from the server). */
+export const AWAY_TYPES = ["blur", "hidden"] as const;
+const NEUTRAL = new Set(["open", "start", "submit", "autosubmit"]);
+
+/** How long an away event lasted (filled in when the cadet came back); 0 when unknown. */
+export function awayMs(details: unknown): number {
+  const ms = details && typeof details === "object" ? (details as { ms?: unknown }).ms : undefined;
+  return typeof ms === "number" && Number.isFinite(ms) && ms > 0 ? ms : 0;
+}
+
+/**
+ * Red: switched tab or minimised, exited full screen, changed device/network, or out of the window for
+ * LONG_AWAY_MS or more. Yellow: a brief focus loss, blocked copy/paste/right-click, reloading the page.
+ */
+export function eventSeverity(type: string, details?: unknown): Severity | null {
+  if (NEUTRAL.has(type)) return null;
+  if (type === "hidden" || type === "fullscreen_exit" || type === "device") return "red";
+  if (type === "blur") return awayMs(details) >= LONG_AWAY_MS ? "red" : "yellow";
+  return "yellow";
+}
+
+export type IntegritySummary = { total: number; red: number; yellow: number; awayMs: number; level: Severity | null };
+
+export function integritySummary(events: { type: string; details?: unknown }[]): IntegritySummary {
+  let red = 0;
+  let yellow = 0;
+  let away = 0;
+  for (const e of events) {
+    const s = eventSeverity(e.type, e.details);
+    if (s === "red") red++;
+    else if (s === "yellow") yellow++;
+    if ((AWAY_TYPES as readonly string[]).includes(e.type)) away += awayMs(e.details);
+  }
+  const level: Severity | null = red > 0 || yellow >= MINOR_LIMIT ? "red" : yellow > 0 ? "yellow" : null;
+  return { total: red + yellow, red, yellow, awayMs: away, level };
+}
+
+export type Presence = "notStarted" | "submitted" | "active" | "away" | "offline";
+
+/** Where a cadet is right now, for the supervising instructor's live view. Away wins over offline. */
+export function presence(
+  a: { status: "IN_PROGRESS" | "SUBMITTED"; lastSeenAt: Date | null; awayAt: Date | null } | null | undefined,
+  now = new Date(),
+): Presence {
+  if (!a) return "notStarted";
+  if (a.status === "SUBMITTED") return "submitted";
+  if (a.awayAt) return "away";
+  if (!a.lastSeenAt || now.getTime() - a.lastSeenAt.getTime() > OFFLINE_MS) return "offline";
+  return "active";
+}
+
+/** Minutes and seconds of a duration, for "{m} min {s} s" style labels. */
+export function splitDuration(ms: number): { m: number; s: number } {
+  const total = Math.max(0, Math.round(ms / 1000));
+  return { m: Math.floor(total / 60), s: total % 60 };
+}
