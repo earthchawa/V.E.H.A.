@@ -6,7 +6,7 @@ import { useI18n } from "@/lib/i18n/client";
 import type { Response } from "@/lib/quiz";
 import { isBlankCode, type CodeFiles, type CodeLanguage } from "@/lib/code";
 import { CodeWorkspace } from "@/components/code/CodeWorkspace";
-import { logEventsAction, saveAnswerAction, submitAttemptAction } from "../actions";
+import { heartbeatAction, logEventsAction, saveAnswerAction, submitAttemptAction, type ExamEvent } from "../actions";
 
 export type ExamQuestion = {
   id: string;
@@ -38,6 +38,7 @@ export function ExamClient({
   deadline,
   serverNow,
   doneHref,
+  timesAway,
 }: {
   attemptId: string;
   questions: ExamQuestion[];
@@ -45,6 +46,8 @@ export function ExamClient({
   deadline: string | null;
   serverNow: string;
   doneHref: string;
+  /** Times already away from this attempt (earlier page loads), so the warning keeps counting. */
+  timesAway: number;
 }) {
   const { t } = useI18n();
   const router = useRouter();
@@ -55,11 +58,16 @@ export function ExamClient({
   const [submitting, setSubmitting] = useState(false);
   // In-page confirmation: window.confirm() would blur the window and log a false "left the quiz".
   const [confirming, setConfirming] = useState(false);
+  // Shown on the cadet's screen: red after leaving the page (stays until acknowledged), yellow when a copy/paste is blocked.
+  const [warning, setWarning] = useState<{ kind: "left"; n: number } | { kind: "blocked" } | null>(null);
 
   // Queued work: answers waiting to be saved, integrity events waiting to be sent.
   const pending = useRef(new Map<string, Response>());
   const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
-  const events = useRef<{ type: string; at: number }[]>([]);
+  const events = useRef<ExamEvent[]>([]);
+  const awayCount = useRef(timesAway);
+  // The current time away from the page: one episode however many of blur / tab hidden / full-screen exit it fires.
+  const away = useRef<{ start: number; type: "blur" | "hidden"; recorded: boolean; timer?: ReturnType<typeof setTimeout> } | null>(null);
   const finished = useRef(false);
   // Server clock offset so the countdown matches the server's deadline.
   const offset = useRef(new Date(serverNow).getTime() - Date.now());
@@ -70,8 +78,9 @@ export function ExamClient({
     logEventsAction(attemptId, batch).catch(() => events.current.unshift(...batch));
   }, [attemptId]);
 
-  const record = useCallback((type: string) => {
-    events.current.push({ type, at: Date.now() });
+  const record = useCallback((type: string, extra?: { ms?: number; final?: string }) => {
+    if (finished.current) return;
+    events.current.push({ type, at: Date.now(), ...extra });
   }, []);
 
   const saveNow = useCallback(
@@ -142,31 +151,71 @@ export function ExamClient({
 
   // Integrity monitoring.
   useEffect(() => {
+    const onPage = () => document.visibilityState === "visible" && document.hasFocus();
+    // Record the episode once: a blur waits a moment in case it is really a tab switch ("hidden").
+    // A hidden page waits briefly too: a page that is reloading or closing goes hidden as it unloads, and
+    // that is not a tab switch (a reload is logged as "opened again"; a closed page shows as not connected).
+    const commit = () => {
+      const a = away.current;
+      if (!a || a.recorded) return;
+      clearTimeout(a.timer);
+      a.recorded = true;
+      record(a.type);
+      flushEvents();
+    };
+    const leave = (type: "blur" | "hidden") => {
+      if (finished.current) return;
+      const a = away.current;
+      if (a) {
+        if (type === "hidden" && a.type === "blur") {
+          a.type = "hidden";
+          if (!a.recorded) {
+            clearTimeout(a.timer);
+            a.timer = setTimeout(commit, 300);
+          }
+        }
+        return;
+      }
+      away.current = { start: Date.now(), type, recorded: false };
+      away.current.timer = setTimeout(commit, type === "hidden" ? 300 : 1000);
+    };
+    const back = () => {
+      const a = away.current;
+      if (!a || !onPage() || finished.current) return;
+      commit();
+      away.current = null;
+      record("back", { ms: Date.now() - a.start, final: a.type });
+      flushEvents();
+      awayCount.current += 1;
+      setWarning({ kind: "left", n: awayCount.current });
+    };
     // Clicking into a code question's preview (an iframe on this page) moves focus out of the window;
     // that is not leaving the quiz.
     const onBlur = () =>
       setTimeout(() => {
         const a = document.activeElement;
         if (a instanceof HTMLIFrameElement && a.dataset.runPreview) return;
-        record("blur");
+        leave("blur");
       }, 0);
-    const onVis = () => {
-      if (document.visibilityState === "hidden") {
-        record("hidden");
-        flushEvents();
-      }
-    };
+    const onVis = () => (document.visibilityState === "hidden" ? leave("hidden") : back());
     const onFs = () => {
-      if (!document.fullscreenElement && document.fullscreenEnabled && !finished.current) {
+      if (document.fullscreenElement || !document.fullscreenEnabled || finished.current) return;
+      setFsNeeded(true);
+      // Switching tab or app also ends full screen: count that as the time away, not as a second event.
+      setTimeout(() => {
+        if (finished.current || away.current || !onPage()) return;
         record("fullscreen_exit");
-        setFsNeeded(true);
-      }
+        flushEvents();
+        awayCount.current += 1;
+        setWarning({ kind: "left", n: awayCount.current });
+      }, 1000);
     };
     // Capture phase + stopPropagation so the code editor's own clipboard and drop handlers never run.
     const block = (type: string) => (e: Event) => {
       e.preventDefault();
       e.stopPropagation();
       record(type);
+      setWarning((w) => (w?.kind === "left" ? w : { kind: "blocked" }));
     };
     const onCopy = block("copy");
     const onPaste = block("paste");
@@ -175,6 +224,7 @@ export function ExamClient({
     const onDrop = block("paste");
     const cap = { capture: true };
     window.addEventListener("blur", onBlur);
+    window.addEventListener("focus", back);
     document.addEventListener("visibilitychange", onVis);
     document.addEventListener("fullscreenchange", onFs);
     document.addEventListener("copy", onCopy, cap);
@@ -187,8 +237,16 @@ export function ExamClient({
     };
     window.addEventListener("beforeunload", warn);
     if (document.fullscreenEnabled && !document.fullscreenElement) setFsNeeded(true);
+    // Heartbeat for the instructor's live view.
+    const beat = () => {
+      if (!finished.current) heartbeatAction(attemptId, !!away.current?.recorded).catch(() => undefined);
+    };
+    const hb = setInterval(beat, 10_000);
     return () => {
+      clearInterval(hb);
+      clearTimeout(away.current?.timer);
       window.removeEventListener("blur", onBlur);
+      window.removeEventListener("focus", back);
       document.removeEventListener("visibilitychange", onVis);
       document.removeEventListener("fullscreenchange", onFs);
       document.removeEventListener("copy", onCopy, cap);
@@ -198,7 +256,14 @@ export function ExamClient({
       document.removeEventListener("contextmenu", onMenu, cap);
       window.removeEventListener("beforeunload", warn);
     };
-  }, [flushEvents, record]);
+  }, [attemptId, flushEvents, record]);
+
+  // A blocked copy/paste note goes away by itself; the red warning stays until acknowledged.
+  useEffect(() => {
+    if (warning?.kind !== "blocked") return;
+    const id = setTimeout(() => setWarning(null), 5000);
+    return () => clearTimeout(id);
+  }, [warning]);
 
   const enterFullscreen = () => {
     document.documentElement.requestFullscreen?.().then(() => setFsNeeded(false)).catch(() => setFsNeeded(false));
@@ -240,6 +305,24 @@ export function ExamClient({
             </a>
           ))}
         </nav>
+        {warning && (
+          <div
+            role="alert"
+            data-testid="integrity-warning"
+            data-kind={warning.kind}
+            className={`border-t px-4 py-2.5 ${warning.kind === "left" ? "border-red-500/40 bg-red-500/15" : "border-amber-500/40 bg-amber-500/10"}`}
+          >
+            <div className="mx-auto flex max-w-3xl items-center gap-3">
+              <span aria-hidden className={warning.kind === "left" ? "text-danger" : "text-warning"}>⚠</span>
+              <p className={`min-w-0 flex-1 text-sm font-medium ${warning.kind === "left" ? "text-danger" : "text-warning"}`}>
+                {warning.kind === "left" ? t("qz.warn.left", { n: warning.n }) : t("qz.warn.blocked")}
+              </p>
+              {warning.kind === "left" && (
+                <button type="button" className="btn-secondary h-8 shrink-0" onClick={() => setWarning(null)}>{t("qz.warn.ok")}</button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       <ol className="mx-auto max-w-3xl space-y-6 px-4 py-8">

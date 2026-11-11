@@ -6,7 +6,7 @@ import { requireUser } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { asLanguage, cleanFiles } from "@/lib/code";
-import { quizPhase, type Layout, type Response } from "@/lib/quiz";
+import { awayMs, quizPhase, type Layout, type Response } from "@/lib/quiz";
 import { asOptions, examBlockForAction, finalizeAttempt, isExpired, startAttempt } from "@/lib/quiz-server";
 
 /** Start (or resume) the current cadet's attempt and open the exam page. */
@@ -70,22 +70,59 @@ export async function saveAnswerAction(attemptId: string, questionId: string, re
 }
 
 const EVENT_TYPES = new Set(["blur", "hidden", "fullscreen_exit", "copy", "paste", "contextmenu"]);
+const AWAY = ["blur", "hidden"];
 
-/** Integrity events batched from the exam page. */
-export async function logEventsAction(attemptId: string, events: { type: string; at: number }[]): Promise<void> {
+export type ExamEvent = { type: string; at: number; ms?: number; final?: string };
+
+/**
+ * Integrity events batched from the exam page. Leaving the page is one event per episode ("blur", or
+ * "hidden" for a tab switch); "back" is not stored but closes the latest one with its duration and final type.
+ * Also keeps the attempt's live presence (awayAt / lastSeenAt) for the supervising instructor.
+ */
+export async function logEventsAction(attemptId: string, events: ExamEvent[]): Promise<void> {
   const attempt = await ownAttempt(attemptId);
   if (attempt.status !== "IN_PROGRESS") return;
   const now = Date.now();
-  const rows = events
-    .filter((e) => EVENT_TYPES.has(e.type))
-    .slice(0, 200)
-    .map((e) => ({
-      attemptId,
-      type: e.type,
-      // Trust the client clock only within the last hour; otherwise use server time.
-      at: new Date(Math.abs(now - e.at) < 3600_000 ? e.at : now),
-    }));
-  if (rows.length) await db.quizEvent.createMany({ data: rows });
+  // Trust the client clock only within the last hour; otherwise use server time.
+  const when = (at: number) => new Date(Number.isFinite(at) && Math.abs(now - at) < 3600_000 ? at : now);
+  let rows: { attemptId: string; type: string; at: Date }[] = [];
+  let away: boolean | undefined;
+  const flush = async () => {
+    if (rows.length) await db.quizEvent.createMany({ data: rows });
+    rows = [];
+  };
+  for (const e of events.slice(0, 200)) {
+    if (e.type === "back") {
+      await flush();
+      const last = await db.quizEvent.findFirst({ where: { attemptId, type: { in: AWAY } }, orderBy: { at: "desc" } });
+      if (last && !awayMs(last.details)) {
+        const ms = Math.min(Math.max(0, Math.round(Number(e.ms) || 0)), 6 * 3600_000);
+        await db.quizEvent.update({
+          where: { id: last.id },
+          data: { type: e.final && AWAY.includes(e.final) ? e.final : last.type, details: { ms } },
+        });
+      }
+      away = false;
+    } else if (EVENT_TYPES.has(e.type)) {
+      rows.push({ attemptId, type: e.type, at: when(e.at) });
+      if (AWAY.includes(e.type)) away = true;
+    }
+  }
+  await flush();
+  await touchPresence(attemptId, away);
+}
+
+/** Exam page heartbeat (every 10 s, and whenever the cadet leaves or comes back). */
+export async function heartbeatAction(attemptId: string, away: boolean): Promise<void> {
+  const attempt = await ownAttempt(attemptId);
+  if (attempt.status !== "IN_PROGRESS") return;
+  await touchPresence(attemptId, away);
+}
+
+async function touchPresence(attemptId: string, away: boolean | undefined) {
+  const where = { id: attemptId, status: "IN_PROGRESS" as const };
+  if (away) await db.quizAttempt.updateMany({ where: { ...where, awayAt: null }, data: { awayAt: new Date() } });
+  await db.quizAttempt.updateMany({ where, data: { lastSeenAt: new Date(), ...(away === false ? { awayAt: null } : {}) } });
 }
 
 export async function submitAttemptAction(attemptId: string): Promise<{ ok: boolean }> {

@@ -470,6 +470,9 @@ model QuizAttempt {
   maxScore      Float         @default(0)
   ip            String?
   userAgent     String?
+  /// Live monitor: last heartbeat from the exam page, and since when the cadet has been away from it (null = on the page).
+  lastSeenAt    DateTime?
+  awayAt        DateTime?
 
   answers QuizAnswer[]
   events  QuizEvent[]
