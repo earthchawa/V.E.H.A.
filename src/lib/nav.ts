@@ -25,7 +25,7 @@ export function parentPath(path: string): string | null {
 }
 
 /** Pages reached straight from the top menu: there is nothing to go "back" to, so no Back button. */
-export const NAV_ROOTS = ["/", "/account", "/admin/users", "/admin/courses", "/admin/departments", "/admin/exam-settings", "/admin/audit"];
+export const NAV_ROOTS = ["/", "/account", "/admin/users", "/admin/courses", "/admin/departments", "/admin/exam-settings", "/admin/audit", "/admin/system"];
 export const isNavRoot = (path: string) => NAV_ROOTS.includes(path.replace(/\/+$/, "") || "/");
 
 /** What the Back button returns to, for a label like "Back to the assignment". */

@@ -24,12 +24,16 @@ import { CopyToSections } from "@/components/CopyToSections";
 import { Modal } from "@/components/Modal";
 import { ConfirmButton } from "../../grades/ConfirmButton";
 import {
-  PastAssignmentForm,
+  PastAssignmentForm, AiAnswersForm,
   ReferenceDocumentForm,
   type PastOption,
 } from "../ReferenceForms";
+import { AI_ANSWER_VARIANTS, aiAnswerModel, aiAnswersEnabled } from "@/lib/ai-answers";
 import { removeReferenceAction } from "../actions";
 import { InfoTip } from "@/components/InfoTip";
+
+/** Generating AI reference answers (a server action of this page) can take a minute or two. */
+export const maxDuration = 180;
 
 export default async function AssignmentPage({
   params,
@@ -423,6 +427,16 @@ export default async function AssignmentPage({
                       options={pastOptions}
                     />
                   </Modal>
+                  {aiAnswersEnabled() && (
+                    <Modal
+                      label={<><span aria-hidden>✦</span> {t("ai.button")}</>}
+                      title={t("ai.title")}
+                      buttonClassName="btn-secondary"
+                      testId="add-reference-ai"
+                    >
+                      <AiAnswersForm assignmentId={assignment.id} variants={AI_ANSWER_VARIANTS} model={aiAnswerModel()} />
+                    </Modal>
+                  )}
                 </div>
               </section>
             )}

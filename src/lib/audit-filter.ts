@@ -8,7 +8,7 @@ export const AUDIT_CATEGORIES = {
   assignments: ["assignment.", "submission.", "similarity."],
   quizzes: ["quiz."],
   grades: ["grade."],
-  settings: ["department.", "exam.", "audit."],
+  settings: ["department.", "exam.", "audit.", "backup.", "storage."],
 } as const;
 export type AuditCategory = keyof typeof AUDIT_CATEGORIES;
 export const AUDIT_CATEGORY_KEYS = Object.keys(AUDIT_CATEGORIES) as AuditCategory[];

@@ -8,7 +8,8 @@ import { offeringAccess } from "@/lib/access";
 import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { config } from "@/lib/config";
-import { deleteStoredFile, saveFile } from "@/lib/storage";
+import { deleteStoredFile } from "@/lib/storage";
+import { incomingFiles } from "@/lib/uploads";
 import { getI18n } from "@/lib/i18n/server";
 import { copyMaterial, validTargets } from "@/lib/sections";
 
@@ -50,12 +51,15 @@ export async function addMaterialAction(offeringId: string, _: FormState, fd: Fo
       return { error: t("err.badUrl") };
     url = m.url;
   } else {
-    const file = fd.get("file");
-    if (!(file instanceof File) || file.size === 0) return { error: t("err.chooseFile") };
-    if (file.size > config.maxUploadMb * 1024 * 1024) return { error: t("err.fileTooBig", { mb: config.maxUploadMb }) };
+    const [file] = await incomingFiles(fd, "file", user);
+    if (!file) return { error: t("err.chooseFile") };
+    if (file.size > config.maxUploadMb * 1024 * 1024) {
+      await file.discard();
+      return { error: t("err.fileTooBig", { mb: config.maxUploadMb }) };
+    }
     fileData = {
       fileName: file.name.slice(0, 255),
-      storageKey: await saveFile(file),
+      storageKey: await file.store(),
       mimeType: file.type || "application/octet-stream",
       sizeBytes: file.size,
     };

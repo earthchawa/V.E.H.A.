@@ -7,6 +7,9 @@ import { NavLink } from "@/components/NavLink";
 import { MobileMenu } from "@/components/MobileMenu";
 import { BackButton } from "@/components/BackButton";
 import { Toaster } from "@/components/Toaster";
+import { UploadProvider } from "@/components/direct-upload";
+import { config } from "@/lib/config";
+import { userUploadPrefix } from "@/lib/storage";
 import { logoutAction } from "../auth-actions";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -21,6 +24,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           { href: "/admin/departments", label: t("nav.departments") },
           { href: "/admin/exam-settings", label: t("nav.examSettings") },
           { href: "/admin/audit", label: t("nav.activity") },
+          { href: "/admin/system", label: t("nav.system") },
         ]
       : []),
   ];
@@ -66,7 +70,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       </header>
       <main className="mx-auto max-w-6xl px-4 py-6 sm:py-10">
         <BackButton placement="shell" />
-        {children}
+        <UploadProvider value={{ direct: config.directUpload, prefix: userUploadPrefix(user.id) }}>{children}</UploadProvider>
       </main>
       <Toaster />
     </div>
