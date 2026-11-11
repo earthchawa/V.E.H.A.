@@ -14,7 +14,7 @@ import { audit } from "@/lib/audit";
 import { getI18n } from "@/lib/i18n/server";
 import { SETTING, setSetting } from "@/lib/settings";
 import { BUNDLED_LOGOS, isHexColor } from "@/lib/departments";
-import { deleteStoredFile, saveFile } from "@/lib/storage";
+import { deleteStoredFile, moveDbFilesToBlob, saveFile } from "@/lib/storage";
 import { DEFAULT_FINAL_YEAR, MAX_YEAR_LEVEL, parseYearLevel, planPromotion } from "@/lib/year-level";
 import { currentAcademicYear, setYearLevel } from "@/lib/year-level-server";
 import { redirect } from "next/navigation";
@@ -608,4 +608,24 @@ export async function saveSebKeysAction(_: FormState, fd: FormData): Promise<For
   await setSetting(SETTING.sebConfigKeys, keys.join("\n"));
   await audit({ actorId: me.id, action: "exam.seb_keys_changed", details: { count: keys.length } });
   return { success: t("ok.saved") };
+}
+
+// ---------- System ----------
+
+/**
+ * Move files still kept in Postgres to Blob storage, for about 40 seconds per click (a function may not run
+ * much longer); the message says how many are left.
+ */
+export async function moveFilesToBlobAction(_: FormState, _fd: FormData): Promise<FormState> {
+  const me = await admin();
+  const { t } = await getI18n();
+  if (!config.hasBlob) return { error: t("sys.blob.notConnected") };
+  try {
+    const r = await moveDbFilesToBlob(Date.now() + 40_000);
+    if (r.moved) await audit({ actorId: me.id, action: "storage.moved", details: r });
+    revalidatePath("/admin/system");
+    return { success: t(r.left ? "sys.move.partial" : "sys.move.done", { moved: r.moved, left: r.left }) };
+  } catch (e) {
+    return { error: t("sys.move.failed", { reason: (e as Error).message.slice(0, 200) }) };
+  }
 }

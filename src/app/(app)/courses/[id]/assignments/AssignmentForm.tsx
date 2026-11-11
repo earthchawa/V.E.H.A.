@@ -1,7 +1,7 @@
 "use client";
 
 import { KeepForm } from "@/components/KeepForm";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { saveAssignmentAction } from "./actions";
 import { FormMessage } from "@/components/FormMessage";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -56,6 +56,7 @@ export function AssignmentForm({
   const [state, action, pending] = useActionState(saveAssignmentAction.bind(null, offeringId, assignmentId), undefined);
   const { t } = useI18n();
   const d = defaults;
+  const [check, setCheck] = useState(d.checkSimilarity);
   return (
     <KeepForm action={action} pending={pending} state={state} closeOnSuccess={closeOnSuccess} className="space-y-4">
       <div>
@@ -83,24 +84,44 @@ export function AssignmentForm({
           </select>
         </div>
       </div>
-      <div className="space-y-2 text-sm text-muted">
-        <label className="flex items-center gap-2"><input type="checkbox" name="allowLate" defaultChecked={d.allowLate} role="switch" className="toggle" /> {t("asg.f.allowLate")}</label>
-        <label className="flex items-center gap-2"><input type="checkbox" name="isPublished" defaultChecked={d.isPublished} role="switch" className="toggle" /> {t("asg.f.published")}</label>
-        <label className="flex items-center gap-2"><input type="checkbox" name="checkSimilarity" defaultChecked={d.checkSimilarity} role="switch" className="toggle" /> {t("asg.f.check")}</label>
-        <label className="flex items-center gap-2 pl-5"><input type="checkbox" name="ignoreCommon" defaultChecked={d.ignoreCommon} role="switch" className="toggle" /> <span className="inline-flex items-center gap-1.5">{t("asg.f.ignoreCommon")} <InfoTip text={t("asg.f.ignoreCommonHint")} /></span></label>
+      {/* On/off settings: one row each, label on the left, switch on the right. */}
+      <div className="divide-y divide-border rounded-lg border border-border text-sm">
+        <label className="flex cursor-pointer items-center justify-between gap-3 px-3 py-2.5">
+          {t("asg.f.published")}
+          <input type="checkbox" name="isPublished" defaultChecked={d.isPublished} role="switch" className="toggle" />
+        </label>
+        <label className="flex cursor-pointer items-center justify-between gap-3 px-3 py-2.5">
+          {t("asg.f.allowLate")}
+          <input type="checkbox" name="allowLate" defaultChecked={d.allowLate} role="switch" className="toggle" />
+        </label>
       </div>
-      <div>
-        <label className="label" htmlFor="a-vis">{t("asg.f.reportVis")}</label>
-        <select id="a-vis" name="reportVisibility" className="input" defaultValue={d.reportVisibility}>
-          <option value="IMMEDIATE">{t("vis.IMMEDIATE")}</option>
-          <option value="AFTER_DUE">{t("vis.AFTER_DUE")}</option>
-          <option value="HIDDEN">{t("vis.HIDDEN")}</option>
-        </select>
-      </div>
-      <div>
-        <label className="label flex items-center gap-1.5" htmlFor="a-base">{t("asg.f.baseText")} <span className="text-subtle">{t("common.optional")}</span> <InfoTip text={t("asg.f.baseHint")} align="start" /></label>
-        <textarea id="a-base" name="baseText" rows={3} className="input font-mono text-xs" defaultValue={d.baseText} />
-      </div>
+
+      {/* Similarity checking and the settings that only matter when it is on, as one group. */}
+      <fieldset className="rounded-lg border border-border text-sm" data-testid="similarity-settings">
+        <label className="flex cursor-pointer items-center justify-between gap-3 px-3 py-2.5">
+          <span className="font-medium">{t("asg.f.check")}</span>
+          <input type="checkbox" name="checkSimilarity" checked={check} onChange={(e) => setCheck(e.target.checked)} role="switch" className="toggle" />
+        </label>
+        {/* Hidden, not removed, when off: the values are still posted, so switching back on keeps them. */}
+        <div hidden={!check} className="space-y-4 border-t border-border bg-surface-2/60 px-3 py-3">
+          <label className="flex cursor-pointer items-center justify-between gap-3">
+            <span className="inline-flex items-center gap-1.5">{t("asg.f.ignoreCommon")} <InfoTip text={t("asg.f.ignoreCommonHint")} align="start" /></span>
+            <input type="checkbox" name="ignoreCommon" defaultChecked={d.ignoreCommon} role="switch" className="toggle" />
+          </label>
+          <div>
+            <label className="label" htmlFor="a-vis">{t("asg.f.reportVis")}</label>
+            <select id="a-vis" name="reportVisibility" className="input" defaultValue={d.reportVisibility}>
+              <option value="IMMEDIATE">{t("vis.IMMEDIATE")}</option>
+              <option value="AFTER_DUE">{t("vis.AFTER_DUE")}</option>
+              <option value="HIDDEN">{t("vis.HIDDEN")}</option>
+            </select>
+          </div>
+          <div>
+            <label className="label flex items-center gap-1.5" htmlFor="a-base">{t("asg.f.baseText")} <span className="text-subtle">{t("common.optional")}</span> <InfoTip text={t("asg.f.baseHint")} align="start" /></label>
+            <textarea id="a-base" name="baseText" rows={3} className="input font-mono text-xs" defaultValue={d.baseText} />
+          </div>
+        </div>
+      </fieldset>
       {!assignmentId && <SectionCheckboxes sections={sections} />}
       <FormMessage state={state} />
       <SubmitButton>{t(assignmentId ? "asg.f.save" : "asg.f.create")}</SubmitButton>

@@ -37,7 +37,7 @@ export function SubmitForm({
     return !err;
   };
   return (
-    <KeepForm action={action} pending={pending} beforeSubmit={check} className="space-y-4">
+    <KeepForm action={action} pending={pending} beforeSubmit={check} directUpload className="space-y-4">
       <div>
         <label className="label" htmlFor="s-text">{t("asg.text")}</label>
         <textarea id="s-text" name="textAnswer" rows={8} className="input" defaultValue={defaultText} />

@@ -77,8 +77,17 @@ src/lib/
   (pass `offeringId` when the target was just deleted). New actions need a `log.<action>` label in i18n and a
   prefix in `AUDIT_CATEGORIES` (`lib/audit-filter.ts`; a unit test checks this).
 - **Time inputs** are Bangkok local (`parseBangkokLocal` / `toBangkokLocal` in `lib/assignments.ts`).
-- **Storage:** `lib/storage.ts` — `disk` (self-hosted, `UPLOAD_DIR`) or `db` (Postgres, default on Vercel).
-  Upload cap `config.maxUploadMb` (4 MB on Vercel); forms check sizes in the browser first.
+- **Storage:** `lib/storage.ts` — NEW files go to `disk` (self-hosted, `UPLOAD_DIR`), `blob` (private Vercel Blob;
+  the default once `BLOB_READ_WRITE_TOKEN` is set) or `db` (Postgres; Vercel without Blob). Reads go by the key's
+  shape (`f/<uuid>` / `u/<userId>/<uuid>` = Blob, bare uuid = legacy store), so never assume the current driver.
+  Upload cap `config.maxUploadMb` (4 MB on Vercel without Blob, else 50); forms check sizes in the browser first.
+  File forms use `<KeepForm directUpload>` and actions read files with `incomingFiles(fd, field, user)`
+  (`lib/uploads.ts`) — with Blob the browser uploads first and posts a reference; never read `fd.get("file")`
+  directly. Downloads stream through the permission-checked routes (`openStoredFile`).
+- **Backups:** Admin → System downloads the database (gzipped NDJSON, `lib/backup.ts`) and a tar of uploaded files;
+  `scripts/restore-backup.ts` restores both. Tables are discovered from `pg_tables`, so new models need nothing.
+- **AI reference answers** (`lib/ai-answers.ts`, only with `ANTHROPIC_API_KEY`): sends the assignment text only,
+  stores answers as `DOCUMENT` sources titled "AI · …". A comparison aid — never present it as AI detection.
 - **Database URL** may arrive under integration-specific names; `lib/db-url.ts` normalises it.
 - **Exams** use full-screen browser mode with a supervising instructor. Safe Exam Browser support is kept but
   switched off (`config.sebEnabled`, env `SEB_ENABLED=true`); use `sebRequired(quiz)`, never `quiz.requireSeb`.
@@ -131,8 +140,8 @@ project status / what is not done) are in `docs/technical/feature-notes.md` — 
 ## Testing
 
 - `npm test` covers pure logic (auth policy, CSV, similarity incl. Thai Q&A, grades, quiz logic, year levels, i18n parity).
-- End-to-end suites live in `e2e/` (`npm run build && npm run test:e2e`, see `e2e/README.md`): 21 Playwright suites
-  (~330 checks) against `next start` + the local Postgres, reseeded before each suite with `DEMO_PASSWORD`.
+- End-to-end suites live in `e2e/` (`npm run build && npm run test:e2e`, see `e2e/README.md`): 22 Playwright suites
+  (~360 checks) against `next start` + the local Postgres, reseeded before each suite with `DEMO_PASSWORD`.
   **Keep them in the repo and up to date**: when a user flow changes, update/add a suite in the same commit and run
   only the affected suites. Run the full set only when the owner asks. Fixtures are synthetic — never real people or passwords.
 - In the cloud container Postgres may need restarting after the container restarts.

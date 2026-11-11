@@ -6,14 +6,14 @@ import { FormMessage } from "@/components/FormMessage";
 import { SubmitButton } from "@/components/SubmitButton";
 import { FileDropzone } from "@/components/FileDropzone";
 import { useI18n } from "@/lib/i18n/client";
-import { addPastAssignmentSourceAction, addReferenceDocumentAction } from "./actions";
+import { addPastAssignmentSourceAction, addReferenceDocumentAction, generateAiAnswersAction } from "./actions";
 
 /** Add a reference document: pasted text (a web page, a model answer, an AI chatbot's answer) and/or files. */
 export function ReferenceDocumentForm({ assignmentId }: { assignmentId: string }) {
   const [state, action, pending] = useActionState(addReferenceDocumentAction.bind(null, assignmentId), undefined);
   const { t } = useI18n();
   return (
-    <KeepForm action={action} pending={pending} state={state} resetOnSuccess closeOnSuccess className="space-y-4">
+    <KeepForm action={action} pending={pending} state={state} resetOnSuccess closeOnSuccess directUpload className="space-y-4">
       <p className="rounded-lg border border-border bg-surface-2 px-3 py-2.5 text-xs leading-relaxed text-muted">{t("src.docHint")}</p>
       <div>
         <label className="label" htmlFor="src-title">{t("src.title")}</label>
@@ -63,6 +63,24 @@ export function PastAssignmentForm({ assignmentId, options }: { assignmentId: st
       <SubmitButton>{t("src.add")}</SubmitButton>
         </>
       )}
+    </KeepForm>
+  );
+}
+
+/** Ask an AI model the assignment's own question and keep its answers as reference documents. */
+export function AiAnswersForm({ assignmentId, variants, model }: { assignmentId: string; variants: number; model: string }) {
+  const [state, action, pending] = useActionState(generateAiAnswersAction.bind(null, assignmentId), undefined);
+  const { t } = useI18n();
+  return (
+    <KeepForm action={action} pending={pending} state={state} closeOnSuccess className="space-y-4" data-testid="ai-answers-form">
+      <p className="text-sm leading-relaxed text-muted">{t("ai.explain", { n: variants })}</p>
+      <ul className="list-disc space-y-1.5 pl-5 text-xs leading-relaxed text-muted">
+        <li>{t("ai.note.sent")}</li>
+        <li>{t("ai.note.limits")}</li>
+        <li>{t("ai.note.model", { model })}</li>
+      </ul>
+      <FormMessage state={state} />
+      <SubmitButton pendingText={t("ai.working")}>{t("ai.generate", { n: variants })}</SubmitButton>
     </KeepForm>
   );
 }

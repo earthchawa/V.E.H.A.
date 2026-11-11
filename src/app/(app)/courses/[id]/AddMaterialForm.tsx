@@ -22,7 +22,7 @@ export function AddMaterialForm({ offeringId, maxMb, sections = [] }: { offering
   };
 
   return (
-    <KeepForm action={action} pending={pending} state={state} resetOnSuccess closeOnSuccess beforeSubmit={check} className="space-y-4">
+    <KeepForm action={action} pending={pending} state={state} resetOnSuccess closeOnSuccess beforeSubmit={check} directUpload className="space-y-4">
       <input type="hidden" name="type" value={type} />
       <div className="grid grid-cols-2 gap-1 rounded-lg bg-surface-2 p-1 text-xs" role="tablist">
         {(["FILE", "LINK"] as const).map((k) => (

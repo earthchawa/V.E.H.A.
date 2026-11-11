@@ -9,7 +9,9 @@ import { offeringAccess } from "@/lib/access";
 import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { getI18n } from "@/lib/i18n/server";
-import { deleteStoredFile, saveBuffer } from "@/lib/storage";
+import { deleteStoredFile } from "@/lib/storage";
+import { incomingFiles } from "@/lib/uploads";
+import { AI_ANSWER_LIMIT, AI_ANSWER_VARIANTS, aiAnswersEnabled, generateAiAnswers } from "@/lib/ai-answers";
 import { acceptsSubmissions, isPastDue, parseBangkokLocal, uploadLimits } from "@/lib/assignments";
 import { config } from "@/lib/config";
 import { extractFile, type Extracted } from "@/lib/similarity/extract";
@@ -144,12 +146,15 @@ export async function submitAction(assignmentId: string, _: FormState, fd: FormD
   if (!acceptsSubmissions(assignment, now)) return { error: t("err.submissionClosed") };
 
   const textAnswer = String(fd.get("textAnswer") ?? "").trim().slice(0, 100000) || null;
-  const uploads = fd.getAll("files").filter((f): f is File => f instanceof File && f.size > 0);
+  const uploads = await incomingFiles(fd, "files", user);
   const limits = uploadLimits(config.maxUploadMb);
-  if (uploads.length > limits.maxFiles) return { error: t("err.tooManyFiles", { n: limits.maxFiles }) };
-  if (uploads.some((f) => f.size > limits.fileMb * 1024 * 1024)) return { error: t("err.fileTooBig", { mb: limits.fileMb }) };
-  if (uploads.reduce((n, f) => n + f.size, 0) > limits.totalMb * 1024 * 1024)
-    return { error: t("err.filesTooBig", { mb: limits.totalMb }) };
+  const reject = async (error: string) => {
+    await Promise.all(uploads.map((f) => f.discard()));
+    return { error };
+  };
+  if (uploads.length > limits.maxFiles) return reject(t("err.tooManyFiles", { n: limits.maxFiles }));
+  if (uploads.some((f) => f.size > limits.fileMb * 1024 * 1024)) return reject(t("err.fileTooBig", { mb: limits.fileMb }));
+  if (uploads.reduce((n, f) => n + f.size, 0) > limits.totalMb * 1024 * 1024) return reject(t("err.filesTooBig", { mb: limits.totalMb }));
 
   const existing = await db.submission.findUnique({
     where: { assignmentId_studentId: { assignmentId, studentId: user.id } },
@@ -160,11 +165,11 @@ export async function submitAction(assignmentId: string, _: FormState, fd: FormD
   // Store and analyse new files.
   const newFiles: { fileName: string; storageKey: string; mimeType: string; sizeBytes: number; extracted: Extracted[] | null }[] = [];
   for (const f of uploads) {
-    const data = Buffer.from(await f.arrayBuffer());
+    const data = await f.bytes();
     const fileName = f.name.slice(0, 255);
     newFiles.push({
       fileName,
-      storageKey: await saveBuffer(data),
+      storageKey: await f.store(),
       mimeType: f.type || "application/octet-stream",
       sizeBytes: f.size,
       extracted: await extractFile(fileName, data),
@@ -248,16 +253,19 @@ export async function addReferenceDocumentAction(assignmentId: string, _: FormSt
   const urlRaw = String(fd.get("url") ?? "").trim().slice(0, 1000);
   if (urlRaw && !/^https?:\/\/\S+$/i.test(urlRaw)) return { error: t("src.err.url") };
   const text = String(fd.get("text") ?? "").trim().slice(0, MAX_REFERENCE_CHARS) || null;
-  const uploads = fd.getAll("files").filter((f): f is File => f instanceof File && f.size > 0);
+  const uploads = await incomingFiles(fd, "files", user);
   const limits = uploadLimits(config.maxUploadMb);
-  if (uploads.length > limits.maxFiles) return { error: t("err.tooManyFiles", { n: limits.maxFiles }) };
-  if (uploads.reduce((n, f) => n + f.size, 0) > limits.totalMb * 1024 * 1024) return { error: t("err.filesTooBig", { mb: limits.totalMb }) };
+  // Only the text of a reference file is kept, so direct uploads are removed again in every case.
+  const discardAll = () => Promise.all(uploads.map((f) => f.discard()));
+  if (uploads.length > limits.maxFiles) { await discardAll(); return { error: t("err.tooManyFiles", { n: limits.maxFiles }) }; }
+  if (uploads.reduce((n, f) => n + f.size, 0) > limits.totalMb * 1024 * 1024) { await discardAll(); return { error: t("err.filesTooBig", { mb: limits.totalMb }) }; }
 
   const files: { fileName: string; extracted: Extracted[] | null }[] = [];
   for (const f of uploads) {
     const fileName = f.name.slice(0, 255);
-    files.push({ fileName, extracted: await extractFile(fileName, Buffer.from(await f.arrayBuffer())) });
+    files.push({ fileName, extracted: await extractFile(fileName, await f.bytes()) });
   }
+  await discardAll();
   const { content, segments } = referenceContent(text, files);
   if (!content.trim()) return { error: t("src.err.empty") };
 
@@ -276,6 +284,43 @@ export async function addReferenceDocumentAction(assignmentId: string, _: FormSt
   await audit({ actorId: user.id, action: "similarity.source_added", targetType: "Assignment", targetId: assignmentId, details: { title, kind: "DOCUMENT", source: source.id } });
   revalidatePath(`/courses/${assignment.offeringId}/assignments/${assignmentId}`, "layout");
   return { success: t("src.added") };
+}
+
+/** Title prefix of AI-generated reference answers (also how they are counted and recognised in the list). */
+const AI_TITLE = "AI · ";
+
+/**
+ * Ask an AI model the assignment's question a few times and keep the answers as reference documents
+ * (lib/ai-answers.ts). Sends only the assignment's title, instructions and starter text.
+ */
+export async function generateAiAnswersAction(assignmentId: string, _: FormState, _fd: FormData): Promise<FormState> {
+  const assignment = await db.assignment.findUniqueOrThrow({ where: { id: assignmentId } });
+  const user = await requireManage(assignment.offeringId);
+  const { t } = await getI18n();
+  if (!aiAnswersEnabled()) return { error: t("ai.err.off") };
+  if (!assignment.instructions?.trim()) return { error: t("ai.err.noInstructions") };
+  const have = await db.similaritySource.count({ where: { assignmentId, kind: "DOCUMENT", title: { startsWith: AI_TITLE } } });
+  if (have + AI_ANSWER_VARIANTS > AI_ANSWER_LIMIT) return { error: t("ai.err.limit", { n: AI_ANSWER_LIMIT }) };
+
+  const { answers, error } = await generateAiAnswers(assignment.title, assignment.instructions, assignment.baseText);
+  if (!answers.length) return { error: t(`ai.err.${error ?? "failed"}`) };
+  for (const [i, a] of answers.entries()) {
+    const { content, segments } = referenceContent(a.text.slice(0, MAX_REFERENCE_CHARS), []);
+    await db.similaritySource.create({
+      data: {
+        assignmentId,
+        kind: "DOCUMENT",
+        title: `${AI_TITLE}${t("ai.sourceTitle", { n: have + i + 1 })} (${a.model})`,
+        content,
+        segments: segments as Prisma.InputJsonValue,
+        createdById: user.id,
+      },
+    });
+  }
+  await recheckAssignment(assignmentId);
+  await audit({ actorId: user.id, action: "similarity.ai_generated", targetType: "Assignment", targetId: assignmentId, details: { answers: answers.length, model: answers[0].model } });
+  revalidatePath(`/courses/${assignment.offeringId}/assignments/${assignmentId}`, "layout");
+  return { success: t("ai.added", { n: answers.length }) };
 }
 
 /** Compare with every submission to the same course's assignment in an earlier term or another section. */
