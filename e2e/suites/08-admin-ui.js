@@ -117,7 +117,7 @@ const ok = (c, m) => { if (!c) throw new Error('FAIL: ' + m); console.log('PASS'
   // Instructor sees the plain-language exam options with rooms from admin
   await tp.goto(course.replace(/\/courses\/.*/, '') + course.slice(course.indexOf('/courses/')) + '/quizzes');
   await tp.getByText('Quiz 1: Linked lists').click(); await tp.waitForURL(/quizzes\/[^/]+$/);
-  await tp.getByTestId('quiz-settings').click();
+  await tp.getByTestId('quiz-more').click(); await tp.getByTestId('quiz-settings').click();
   await tp.getByLabel('Only in these exam rooms').check();
   ok(await tp.getByLabel('Library').count() === 1 && await tp.getByLabel('CS Lab 301').count() === 1, 'instructor picks rooms by name');
   await tp.screenshot({ path: S + '/r6-quiz-settings.png', fullPage: true });
@@ -126,7 +126,7 @@ const ok = (c, m) => { if (!c) throw new Error('FAIL: ' + m); console.log('PASS'
   await tp.getByRole('dialog').getByRole('button', { name: 'Close' }).click();
   await tp.getByRole('button', { name: 'TH' }).click();
   await tp.getByRole('link', { name: 'แบบทดสอบ' }).first().waitFor(); // wait until the page has re-rendered in Thai
-  await tp.getByTestId('quiz-settings').click();
+  await tp.getByTestId('quiz-more').click(); await tp.getByTestId('quiz-settings').click();
   ok(await tp.getByTestId('fullscreen-note').filter({ hasText: 'เต็มจอ' }).count() === 1, 'full-screen exam note translated');
 
   await browser.close(); console.log('ALL OK');

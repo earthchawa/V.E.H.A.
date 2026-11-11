@@ -27,6 +27,8 @@ const confirmOk = async (page) => {
 };
 /** Open "Copy to other sections" (kind: material | assignment | gradebook), copy to every listed section, wait for the toast. */
 const copyToSections = async (page, kind) => {
+  // Materials and assignments keep "Copy to other sections" in their ⋯ menu.
+  if (kind !== 'gradebook') await page.getByTestId(`${kind}-more`).first().click();
   await page.getByTestId(`copy-${kind}`).first().click();
   const form = page.getByTestId('copy-form');
   for (const box of await form.locator('input[name=target]').all()) await box.check();

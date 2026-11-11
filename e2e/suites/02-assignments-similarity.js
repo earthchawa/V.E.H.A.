@@ -103,7 +103,7 @@ const ok = (c, m) => { if (!c) throw new Error('FAIL: ' + m); console.log('PASS'
 
   // --- Hidden report visibility ---
   await tp.goto(refl);
-  await tp.getByTestId('edit-assignment').click();
+  await tp.getByTestId('assignment-more').click(); await tp.getByTestId('edit-assignment').click();
   await tp.selectOption('#a-vis', 'HIDDEN');
   await tp.getByRole('button', { name: 'Save changes' }).click();
   await tp.locator('dialog[open]').waitFor({ state: 'hidden' });

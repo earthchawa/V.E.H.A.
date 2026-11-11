@@ -14,7 +14,7 @@ import { QuestionList } from "../QuestionList";
 import { QuestionEditor } from "../QuestionEditor";
 import { StartButton } from "../StartButton";
 import { deleteQuizAction } from "../actions";
-import { ConfirmButton } from "../../grades/ConfirmButton";
+import { MoreMenu, MenuConfirm } from "@/components/MoreMenu";
 import { Modal } from "@/components/Modal";
 import { QuizTabs } from "../QuizTabs";
 
@@ -112,9 +112,22 @@ export default async function QuizPage({
           <Modal label={`+ ${t("qz.addQuestion")}`} title={t("qz.addQuestion")} size="lg" testId="add-question">
             <QuestionEditor quizId={quiz.id} closeOnSuccess />
           </Modal>
-          <Modal label={<><span aria-hidden>⚙</span> {t("qz.f.settings")}</>} title={t("qz.f.settings")} buttonClassName="btn-secondary h-9" size="lg" testId="quiz-settings">
-            {settingsForm}
-          </Modal>
+          <div className="ml-auto">
+            <MoreMenu testId="quiz-more">
+              <Modal label={<><span className="menu-icon" aria-hidden>⚙</span> {t("qz.f.settings")}</>} title={t("qz.f.settings")} buttonClassName="menu-item" size="lg" testId="quiz-settings">
+                {settingsForm}
+              </Modal>
+              <MenuConfirm
+                action={deleteQuizAction}
+                name="quizId"
+                value={quiz.id}
+                message={t("qz.deleteQuizConfirm")}
+                label={t("qz.deleteQuiz")}
+                icon="✕"
+                testId="delete-quiz"
+              />
+            </MoreMenu>
+          </div>
         </div>
         {quiz._count.attempts > 0 && (
           <p className="mb-4 rounded-lg border border-amber-500/25 bg-amber-500/5 px-3 py-2 text-sm text-warning">{t("qz.startedWarning")}</p>
@@ -149,7 +162,6 @@ export default async function QuizPage({
                 {row(t("qz.f.results"), t(`qz.res.${quiz.results}`))}
               </dl>
             </section>
-            <ConfirmButton action={deleteQuizAction} name="quizId" value={quiz.id} message={t("qz.deleteQuizConfirm")} label={t("qz.deleteQuiz")} />
           </aside>
         </div>
       </div>

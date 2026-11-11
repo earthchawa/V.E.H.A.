@@ -108,7 +108,7 @@ const ok = (c, m) => { if (!c) throw new Error('FAIL: ' + m); console.log('PASS'
   ok(true, 'clicking anywhere on an assignment card opens it');
 
   // Copy dialog: names the item, shows the other section with its instructor and cadet count.
-  await tp.getByTestId('copy-assignment').click();
+  await tp.getByTestId('assignment-more').click(); await tp.getByTestId('copy-assignment').click();
   const cf = tp.getByTestId('copy-form');
   const ct = await cf.innerText();
   ok(/Lab 3/.test(ct) && /Sec 2/.test(ct) && /Demo Instructor/.test(ct) && /2 cadets/.test(ct), 'copy dialog names the assignment and describes the target section');
@@ -121,7 +121,7 @@ const ok = (c, m) => { if (!c) throw new Error('FAIL: ' + m); console.log('PASS'
   await tp.screenshot({ path: S + '/ux-assignment.png' });
 
   // Switches in the assignment form.
-  await tp.getByTestId('edit-assignment').click();
+  await tp.getByTestId('assignment-more').click(); await tp.getByTestId('edit-assignment').click();
   const sw = tp.locator('dialog[open] input.toggle[role=switch]');
   ok(await sw.count() === 4, 'on/off settings are switches');
   ok(await tp.locator('dialog[open] input[name=allowLate]').evaluate((e) => getComputedStyle(e).appearance === 'none' && e.offsetWidth >= 34), 'switches are drawn as switches, not ticks');
@@ -134,13 +134,13 @@ const ok = (c, m) => { if (!c) throw new Error('FAIL: ' + m); console.log('PASS'
   await tp.goto(`${B}/courses/${sec2}/assignments`);
   await tp.getByTestId('assignment-row').first().locator('a').first().click();
   await tp.waitForURL(/assignments\/[a-z0-9]+$/);
-  await tp.getByTestId('delete-assignment').click();
+  await tp.getByTestId('assignment-more').click(); await tp.getByTestId('delete-assignment').click();
   const cd = tp.getByTestId('confirm-dialog');
   ok(await cd.isVisible() && !native, 'deleting asks in an in-page dialog');
   await cd.getByTestId('confirm-cancel').click();
   await tp.waitForFunction(() => !document.querySelector('[data-testid=confirm-dialog]'));
   ok(sql(`select count(*) from "Assignment" where "offeringId" = '${sec2}'`) === '1', 'Cancel keeps the assignment');
-  await tp.getByTestId('delete-assignment').click();
+  await tp.getByTestId('assignment-more').click(); await tp.getByTestId('delete-assignment').click();
   await tp.getByTestId('confirm-ok').click();
   await tp.waitForURL(new RegExp(`/courses/${sec2}/assignments$`));
   ok(sql(`select count(*) from "Assignment" where "offeringId" = '${sec2}'`) === '0', 'confirming deletes it');
@@ -160,6 +160,19 @@ const ok = (c, m) => { if (!c) throw new Error('FAIL: ' + m); console.log('PASS'
   await vis.click();
   await tp.waitForFunction(() => document.querySelector('[data-testid=material-visible]')?.getAttribute('aria-checked') === 'false');
   ok(sql(`select "isPublished" from "Material" where title = 'Switch test link'`) === 'f', 'switching it off hides the material');
+  const mrow = tp.getByTestId('material-row').filter({ hasText: 'Switch test link' });
+  ok(await mrow.getByTestId('material-download').getAttribute('href') === 'https://example.org/x', 'material row has its own open/download button');
+  ok(await mrow.locator('a').first().evaluate((e) => getComputedStyle(e, '::after').position === 'absolute'), 'the title link covers the whole material row');
+  // Copy and delete sit in the ⋯ menu; delete still asks first.
+  ok(await mrow.getByTestId('material-delete').count() === 0, 'delete is not shown on the row itself');
+  await mrow.getByTestId('material-more').click();
+  await mrow.getByTestId('material-delete').click();
+  await tp.getByTestId('confirm-ok').click();
+  await tp.waitForFunction(() => ![...document.querySelectorAll('[data-testid=material-row]')].some((r) => r.textContent.includes('Switch test link')));
+  ok(sql(`select count(*) from "Material" where title = 'Switch test link'`) === '0', 'deleting from the ⋯ menu removes the material');
+  // Cadets in the course, grouped by year level and programme.
+  const groups = await tp.getByTestId('course-cadets').getByTestId('cadet-group').allInnerTexts();
+  ok(groups.length >= 1 && groups.every((g) => /(Year \d|No year level)\s*·\s*\S/.test(g)), 'cadet list says each group\'s year level and programme: ' + groups.join(' | '));
 
   // Quiz list: the two views are buttons on the card; results has a summary and the big tabs.
   await tp.goto(`${B}/courses/${sec1}/quizzes`);

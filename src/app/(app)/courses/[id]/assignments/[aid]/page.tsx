@@ -17,8 +17,9 @@ import { SimilarityBadge } from "@/components/SimilarityBadge";
 import { AssignmentForm } from "../AssignmentForm";
 import { SubmitForm } from "../SubmitForm";
 import { StatusBadge } from "../StatusBadge";
-import { DeleteAssignmentButton, RecheckButton } from "../ManageButtons";
-import { copyAssignmentAction } from "../actions";
+import { RecheckButton } from "../ManageButtons";
+import { MoreMenu, MenuConfirm } from "@/components/MoreMenu";
+import { copyAssignmentAction, deleteAssignmentAction } from "../actions";
 import { siblingSections } from "@/lib/sections";
 import { CopyToSections } from "@/components/CopyToSections";
 import { Modal } from "@/components/Modal";
@@ -164,20 +165,11 @@ export default async function AssignmentPage({
     return (
       <div>
         {header(
-          <>
-            {siblings.length > 0 && (
-              <CopyToSections
-                action={copyAssignmentAction}
-                itemId={assignment.id}
-                sections={siblings}
-                kind="assignment"
-                itemTitle={assignment.title}
-              />
-            )}
+          <MoreMenu testId="assignment-more">
             <Modal
-              label={t("asg.edit")}
+              label={<><span className="menu-icon" aria-hidden>✎</span> {t("asg.edit")}</>}
               title={t("asg.edit")}
-              buttonClassName="btn-secondary"
+              buttonClassName="menu-item"
               size="lg"
               testId="edit-assignment"
             >
@@ -203,8 +195,26 @@ export default async function AssignmentPage({
                 closeOnSuccess
               />
             </Modal>
-            <DeleteAssignmentButton assignmentId={assignment.id} />
-          </>,
+            {siblings.length > 0 && (
+              <CopyToSections
+                action={copyAssignmentAction}
+                itemId={assignment.id}
+                sections={siblings}
+                kind="assignment"
+                itemTitle={assignment.title}
+                menuItem
+              />
+            )}
+            <MenuConfirm
+              action={deleteAssignmentAction}
+              name="assignmentId"
+              value={assignment.id}
+              message={t("asg.deleteConfirm")}
+              label={t("asg.delete")}
+              icon="✕"
+              testId="delete-assignment"
+            />
+          </MoreMenu>,
         )}
         <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
           <div className="min-w-0 space-y-6">
