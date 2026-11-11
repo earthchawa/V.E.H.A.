@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { CURRICULUM } from "./curriculum";
+import { CURRICULUM, curriculumNote, parseCurriculumNote } from "./curriculum";
 
 describe("curriculum", () => {
   it("has unique, well-formed codes in CS / MA", () => {
@@ -20,5 +20,15 @@ describe("curriculum", () => {
     expect(folder).toBeTruthy();
     const sql = readFileSync(join(dir, folder!, "migration.sql"), "utf8");
     for (const c of CURRICULUM) expect(sql).toContain(`'${c.code}', '${c.title.replace(/'/g, "''")}', '${c.titleTh}'`);
+  });
+});
+
+describe("parseCurriculumNote", () => {
+  it("reads back every generated note", () => {
+    for (const c of CURRICULUM) expect(parseCurriculumNote(curriculumNote(c))).toEqual({ year: c.year, credits: c.credits, hours: c.hours });
+  });
+  it("leaves hand-written descriptions alone", () => {
+    expect(parseCurriculumNote("Intro course for all cadets")).toBeNull();
+    expect(parseCurriculumNote(null)).toBeNull();
   });
 });

@@ -54,5 +54,14 @@ export function curriculumNote(c: CurriculumCourse): string {
   return `ชั้นปีที่ ${c.year} ${SEMESTER_TH[c.semester]} · ${c.credits} หน่วยกิต (บรรยาย-ปฏิบัติ-ทบทวน ${c.hours})`;
 }
 
+/**
+ * Read a curriculumNote() back into its parts, so the course header can show year level and credits in its
+ * top line. Returns null for a description an admin wrote by hand (shown as it is instead).
+ */
+export function parseCurriculumNote(note: string | null | undefined): { year: number; credits: number; hours: string } | null {
+  const m = note?.trim().match(/^ชั้นปีที่ (\d) \S+ · (\d+) หน่วยกิต \(บรรยาย-ปฏิบัติ-ทบทวน (\d+-\d+-\d+)\)$/);
+  return m ? { year: Number(m[1]), credits: Number(m[2]), hours: m[3] } : null;
+}
+
 /** Subject area each course belongs to, by code prefix. */
 export const curriculumDepartment = (code: string) => code.slice(0, 2);
