@@ -63,12 +63,15 @@ export function AddMaterialForm({ offeringId, maxMb, sections = [] }: { offering
         <label className="label" htmlFor="description">{t("mat.description")} <span className="text-subtle">{t("common.optional")}</span></label>
         <textarea id="description" name="description" rows={2} className="input" maxLength={2000} />
       </div>
-      <label className="flex items-center gap-2 text-sm text-muted">
-        <input type="checkbox" name="isPublished" defaultChecked role="switch" className="toggle" /> {t("mat.visible")}
-      </label>
+      <div className="rounded-lg border border-border text-sm">
+        <label className="flex cursor-pointer items-center justify-between gap-3 px-3 py-2.5">
+          {t("mat.visible")}
+          <input type="checkbox" name="isPublished" defaultChecked role="switch" className="toggle" />
+        </label>
+      </div>
       <SectionCheckboxes sections={sections} />
       <FormMessage state={clientError ? { error: clientError } : state} />
-      <SubmitButton className="btn w-full" pendingText={t("mat.uploading")}>{t("course.addMaterial")}</SubmitButton>
+      <SubmitButton pendingText={t("mat.uploading")}>{t("course.addMaterial")}</SubmitButton>
     </KeepForm>
   );
 }

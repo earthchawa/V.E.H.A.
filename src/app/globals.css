@@ -103,6 +103,22 @@ body {
   .btn-danger {
     @apply inline-flex h-8 items-center justify-center rounded-lg border border-red-500/25 px-3 text-xs font-medium text-danger transition hover:bg-red-500/10 disabled:opacity-50;
   }
+  /* "⋯" more-actions button and its menu (components/MoreMenu.tsx). */
+  .more-button {
+    @apply inline-grid h-9 w-9 place-items-center rounded-lg border border-border-strong text-muted transition hover:bg-surface-3 hover:text-fg aria-expanded:bg-surface-3 aria-expanded:text-fg;
+  }
+  .menu-item {
+    @apply flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-fg transition hover:bg-surface-3 focus-visible:bg-surface-3 focus-visible:outline-none;
+  }
+  .menu-item-danger {
+    @apply text-danger hover:bg-red-500/10 focus-visible:bg-red-500/10;
+  }
+  .menu-icon {
+    @apply grid w-4 flex-none place-items-center text-muted;
+  }
+  .menu-item-danger .menu-icon {
+    @apply text-danger;
+  }
   .card {
     @apply rounded-xl border border-border bg-surface p-5;
   }
@@ -260,6 +276,16 @@ dialog.modal[data-closing] {
 dialog.modal[data-closing]::backdrop {
   animation: backdrop-in 0.14s ease-in reverse forwards;
 }
+/* A row whose ⋯ menu is open sits above the rows after it (hover transforms make each row its own layer). */
+.row-link:has([aria-expanded="true"]) {
+  z-index: 10;
+}
+.menu-panel {
+  animation: menu-in 0.12s ease-out;
+}
+@keyframes menu-in {
+  from { opacity: 0; transform: translateY(-4px); }
+}
 @keyframes modal-in {
   from { opacity: 0; transform: translateY(12px) scale(0.97); }
 }
@@ -307,7 +333,7 @@ dialog.modal[data-closing]::backdrop {
 
 @media (prefers-reduced-motion: reduce) {
   dialog.modal[open], dialog.modal[open]::backdrop, dialog.modal[data-closing], dialog.modal[data-closing]::backdrop,
-  .toast, .toast[data-leaving], .page-in, .toggle, .toggle::after, .row-link, .row-chevron {
+  .toast, .toast[data-leaving], .page-in, .menu-panel, .toggle, .toggle::after, .row-link, .row-chevron {
     animation: none;
     transition: none;
   }

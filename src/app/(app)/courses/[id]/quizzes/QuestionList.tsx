@@ -1,6 +1,6 @@
 "use client";
 
-import { ConfirmForm } from "@/components/ConfirmForm";
+import { MoreMenu, MenuConfirm } from "@/components/MoreMenu";
 import { useEffect, useState, useTransition } from "react";
 import { useI18n } from "@/lib/i18n/client";
 import { Modal } from "@/components/Modal";
@@ -76,13 +76,20 @@ export function QuestionList({ quizId, questions }: { quizId: string; questions:
                   </button>
                 </form>
               ))}
-              <Modal label={t("qz.edit")} title={t("qz.question", { n: i + 1 })} buttonClassName="btn-secondary h-7" size="lg">
+              <Modal label={t("qz.edit")} title={t("qz.question", { n: i + 1 })} buttonClassName="btn-secondary h-9" size="lg">
                 <QuestionEditor quizId={quizId} draft={q} closeOnSuccess />
               </Modal>
-              <ConfirmForm action={deleteQuestionAction} message={t("qz.deleteQuestionConfirm")} confirmLabel={t("qz.delete")}>
-                <input type="hidden" name="questionId" value={q.id} />
-                <button className="btn-danger h-7">{t("qz.delete")}</button>
-              </ConfirmForm>
+              <MoreMenu testId="question-more">
+                <MenuConfirm
+                  action={deleteQuestionAction}
+                  name="questionId"
+                  value={q.id}
+                  message={t("qz.deleteQuestionConfirm")}
+                  label={t("qz.delete")}
+                  icon="✕"
+                  testId="delete-question"
+                />
+              </MoreMenu>
             </div>
           </div>
           <p className="mt-2 whitespace-pre-wrap text-sm">{q.prompt}</p>

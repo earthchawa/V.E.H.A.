@@ -8,19 +8,43 @@ import { CopyToSections } from "@/components/CopyToSections";
 import { Modal } from "@/components/Modal";
 import { getI18n } from "@/lib/i18n/server";
 import { AddMaterialForm } from "./AddMaterialForm";
-import { ConfirmButton } from "./grades/ConfirmButton";
+import { MoreMenu, MenuConfirm } from "@/components/MoreMenu";
 import { copyMaterialAction, deleteMaterialAction, toggleMaterialAction } from "./actions";
 
 export default async function CourseMaterialsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { user, offering, canManage, students } = await loadCourse(id);
   const siblings = canManage ? await siblingSections(user, offering.id) : [];
-  const { t, date } = await getI18n();
+  const { t, lang } = await getI18n();
 
   const materials = await db.material.findMany({
     where: { offeringId: offering.id, ...(canManage ? {} : { isPublished: true }) },
     orderBy: [{ week: "asc" }, { createdAt: "asc" }],
   });
+  // Cadets grouped by year level (in this semester's academic year) and programme, for the side panel.
+  const profiles = canManage
+    ? await db.user.findMany({
+        where: { id: { in: students.map((e) => e.user.id) } },
+        select: {
+          id: true,
+          department: { select: { code: true, name: true, nameTh: true } },
+          cadetYears: { where: { academicYear: offering.term.academicYear }, select: { yearLevel: true } },
+        },
+      })
+    : [];
+  const profileOf = new Map(profiles.map((p) => [p.id, p]));
+  const groupMap = new Map<string, { key: string; level: number | null; dept: string | null; cadets: (typeof students)[number]["user"][] }>();
+  for (const e of students) {
+    const p = profileOf.get(e.user.id);
+    const level = p?.cadetYears[0]?.yearLevel ?? null;
+    const d = p?.department;
+    const key = `${level ?? 99}|${d?.code ?? "~"}`;
+    const g = groupMap.get(key) ?? { key, level, dept: d ? (lang === "th" && d.nameTh ? d.nameTh : d.name) : null, cadets: [] };
+    g.cadets.push(e.user);
+    groupMap.set(key, g);
+  }
+  const cadetGroups = [...groupMap.values()].sort((a, b) => a.key.localeCompare(b.key, undefined, { numeric: true }));
+
   const byWeek = new Map<number | null, Material[]>();
   for (const m of materials) byWeek.set(m.week, [...(byWeek.get(m.week) ?? []), m]);
   const groups = [...byWeek.entries()].sort(([a], [b]) => (a ?? -1) - (b ?? -1));
@@ -48,45 +72,63 @@ export default async function CourseMaterialsPage({ params }: { params: Promise<
                 <h3 className="mb-2 text-xs font-medium uppercase tracking-wider text-subtle">
                   {week == null ? t("course.general") : week === 0 ? t("course.beforeClass") : t("course.week", { n: week })}
                 </h3>
-                <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface">
-                  {items.map((m) => (
-                    <li key={m.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
-                      <span className="badge w-10 justify-center bg-surface-3 font-mono text-muted">
-                        {m.type === "FILE" ? (m.fileName?.split(".").pop()?.slice(0, 4).toUpperCase() ?? "FILE") : "LINK"}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <a
-                            href={m.type === "FILE" ? `/api/materials/${m.id}/download` : m.url!}
-                            target={m.type === "LINK" ? "_blank" : undefined}
-                            rel="noopener noreferrer"
-                            className="font-medium transition hover:text-accent"
-                          >
-                            {m.title}
+                <ul className="divide-y divide-border rounded-xl border border-border bg-surface">
+                  {items.map((m) => {
+                    const href = m.type === "FILE" ? `/api/materials/${m.id}/download` : m.url!;
+                    const link = m.type === "LINK" ? { target: "_blank", rel: "noopener noreferrer" } : {};
+                    return (
+                      <li key={m.id} className="row-link relative flex flex-wrap items-center gap-3 px-4 py-3 first:rounded-t-xl last:rounded-b-xl" data-testid="material-row">
+                        <span className="badge w-10 justify-center bg-surface-3 font-mono text-muted">
+                          {m.type === "FILE" ? (m.fileName?.split(".").pop()?.slice(0, 4).toUpperCase() ?? "FILE") : "LINK"}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            {/* The title link covers the whole row; the controls on the right sit above it. */}
+                            <a href={href} {...link} className="font-medium after:absolute after:inset-0 after:rounded-[inherit]">
+                              {m.title}
+                            </a>
+                            {!m.isPublished && <span className="badge bg-amber-500/10 text-warning">{t("course.hidden")}</span>}
+                          </div>
+                          {m.description && <p className="mt-0.5 text-sm text-muted">{m.description}</p>}
+                          {m.fileName && (
+                            <p className="mt-0.5 break-all text-xs text-subtle">
+                              {m.fileName} · {formatBytes(m.sizeBytes)}
+                            </p>
+                          )}
+                        </div>
+                        <div className={`relative z-[1] flex items-center gap-2 ${canManage ? "w-full justify-end sm:w-auto" : ""}`}>
+                          {canManage && (
+                            <form action={toggleMaterialAction}>
+                              <input type="hidden" name="materialId" value={m.id} />
+                              <button role="switch" aria-checked={m.isPublished} className="flex h-9 items-center gap-2 rounded-lg px-1.5 text-xs text-muted transition hover:text-fg" data-testid="material-visible">
+                                <span className="toggle" data-on={m.isPublished} />
+                                {t("mat.visible")}
+                              </button>
+                            </form>
+                          )}
+                          <a href={href} {...link} className="btn-secondary h-9 px-3" data-testid="material-download">
+                            <span aria-hidden>{m.type === "FILE" ? "↓" : "↗"}</span>
+                            <span className="hidden sm:inline">{t(m.type === "FILE" ? "mat.download" : "mat.openLink")}</span>
+                            <span className="sr-only sm:hidden">{t(m.type === "FILE" ? "mat.download" : "mat.openLink")}</span>
                           </a>
-                          {!m.isPublished && <span className="badge bg-amber-500/10 text-warning">{t("course.hidden")}</span>}
+                          {canManage && (
+                            <MoreMenu testId="material-more">
+                              <CopyToSections action={copyMaterialAction} itemId={m.id} sections={siblings} kind="material" itemTitle={m.title} menuItem />
+                              <MenuConfirm
+                                action={deleteMaterialAction}
+                                name="materialId"
+                                value={m.id}
+                                message={t("mat.deleteConfirm", { title: m.title })}
+                                label={t("course.delete")}
+                                icon="✕"
+                                testId="material-delete"
+                              />
+                            </MoreMenu>
+                          )}
                         </div>
-                        {m.description && <p className="mt-0.5 text-sm text-muted">{m.description}</p>}
-                        <p className="mt-0.5 text-xs text-subtle">
-                          {m.fileName && `${m.fileName} · ${formatBytes(m.sizeBytes)} · `}
-                          {date(m.createdAt)}
-                        </p>
-                      </div>
-                      {canManage && (
-                        <div className="flex flex-wrap items-center gap-2">
-                          <CopyToSections action={copyMaterialAction} itemId={m.id} sections={siblings} kind="material" itemTitle={m.title} />
-                          <form action={toggleMaterialAction}>
-                            <input type="hidden" name="materialId" value={m.id} />
-                            <button role="switch" aria-checked={m.isPublished} className="flex h-8 items-center gap-2 rounded-lg px-1.5 text-xs text-muted transition hover:text-fg" data-testid="material-visible">
-                              <span className="toggle" data-on={m.isPublished} />
-                              {t("mat.visible")}
-                            </button>
-                          </form>
-                          <ConfirmButton action={deleteMaterialAction} name="materialId" value={m.id} message={t("mat.deleteConfirm", { title: m.title })} label={t("course.delete")} />
-                        </div>
-                      )}
-                    </li>
-                  ))}
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             ))}
@@ -95,16 +137,29 @@ export default async function CourseMaterialsPage({ params }: { params: Promise<
 
         {canManage && (
           <aside className="space-y-6">
-            <section className="card">
+            <section className="card" data-testid="course-cadets">
               <h2 className="card-title">{t("course.cadets")} <span className="font-normal text-subtle">{students.length}</span></h2>
-              <ul className="max-h-96 space-y-1.5 overflow-y-auto text-sm">
-                {students.map((e) => (
-                  <li key={e.id} className="flex gap-3">
-                    <span className="font-mono text-xs leading-5 text-subtle">{e.user.username}</span>
-                    <span>{e.user.fullName}</span>
-                  </li>
+              <div className="max-h-96 space-y-4 overflow-y-auto text-sm">
+                {cadetGroups.map((g) => (
+                  <div key={g.key}>
+                    {/* Year level (this semester's academic year) and programme of this group of cadets. */}
+                    <h3 className="mb-1.5 flex flex-wrap items-baseline gap-x-1.5 border-b border-border pb-1 text-xs font-medium text-muted" data-testid="cadet-group">
+                      <span className="text-fg">{g.level != null ? t("yl.level", { n: g.level }) : t("yl.none")}</span>
+                      <span aria-hidden>·</span>
+                      <span>{g.dept ?? t("course.noDept")}</span>
+                      <span className="ml-auto font-normal text-subtle">{g.cadets.length}</span>
+                    </h3>
+                    <ul className="space-y-1.5">
+                      {g.cadets.map((u) => (
+                        <li key={u.id} className="flex gap-3">
+                          <span className="font-mono text-xs leading-5 text-subtle">{u.username}</span>
+                          <span>{u.fullName}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 ))}
-              </ul>
+              </div>
             </section>
           </aside>
         )}

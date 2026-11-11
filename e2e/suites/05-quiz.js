@@ -140,7 +140,7 @@ const ok = (c, m) => { if (!c) throw new Error('FAIL: ' + m); console.log('PASS'
   ok(await c3.getByTestId('quiz-blocked').count() === 0 && await c3.getByRole('button', { name: 'Start quiz' }).count() === 1, 'SEB switched off: requireSeb ignored, normal browser can start');
   // Instructor switches back to a normal browser but restricts the quiz to the "CS Lab 301" exam room (10.20.3.0/24).
   await tp.goto(quizBase);
-  await tp.getByTestId('quiz-settings').click();
+  await tp.getByTestId('quiz-more').click(); await tp.getByTestId('quiz-settings').click();
   await tp.getByLabel('Only in these exam rooms').check();
   await tp.getByLabel('CS Lab 301').check();
   await tp.getByRole('button', { name: 'Save settings' }).click();

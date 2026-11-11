@@ -21,7 +21,10 @@ export function CopyToSections({
   sections,
   kind,
   itemTitle,
+  menuItem = false,
 }: {
+  /** Render the trigger as an item of a <MoreMenu>. */
+  menuItem?: boolean;
   action: (state: FormState, fd: FormData) => Promise<FormState>;
   itemId: string;
   sections: SectionRef[];
@@ -32,7 +35,12 @@ export function CopyToSections({
   const { t } = useI18n();
   if (!sections.length) return null;
   return (
-    <Modal label={<><span aria-hidden>⧉</span> {t("sec.copyTo")}</>} title={t("sec.copyTitle")} buttonClassName="btn-secondary" testId={`copy-${kind}`}>
+    <Modal
+      label={<><span className={menuItem ? "menu-icon" : undefined} aria-hidden>⧉</span> {t("sec.copyTo")}</>}
+      title={t("sec.copyTitle")}
+      buttonClassName={menuItem ? "menu-item" : "btn-secondary"}
+      testId={`copy-${kind}`}
+    >
       <CopyForm action={action} itemId={itemId} sections={sections} kind={kind} itemTitle={itemTitle} />
     </Modal>
   );

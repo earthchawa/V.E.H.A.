@@ -17,7 +17,7 @@ const ok = (c, m) => { if (!c) throw new Error('FAIL: ' + m); console.log('PASS'
   await p.getByRole('button', { name: 'Create quiz' }).click(); await p.waitForURL(/quizzes\/[^/]+$/);
   ok(true, 'quiz created (draft)');
   // publishing without questions is refused
-  await p.getByTestId('quiz-settings').click();
+  await p.getByTestId('quiz-more').click(); await p.getByTestId('quiz-settings').click();
   await p.getByLabel('Visible to cadets').check();
   await p.getByRole('button', { name: 'Save settings' }).click();
   await p.getByText('Add questions before publishing.').waitFor();
@@ -61,7 +61,7 @@ const ok = (c, m) => { if (!c) throw new Error('FAIL: ' + m); console.log('PASS'
   await p.reload();
   ok((await p.getByTestId('builder-question').nth(0).textContent()).includes('Pick the DML'), 'drag and drop reorder is saved');
   // publish
-  await p.getByTestId('quiz-settings').click();
+  await p.getByTestId('quiz-more').click(); await p.getByTestId('quiz-settings').click();
   await p.getByLabel('Visible to cadets').check();
   await p.getByRole('button', { name: 'Save settings' }).click();
   await p.locator('dialog[open]').waitFor({ state: 'hidden' });

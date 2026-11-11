@@ -73,9 +73,11 @@ export function QuizForm({
       </span>
     </label>
   );
+  // On/off settings: one row each, label on the left, switch on the right (as in the assignment form).
   const check = (name: keyof QuizDefaults, label: string) => (
-    <label className="flex items-center gap-2">
-      <input type="checkbox" name={name} defaultChecked={d[name] as boolean} role="switch" className="toggle" /> {label}
+    <label className="flex cursor-pointer items-center justify-between gap-3 px-3 py-2.5">
+      {label}
+      <input type="checkbox" name={name} defaultChecked={d[name] as boolean} role="switch" className="toggle" />
     </label>
   );
   return (
@@ -98,7 +100,7 @@ export function QuizForm({
           <input id="qz-close" name="closesAt" type="datetime-local" className="input" defaultValue={d.closesAt} />
         </div>
       </div>
-      <div className="grid grid-cols-[8rem_1fr] gap-3">
+      <div className="grid grid-cols-[7rem_1fr] gap-3">
         <div>
           <label className="label flex items-center gap-1.5" htmlFor="qz-limit">{t("qz.f.timeLimit")} <InfoTip text={t("qz.f.timeLimitHint")} align="start" /></label>
           <input id="qz-limit" name="timeLimitMin" inputMode="numeric" className="input" defaultValue={d.timeLimitMin} />
@@ -111,10 +113,10 @@ export function QuizForm({
           </select>
         </div>
       </div>
-      <div className="space-y-2 text-sm text-muted">
+      <div className="divide-y divide-border rounded-lg border border-border text-sm">
+        {quizId && check("isPublished", t("qz.f.published"))}
         {check("shuffleQuestions", t("qz.f.shuffleQuestions"))}
         {check("shuffleOptions", t("qz.f.shuffleOptions"))}
-        {quizId && check("isPublished", t("qz.f.published"))}
       </div>
       <div>
         <label className="label" htmlFor="qz-results">{t("qz.f.results")}</label>
