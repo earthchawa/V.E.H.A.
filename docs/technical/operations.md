@@ -83,7 +83,7 @@ classroom.nkrafa.ac.th {
 | `COOKIE_SECURE` | `true` เมื่อ production | ส่ง cookie เฉพาะผ่าน HTTPS |
 | `UPLOAD_DIR` | `./storage/uploads` (Docker: `/data/uploads`) | ที่เก็บไฟล์อัปโหลด |
 | `STORAGE_DRIVER` | `disk` (Vercel: `blob` ถ้าเชื่อม Blob store แล้ว ไม่เช่นนั้น `db`) | ที่เก็บของไฟล์**ใหม่**: `disk`, `db` หรือ `blob` ไฟล์เดิมยังอ่านได้จากที่เก็บเดิม |
-| `BLOB_READ_WRITE_TOKEN` | — | Vercel ตั้งให้เองเมื่อเชื่อม Blob store กับโปรเจกต์ มีค่านี้แล้วระบบใช้ Blob ทันที |
+| `BLOB_STORE_ID` หรือ `BLOB_READ_WRITE_TOKEN` | — | Vercel ตั้งให้เองเมื่อเชื่อม Blob store กับโปรเจกต์ (แบบใหม่ได้ `BLOB_STORE_ID` + `BLOB_WEBHOOK_PUBLIC_KEY` และใช้ OIDC; แบบเดิมได้ token) มีค่าใดค่าหนึ่งแล้วระบบใช้ Blob ทันที |
 | `MAX_UPLOAD_MB` | `50` (Vercel ที่ไม่มี Blob: `4`) | ขนาดอัปโหลดสูงสุดต่อครั้ง (งานส่งยังจำกัดไฟล์ละ 20 MB, ไม่เกิน 5 ไฟล์) |
 | `ANTHROPIC_API_KEY` | — | เปิดปุ่ม "คำตอบจาก AI" ในคลังแหล่งอ้างอิง (มีค่าใช้จ่ายตามการใช้ API) |
 | `AI_ANSWER_MODEL` | `claude-opus-5-5` | โมเดลที่ใช้สร้างคำตอบ AI |

@@ -989,7 +989,7 @@ export const th: Record<Key, string> = {
   "sys.move.done": "ย้ายแล้ว {moved} ไฟล์ ไม่มีไฟล์เหลือในฐานข้อมูล",
   "sys.move.failed": "การย้ายหยุดลง: {reason}",
   "sys.services": "บริการเสริม",
-  "sys.svc.blob": "ที่เก็บไฟล์ Vercel Blob (BLOB_READ_WRITE_TOKEN)",
+  "sys.svc.blob": "ที่เก็บไฟล์ Vercel Blob (BLOB_STORE_ID หรือ BLOB_READ_WRITE_TOKEN)",
   "sys.svc.ai": "สร้างคำตอบ AI สำหรับเทียบ (ANTHROPIC_API_KEY)",
   "sys.svc.email": "รีเซ็ตรหัสผ่านทางอีเมล (SMTP_HOST)",
   "log.backup.downloaded": "ดาวน์โหลดข้อมูลสำรอง",

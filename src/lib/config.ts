@@ -1,5 +1,13 @@
 const onVercel = !!process.env.VERCEL;
-const hasBlob = !!process.env.BLOB_READ_WRITE_TOKEN;
+/**
+ * A Blob store is connected either the classic way (BLOB_READ_WRITE_TOKEN) or the newer way Vercel now uses by
+ * default: OIDC with BLOB_STORE_ID (no read-write token). The SDK picks the credentials up by itself on the server;
+ * browser uploads differ (classic: client token from handleUpload; OIDC: presigned URL from handleUploadPresigned).
+ */
+const blobAuth: "token" | "oidc" | null = process.env.BLOB_READ_WRITE_TOKEN
+  ? "token"
+  : process.env.BLOB_STORE_ID ? "oidc" : null;
+const hasBlob = blobAuth !== null;
 const blobDriver = (process.env.STORAGE_DRIVER ?? (hasBlob ? "blob" : "")) === "blob";
 
 export const config = {
@@ -10,7 +18,7 @@ export const config = {
   ).replace(/\/$/, ""),
   /**
    * Where NEW uploads go: "disk" (self-hosted default), "blob" (Vercel Blob; the default as soon as a Blob store
-   * is connected, i.e. BLOB_READ_WRITE_TOKEN is set) or "db" (bytes in Postgres; Vercel without a Blob store).
+   * is connected, i.e. BLOB_READ_WRITE_TOKEN or BLOB_STORE_ID is set) or "db" (bytes in Postgres; Vercel without a Blob store).
    * Files saved earlier stay readable after a switch: a key tells which store it is in (lib/storage.ts).
    */
   storageDriver: (process.env.STORAGE_DRIVER ?? (hasBlob ? "blob" : onVercel ? "db" : "disk")) as "disk" | "db" | "blob",
@@ -19,6 +27,7 @@ export const config = {
     ? process.env.STORAGE_DRIVER
     : onVercel ? "db" : "disk") as "disk" | "db",
   hasBlob,
+  blobAuth,
   uploadDir: process.env.UPLOAD_DIR ?? "./storage/uploads",
   cookieSecure: process.env.COOKIE_SECURE
     ? process.env.COOKIE_SECURE !== "false"

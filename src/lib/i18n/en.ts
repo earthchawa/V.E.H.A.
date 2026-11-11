@@ -1005,7 +1005,7 @@ export const en = {
   "sys.move.done": "Moved {moved} files. Nothing is left in the database.",
   "sys.move.failed": "Moving stopped: {reason}",
   "sys.services": "Optional services",
-  "sys.svc.blob": "Vercel Blob file storage (BLOB_READ_WRITE_TOKEN)",
+  "sys.svc.blob": "Vercel Blob file storage (BLOB_STORE_ID or BLOB_READ_WRITE_TOKEN)",
   "sys.svc.ai": "AI reference answers (ANTHROPIC_API_KEY)",
   "sys.svc.email": "Password reset by email (SMTP_HOST)",
   "log.backup.downloaded": "Backup downloaded",

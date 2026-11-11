@@ -470,7 +470,7 @@ stateDiagram-v2
 |---|---|---|---|
 | `disk` | ติดตั้งภายใน (ค่าเริ่มต้น) | `UPLOAD_DIR` (Docker: volume `uploads`) | `<uuid>` |
 | `db` | Vercel ที่ยังไม่เชื่อม Blob | ตาราง `StoredFile` | `<uuid>` |
-| `blob` | Vercel ที่เชื่อม Blob store แล้ว (มี `BLOB_READ_WRITE_TOKEN`) | Vercel Blob แบบ private | `f/<uuid>` (เซิร์ฟเวอร์บันทึก) หรือ `u/<userId>/<uuid>` (เบราว์เซอร์อัปโหลดตรง) |
+| `blob` | Vercel ที่เชื่อม Blob store แล้ว (มี `BLOB_STORE_ID` หรือ `BLOB_READ_WRITE_TOKEN`; แบบ OIDC เบราว์เซอร์อัปโหลดผ่าน presigned URL) | Vercel Blob แบบ private | `f/<uuid>` (เซิร์ฟเวอร์บันทึก) หรือ `u/<userId>/<uuid>` (เบราว์เซอร์อัปโหลดตรง) |
 
 - **driver มีผลกับไฟล์ใหม่เท่านั้น** การอ่าน/ลบดูจากรูปแบบ key ไฟล์ที่บันทึกก่อนเปลี่ยน driver จึงยังใช้ได้ และผู้ดูแลระบบย้ายไฟล์จาก `StoredFile` ไป Blob ได้จากหน้า "ระบบ" (`moveDbFilesToBlob`)
 - **อัปโหลดตรงจากเบราว์เซอร์ (เฉพาะ `blob`):** `<KeepForm directUpload>` อัปโหลดไฟล์ไป Blob ก่อน (`components/direct-upload.tsx`) แล้วส่ง "reference" แทนไฟล์ ฝั่ง server action อ่านด้วย `incomingFiles()` (`lib/uploads.ts`) ซึ่งรับทั้งไฟล์จริงและ reference จึงไม่ติดเพดาน request 4.5 MB ของ Vercel

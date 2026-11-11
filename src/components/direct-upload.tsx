@@ -1,10 +1,13 @@
 "use client";
 
 import { createContext, useContext } from "react";
-import { upload } from "@vercel/blob/client";
+import { upload, uploadPresigned } from "@vercel/blob/client";
 
-/** Set in the app shell: whether files go straight from the browser to Blob storage, and under which prefix. */
-export type UploadConfig = { direct: boolean; prefix: string };
+/**
+ * Set in the app shell: whether files go straight from the browser to Blob storage, under which prefix, and
+ * whether the store uses OIDC (presigned URLs) rather than a read-write token (client tokens).
+ */
+export type UploadConfig = { direct: boolean; prefix: string; presigned?: boolean };
 const UploadContext = createContext<UploadConfig>({ direct: false, prefix: "" });
 export function UploadProvider({ value, children }: { value: UploadConfig; children: React.ReactNode }) {
   return <UploadContext.Provider value={value}>{children}</UploadContext.Provider>;
@@ -28,7 +31,8 @@ export async function uploadFormFiles(fd: FormData, cfg: UploadConfig, onProgres
     if (!(value instanceof File)) out.append(name, value);
     else if (value.size > 0) {
       const key = `${cfg.prefix}${crypto.randomUUID()}`;
-      await upload(key, value, {
+      const send = cfg.presigned ? uploadPresigned : upload;
+      await send(key, value, {
         access: "private",
         handleUploadUrl: "/api/blob/upload",
         contentType: value.type || "application/octet-stream",
