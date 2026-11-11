@@ -24,16 +24,26 @@ export default async function CourseLayout({ params, children }: { params: Promi
     <div className={theme.className} style={theme.style}>
       <header className="mb-6 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
         <div className="min-w-0">
-          <div className="cc-text mb-1 font-mono text-xs" data-testid="course-meta">
+          <div className="cc-text mb-1 flex flex-wrap font-mono text-xs" data-testid="course-meta">
+            {/* Each part stays on one line; the line wraps between parts on narrow screens. */}
             {[
               offering.course.code,
               multiSection ? t("dash.section", { s: offering.section }) : null,
               // "ชั้นปีที่ 3 ภาคเรียนที่ 2/2569" when the curriculum note gives the year level.
               note ? `${t("yl.level", { n: note.year })} ${term(offering.term)}` : term(offering.term),
-              note ? t("course.credits", { n: note.credits, h: note.hours }) : null,
+              note
+                ? t("course.credits", { n: note.credits, h: note.hours })
+                : offering.course.credits
+                  ? t("course.creditsOnly", { n: offering.course.credits })
+                  : null,
             ]
-              .filter(Boolean)
-              .join(" · ")}
+              .filter((x): x is string => !!x)
+              .map((part, i, all) => (
+                <span key={i} className="whitespace-nowrap">
+                  {part}
+                  {i < all.length - 1 && <span className="px-1.5" aria-hidden>·</span>}
+                </span>
+              ))}
           </div>
           <h1 className="text-2xl font-semibold tracking-tight">{offering.course.title}</h1>
           {offering.course.titleTh && <div className="mt-1 text-sm text-muted">{offering.course.titleTh}</div>}

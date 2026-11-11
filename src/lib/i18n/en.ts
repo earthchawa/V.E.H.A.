@@ -138,6 +138,7 @@ export const en = {
   "course.cadets": "Cadets",
   "course.noDept": "No department",
   "course.credits": "{n} credits (lecture-lab-self-study {h})",
+  "course.creditsOnly": "{n} credits",
   "mat.upload": "Upload file",
   "mat.link": "Add link",
   "mat.title": "Title",
