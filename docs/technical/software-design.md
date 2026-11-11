@@ -466,12 +466,30 @@ stateDiagram-v2
 
 ### 6.12 ที่เก็บไฟล์ (`lib/storage.ts`)
 
-| driver | ใช้เมื่อ | ที่เก็บ |
-|---|---|---|
-| `disk` | ติดตั้งภายใน (ค่าเริ่มต้น) | `UPLOAD_DIR` (Docker: volume `uploads`) |
-| `db` | Vercel (ค่าเริ่มต้นบน Vercel) | ตาราง `StoredFile` |
+| driver | ใช้เมื่อ | ที่เก็บ | รูปแบบ key |
+|---|---|---|---|
+| `disk` | ติดตั้งภายใน (ค่าเริ่มต้น) | `UPLOAD_DIR` (Docker: volume `uploads`) | `<uuid>` |
+| `db` | Vercel ที่ยังไม่เชื่อม Blob | ตาราง `StoredFile` | `<uuid>` |
+| `blob` | Vercel ที่เชื่อม Blob store แล้ว (มี `BLOB_READ_WRITE_TOKEN`) | Vercel Blob แบบ private | `f/<uuid>` (เซิร์ฟเวอร์บันทึก) หรือ `u/<userId>/<uuid>` (เบราว์เซอร์อัปโหลดตรง) |
 
-ทุกการดาวน์โหลดผ่าน route handler ที่ตรวจสิทธิ์ ไม่มี URL ตรงไปที่ไฟล์
+- **driver มีผลกับไฟล์ใหม่เท่านั้น** การอ่าน/ลบดูจากรูปแบบ key ไฟล์ที่บันทึกก่อนเปลี่ยน driver จึงยังใช้ได้ และผู้ดูแลระบบย้ายไฟล์จาก `StoredFile` ไป Blob ได้จากหน้า "ระบบ" (`moveDbFilesToBlob`)
+- **อัปโหลดตรงจากเบราว์เซอร์ (เฉพาะ `blob`):** `<KeepForm directUpload>` อัปโหลดไฟล์ไป Blob ก่อน (`components/direct-upload.tsx`) แล้วส่ง "reference" แทนไฟล์ ฝั่ง server action อ่านด้วย `incomingFiles()` (`lib/uploads.ts`) ซึ่งรับทั้งไฟล์จริงและ reference จึงไม่ติดเพดาน request 4.5 MB ของ Vercel
+- **ความปลอดภัยของการอัปโหลดตรง:** `/api/blob/upload` ออก token อายุ 10 นาทีให้เฉพาะผู้ที่เข้าสู่ระบบ สำหรับ pathname ใต้ `u/<id ของตัวเอง>/` เท่านั้น จำกัดขนาด และห้ามเขียนทับ ฝั่ง action ยอมรับ reference เฉพาะ prefix ของผู้ส่งเอง และอ่านขนาดจริงจาก store ไม่เชื่อค่าที่เบราว์เซอร์ส่งมา การตรวจสิทธิ์ว่าไฟล์นี้ใช้ทำอะไรได้ยังอยู่ใน action เดิม
+- ทุกการดาวน์โหลดผ่าน route handler ที่ตรวจสิทธิ์ ไม่มี URL ตรงไปที่ไฟล์ (ไฟล์ใน Blob เป็น private และถูก stream ผ่าน route)
+
+### 6.13 สำรองและกู้คืน (`lib/backup.ts`, `scripts/restore-backup.ts`, หน้า "ระบบ")
+
+- **ฐานข้อมูล:** `/api/admin/backup` stream ไฟล์ gzip NDJSON บรรทัดแรกเป็น header (format, version, migration ล่าสุด, รายชื่อตาราง) บรรทัดถัดไปเป็น `{t, rows}` โดย rows มาจาก `row_to_json` ของ PostgreSQL ทีละหน้าตาม primary key รายชื่อตารางอ่านจาก `pg_tables` จึงครอบคลุมตารางใหม่เอง ไม่รวม `Session`, `PasswordResetToken`, `_prisma_migrations`
+- **ไฟล์:** `/api/admin/backup/files` stream ไฟล์ tar (`files/<key>` + `manifest.json`)
+- **กู้คืน:** สคริปต์ตรวจว่า migration ตรงกัน เรียงตารางตาม foreign key (`restoreOrder`) แล้วใส่ข้อมูลด้วย `jsonb_populate_recordset` ภายใน transaction เดียว ปฏิเสธฐานข้อมูลที่มีบัญชีอยู่แล้วถ้าไม่ใส่ `--wipe`
+- ชุด e2e 22 ทดสอบรอบเต็ม: ดาวน์โหลด → แก้ข้อมูล → กู้คืน → เทียบ fingerprint ของตาราง
+
+### 6.14 คำตอบจาก AI สำหรับเทียบ (`lib/ai-answers.ts`)
+
+- ปุ่มในคลังแหล่งอ้างอิง (เฉพาะเมื่อตั้ง `ANTHROPIC_API_KEY`) เรียก Claude API 3 คำขอขนานกัน แต่ละคำขอใช้คำสั่งงานเป็นโจทย์และต่างกันที่ "สไตล์" (ตอบเต็ม / ตอบสั้น / เขียนแบบนักเรียน) แล้วบันทึกคำตอบเป็น `SimilaritySource` ชนิด `DOCUMENT` (ชื่อขึ้นต้น "AI ·") และตรวจงานใหม่
+- ส่งออกเฉพาะชื่องาน คำสั่งงาน และข้อความตั้งต้น ไม่ส่งงานของ นนอ.
+- ใช้ streaming (`.stream().finalMessage()`), `effort: "low"`, และ server-side fallback (`fallbacks: "default"`) เผื่อคำขอถูกปฏิเสธ
+- **ข้อจำกัดโดยธรรมชาติ:** เป็นการเทียบถ้อยคำ ไม่ใช่การตรวจจับงานที่เขียนด้วย AI ผลของแชตบอตไม่ซ้ำกันทุกครั้ง จึงได้ผลกับโค้ดและข้อความมาตรฐานมากกว่าเรียงความ
 
 ---
 
@@ -515,6 +533,7 @@ stateDiagram-v2
 | หัวข้อ | สถานะ | แนวทาง |
 |---|---|---|
 | ตรวจความคล้ายกับอินเทอร์เน็ตอัตโนมัติ | ยังไม่ทำ | ใช้ Copyleaks หรือบริการคล้ายกันเมื่อมีงบ เพิ่มเป็น `SourceKind` ใหม่ที่เขียนลง `SourceMatch` |
+| เทียบกับคำตอบจาก AI | ทำแล้ว (เปิดด้วย `ANTHROPIC_API_KEY`) | เป็นการเทียบถ้อยคำกับคำตอบที่ระบบสร้าง ไม่ใช่ตัวตรวจจับ AI |
 | ตรวจงานที่เขียนด้วย AI | ยังไม่ทำ | ผลต้องเป็นไฮไลต์สีเหลือง "ควรตรวจสอบ" ที่อาจารย์เห็นเท่านั้น ห้ามแสดงเป็นข้อกล่าวหา |
 | ลืมรหัสผ่านทางอีเมล | ปิดไว้ (ให้ติดต่อผู้ดูแลระบบ) | เปิดเองอัตโนมัติเมื่อตั้ง `SMTP_HOST` |
 | Safe Exam Browser | ปิดไว้ | `SEB_ENABLED=true` |
