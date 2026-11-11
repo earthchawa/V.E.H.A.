@@ -27,6 +27,8 @@ export default async function CourseLayout({ params, children }: { params: Promi
           </div>
           <h1 className="text-2xl font-semibold tracking-tight">{offering.course.title}</h1>
           {offering.course.titleTh && <div className="mt-1 text-sm text-muted">{offering.course.titleTh}</div>}
+          {/* Curriculum note (year, half, credits): small, under the title instead of under the tabs. */}
+          {offering.course.description && <div className="mt-1 text-xs text-subtle" data-testid="course-description">{offering.course.description}</div>}
         </div>
         <div className="flex shrink-0 items-center gap-3 md:flex-row-reverse md:text-right">
           {logo && (
