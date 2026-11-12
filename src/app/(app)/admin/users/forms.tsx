@@ -3,7 +3,7 @@
 import { KeepForm } from "@/components/KeepForm";
 import { useActionState } from "react";
 import { useState } from "react";
-import { createUserAction, importUsersAction, promoteCadetsAction, resetUserPasswordAction, toggleUserActiveAction, updateUserAction } from "../actions";
+import { createUserAction, importUsersChunkAction, promoteCadetsAction, resetUserPasswordAction, toggleUserActiveAction, updateUserAction } from "../actions";
 import { DEFAULT_FINAL_YEAR, YEAR_LEVELS } from "@/lib/year-level";
 import { FormMessage } from "@/components/FormMessage";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -12,6 +12,8 @@ import { FileDropzone } from "@/components/FileDropzone";
 import { useI18n } from "@/lib/i18n/client";
 import { InfoTip } from "@/components/InfoTip";
 import { ConfirmForm } from "@/components/ConfirmForm";
+import { parseUserImport, toCsv, USER_IMPORT_CHUNK } from "@/lib/csv";
+import type { FormState } from "@/lib/form";
 
 /** Year level picker for cadets; `academicYear` tells which year the value is recorded for. */
 function YearLevelField({ id, academicYear, defaultValue }: { id: string; academicYear: number; defaultValue?: number | null }) {
@@ -76,8 +78,48 @@ export function CreateUserForm({ departments = [], academicYear }: { departments
 }
 
 export function ImportUsersForm() {
-  const [state, action, pending] = useActionState(importUsersAction, undefined);
-  const { t } = useI18n();
+  const { t, tn, tm } = useI18n();
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  // The whole file is checked here first (so errors carry the file's line numbers), then sent in slices:
+  // creating hundreds of accounts in one request would run past the server's time limit.
+  const run = async (_: FormState, fd: FormData): Promise<FormState> => {
+    const file = fd.get("file");
+    const text = file instanceof File && file.size > 0 ? await file.text() : String(fd.get("csv") ?? "");
+    if (!text.trim()) return { error: t("err.csvMissing") };
+    const { rows, errors } = parseUserImport(text);
+    if (errors.length) return { error: t("err.csvRows", { rows: errors.slice(0, 10).map(tm).join("\n") }) };
+    if (!rows.length) return { error: t("err.csvMissing") };
+    const reissue = fd.get("reissue") === "on";
+    const issued: Issued[] = [];
+    const skipped: string[] = [];
+    let reissued = 0, yearSet = 0, academicYear = 0;
+    const summary = () =>
+      tn("ok.imported", issued.length - reissued) +
+      (reissued ? t("ok.importReissued", { n: reissued }) : "") +
+      (yearSet ? t("ok.importYearSet", { n: yearSet, year: academicYear }) : "") +
+      (skipped.length ? t("ok.importSkipped", { n: skipped.length, list: skipped.join(", ") }) : "");
+    try {
+      for (let i = 0; i < rows.length; i += USER_IMPORT_CHUNK) {
+        setProgress({ done: i, total: rows.length });
+        const slice = rows.slice(i, i + USER_IMPORT_CHUNK)
+          .map((r) => [r.username, r.fullName, r.role, r.email, r.department, r.password, r.yearLevel]);
+        const res = await importUsersChunkAction(toCsv(slice), reissue);
+        if ("error" in res) return { error: res.error + (issued.length ? "\n" + summary() : ""), data: issued };
+        issued.push(...res.issued, ...res.reissued);
+        reissued += res.reissued.length;
+        skipped.push(...res.skipped);
+        yearSet += res.yearSet;
+        academicYear = res.academicYear;
+      }
+    } catch {
+      // Accounts created so far stay; their passwords are still shown. Importing the file again skips them.
+      return { error: t("users.importBroken", { done: issued.length, total: rows.length }) + (issued.length ? "\n" + summary() : ""), data: issued };
+    } finally {
+      setProgress(null);
+    }
+    return { success: summary(), data: issued };
+  };
+  const [state, action, pending] = useActionState(run, undefined);
   return (
     <KeepForm action={action} pending={pending} state={state} resetOnSuccess className="space-y-4">
       <p className="text-xs leading-relaxed text-muted">{t("users.importHelp")}</p>
@@ -89,8 +131,14 @@ export function ImportUsersForm() {
         aria-label="CSV rows"
         placeholder={t("users.pastePlaceholder")}
       />
+      <div className="flex items-center gap-1.5">
+        <label className="flex items-center gap-2.5 text-sm text-muted">
+          <input type="checkbox" role="switch" name="reissue" className="toggle" /> {t("users.reissue")}
+        </label>
+        <InfoTip text={t("users.reissueHelp")} />
+      </div>
       <FormMessage state={state} />
-      <SubmitButton pendingText={t("users.importing")}>{t("users.importBtn")}</SubmitButton>
+      <SubmitButton pendingText={progress ? t("users.importProgress", progress) : t("users.importing")}>{t("users.importBtn")}</SubmitButton>
       <IssuedPasswords items={(state?.data as Issued[]) ?? []} />
     </KeepForm>
   );

@@ -62,6 +62,12 @@ const ROLE_ALIASES: Record<string, UserImportRow["role"]> = {
   admin: "ADMIN", ผู้ดูแลระบบ: "ADMIN",
 };
 
+/**
+ * Most rows one import request takes: each new account hashes a password (bcrypt, ~0.3 s), and the request has to
+ * finish well inside the hosting time limit (60 s on Vercel). The dialog sends longer files in slices of this size.
+ */
+export const USER_IMPORT_CHUNK = 20;
+
 /** Shortest starting password an admin may set in an import (the user must change it at first sign-in). */
 export const START_PASSWORD_MIN = 6;
 

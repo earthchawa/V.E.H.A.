@@ -6,7 +6,7 @@ import type { FormState } from "@/lib/form";
 import { requireRole } from "@/lib/auth/session";
 import { issueTempPassword } from "@/lib/auth/account";
 import { generateTempPassword, hashPassword, tempPasswordExpiry } from "@/lib/auth/password";
-import { parseUserImport, type UserImportRow } from "@/lib/csv";
+import { parseUserImport, USER_IMPORT_CHUNK, type UserImportRow } from "@/lib/csv";
 import { AREA_DEPARTMENT, codeArea, parseSchedule } from "@/lib/schedule-import";
 import { config } from "@/lib/config";
 import { db } from "@/lib/db";
@@ -28,9 +28,17 @@ const admin = () => requireRole("ADMIN");
 
 // ---------- Users ----------
 
-async function createUsers(actorId: string, rows: UserImportRow[], t: Translator["t"]) {
+/**
+ * Creates the accounts that do not exist yet. With `reissue`, accounts in the list that were created but have never
+ * been signed in to (still on their first temporary password) get a new temporary password — for when the passwords
+ * from an earlier import were lost, e.g. because that request timed out before showing them.
+ */
+async function createUsers(actorId: string, rows: UserImportRow[], t: Translator["t"], reissue = false) {
   const existing = new Map(
-    (await db.user.findMany({ where: { username: { in: rows.map((r) => r.username) } }, select: { username: true, id: true, role: true } }))
+    (await db.user.findMany({
+      where: { username: { in: rows.map((r) => r.username) } },
+      select: { username: true, id: true, role: true, lastLoginAt: true, mustChangePassword: true },
+    }))
       .map((u) => [u.username, u]),
   );
   const academicYear = rows.some((r) => r.yearLevel != null) ? await currentAcademicYear() : 0;
@@ -46,14 +54,17 @@ async function createUsers(actorId: string, rows: UserImportRow[], t: Translator
   const skipped: string[] = [];
   /** Existing cadets whose year level was set from the file (the account itself is never changed). */
   const yearSet: string[] = [];
+  const reissued: IssuedPassword[] = [];
   for (const r of rows) {
     if (r.department && !depts.has(r.department)) { skipped.push(t("users.skip.dept", { id: r.username, code: r.department })); continue; }
     const found = existing.get(r.username);
     if (found) {
+      const neverUsed = reissue && found.lastLoginAt == null && found.mustChangePassword;
       // A re-import with a year column fills in year levels for accounts that already exist.
       if (r.yearLevel != null && found.role === "STUDENT") {
         if ((await setYearLevel(found.id, academicYear, r.yearLevel)) !== r.yearLevel) yearSet.push(r.username);
-      } else skipped.push(t("users.skip.exists", { id: r.username }));
+      } else if (!neverUsed) skipped.push(t("users.skip.exists", { id: r.username }));
+      if (neverUsed) reissued.push({ username: r.username, fullName: r.fullName, password: await issueTempPassword(actorId, found.id) });
       continue;
     }
     if (r.email && takenEmails.has(r.email)) { skipped.push(t("users.skip.email", { id: r.username })); continue; }
@@ -77,7 +88,7 @@ async function createUsers(actorId: string, rows: UserImportRow[], t: Translator
     await audit({ actorId, action: "user.yearSet", details: { academicYear, usernames: yearSet } });
   if (issued.length)
     await audit({ actorId, action: "user.created", details: { usernames: issued.map((i) => i.username) } });
-  return { issued, skipped, yearSet, academicYear };
+  return { issued, skipped, yearSet, reissued, academicYear };
 }
 
 export async function createUserAction(_: FormState, fd: FormData): Promise<FormState> {
@@ -94,23 +105,23 @@ export async function createUserAction(_: FormState, fd: FormData): Promise<Form
   return { success: t("ok.accountCreated"), data: issued };
 }
 
-export async function importUsersAction(_: FormState, fd: FormData): Promise<FormState> {
+export type UserImportChunkResult =
+  | { error: string }
+  | { issued: IssuedPassword[]; reissued: IssuedPassword[]; skipped: string[]; yearSet: number; academicYear: number };
+
+/**
+ * One slice of a user import. The import dialog checks the whole file in the browser first, then sends it in
+ * slices of {@link USER_IMPORT_CHUNK} rows, so a list of hundreds of cadets does not run into the server's time limit.
+ */
+export async function importUsersChunkAction(csv: string, reissue: boolean): Promise<UserImportChunkResult> {
   const me = await admin();
-  const { t, tn, tm } = await getI18n();
-  const file = fd.get("file");
-  const text = file instanceof File && file.size > 0 ? await file.text() : String(fd.get("csv") ?? "");
-  if (!text.trim()) return { error: t("err.csvMissing") };
-  const { rows, errors } = parseUserImport(text);
+  const { t, tm } = await getI18n();
+  const { rows, errors } = parseUserImport(csv);
   if (errors.length) return { error: t("err.csvRows", { rows: errors.slice(0, 10).map(tm).join("\n") }) };
-  const { issued, skipped, yearSet, academicYear } = await createUsers(me.id, rows, t);
+  if (rows.length > USER_IMPORT_CHUNK) return { error: t("err.csvRows", { rows: `> ${USER_IMPORT_CHUNK}` }) };
+  const { issued, skipped, yearSet, reissued, academicYear } = await createUsers(me.id, rows, t, reissue);
   revalidatePath("/admin/users");
-  return {
-    success:
-      tn("ok.imported", issued.length) +
-      (yearSet.length ? t("ok.importYearSet", { n: yearSet.length, year: academicYear }) : "") +
-      (skipped.length ? t("ok.importSkipped", { n: skipped.length, list: skipped.join(", ") }) : ""),
-    data: issued,
-  };
+  return { issued, reissued, skipped, yearSet: yearSet.length, academicYear };
 }
 
 export async function resetUserPasswordAction(_: FormState, fd: FormData): Promise<FormState> {

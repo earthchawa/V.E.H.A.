@@ -57,6 +57,19 @@ const handout = fs.readFileSync(F + '/cadets-cs-y2-4-handout.csv', 'utf8').repla
   const cards = (await c.locator('ul.grid a').allTextContents()).join(' ');
   ok(['CS233', 'CS236', 'CS269'].every((x) => cards.includes(x)) && !cards.includes('CS332'), `${user} (year 2) sees their semester-2 courses`);
   await c.screenshot({ path: S + '/r12-cadet.png', fullPage: true });
+  // The 62 cadets went in as 4 requests of up to 20 rows (one request would pass the hosting time limit).
+  // Passwords lost? Import the same file again with the re-issue switch: only accounts never signed in get new ones.
+  const before = sql(`select "passwordHash" from "User" where username='${user}'`);
+  await ad.goto(B + '/admin/users'); await ad.getByTestId('import-users').click();
+  await ad.locator('#csv-file').setInputFiles(F + '/cadets-cs-y2-4.csv');
+  await ad.getByRole('dialog').getByRole('switch').check();
+  await ad.getByRole('dialog').getByRole('button', { name: /Import/ }).last().click();
+  const done = ad.getByRole('dialog').getByText(/new temporary passwords for \d+ accounts/);
+  await done.waitFor({ timeout: 90000 });
+  ok(/Created 0 accounts · new temporary passwords for 61 accounts never signed in to/.test(await done.textContent()), 'reissue: 61 new passwords, none created');
+  ok(await ad.getByRole('dialog').locator('table tbody tr').count() === 61, 'the 61 new passwords are listed for download');
+  ok(sql(`select "passwordHash" from "User" where username='${user}'`) === before, `${user} (already signed in) keeps their password`);
+  await ad.keyboard.press('Escape');
   ok(errors.length === 0, 'no page errors ' + JSON.stringify(errors));
   await browser.close(); console.log('ALL OK');
 })().catch((e) => { console.error(e); process.exit(1); });
