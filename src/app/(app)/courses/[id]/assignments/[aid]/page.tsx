@@ -29,7 +29,7 @@ import {
   ReferenceDocumentForm,
   type PastOption,
 } from "../ReferenceForms";
-import { AI_ANSWER_VARIANTS, aiAnswerModel, aiAnswersEnabled } from "@/lib/ai-answers";
+import { AI_ANSWER_VARIANTS, AI_SOURCE_PREFIX, aiAnswerModel, aiAnswersEnabled } from "@/lib/ai-answers";
 import { removeReferenceAction } from "../actions";
 import { InfoTip } from "@/components/InfoTip";
 
@@ -344,7 +344,7 @@ export default async function AssignmentPage({
               <section className="card" data-testid="reference-library">
                 <h3 className="card-title flex items-center gap-1.5">
                   {t("src.title.card")}{" "}
-                  <InfoTip text={t("src.cardHint")} align="end" />
+                  <InfoTip text={`${t("src.cardHint")} ${t(aiAnswersEnabled() ? "src.cardHint.ai" : "src.cardHint.local")}`} align="end" />
                 </h3>
                 {sources.length === 0 ? (
                   <p className="mb-3 text-sm text-subtle">{t("src.none")}</p>
@@ -357,6 +357,12 @@ export default async function AssignmentPage({
                         (n, m) => Math.max(n, m.score),
                         0,
                       );
+                      const isAi =
+                        s.kind === "DOCUMENT" &&
+                        s.title.startsWith(AI_SOURCE_PREFIX);
+                      const title = isAi
+                        ? s.title.slice(AI_SOURCE_PREFIX.length)
+                        : s.title;
                       return (
                         <li
                           key={s.id}
@@ -368,9 +374,11 @@ export default async function AssignmentPage({
                               className={`badge mt-0.5 shrink-0 ${s.kind === "DOCUMENT" ? "bg-accent/10 text-accent" : "bg-surface-3 text-muted"}`}
                             >
                               {t(
-                                s.kind === "DOCUMENT"
-                                  ? "src.kind.doc"
-                                  : "src.kind.past",
+                                isAi
+                                  ? "src.kind.ai"
+                                  : s.kind === "DOCUMENT"
+                                    ? "src.kind.doc"
+                                    : "src.kind.past",
                               )}
                             </span>
                             <span className="min-w-0 flex-1 break-words">
@@ -381,10 +389,10 @@ export default async function AssignmentPage({
                                   rel="noreferrer noopener"
                                   className="hover:text-accent hover:underline"
                                 >
-                                  {s.title}
+                                  {title}
                                 </a>
                               ) : (
-                                s.title
+                                title
                               )}
                             </span>
                           </div>
@@ -424,7 +432,7 @@ export default async function AssignmentPage({
                     size="lg"
                     testId="add-reference-doc"
                   >
-                    <ReferenceDocumentForm assignmentId={assignment.id} />
+                    <ReferenceDocumentForm assignmentId={assignment.id} aiEnabled={aiAnswersEnabled()} />
                   </Modal>
                   <Modal
                     label={`+ ${t("src.addPast")}`}
