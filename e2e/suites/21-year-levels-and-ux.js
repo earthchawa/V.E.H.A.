@@ -20,7 +20,7 @@ const ok = (c, m) => { if (!c) throw new Error('FAIL: ' + m); console.log('PASS'
 
   // ---------- Year levels ----------
   const ap = await firstLogin('admin', 'Adm1nPass99');
-  await ap.goto(B + '/admin/users?role=STUDENT');
+  await ap.goto(B + '/admin/users?role=STUDENT&view=list');
   const yearCell = (u) => ap.locator(`[data-username="${u}"] [data-testid=user-year]`);
   ok((await yearCell('6601001').innerText()).trim() === 'Year 2', 'cadet list shows this year\'s year level');
   ok((await yearCell('6601006').innerText()).trim() === '—', 'a cadet without a year level shows a dash');
@@ -34,8 +34,25 @@ const ok = (c, m) => { if (!c) throw new Error('FAIL: ' + m); console.log('PASS'
   await ap.goto(B + '/admin/users?role=INSTRUCTOR');
   ok(await ap.getByTestId('year-filter').count() === 0 && await ap.getByTestId('user-year').count() === 0, 'no year column on the instructors tab');
 
-  // Manage dialog: set a year level; history shows earlier years.
+  // Cadets tab opens on an overview by department and year level; each number opens that slice of the list.
   await ap.goto(B + '/admin/users?role=STUDENT');
+  ok(await ap.getByTestId('user-row').count() === 0 && await ap.getByTestId('cadet-dept').count() > 0, 'cadets tab opens on the overview, not a long list');
+  const yearTotal = sql(`select count(*) from "CadetYear" y join "User" u on u.id=y."userId" where u.role='STUDENT' and y."academicYear"=2569 and y."yearLevel"=2`);
+  ok((await ap.getByTestId('year-chips').innerText()).includes('Year 2 ' + yearTotal) || (await ap.getByTestId('year-chips').innerText()).replace(/\s+/g, ' ').includes('Year 2 ' + yearTotal), 'year chips count the cadets per year level');
+  const chip = ap.getByTestId('cadet-dept').first().getByTestId('dept-year').first();
+  const n = Number((await chip.innerText()).trim().match(/(\d+)$/)[1]);
+  await chip.click(); await ap.waitForURL(/year=/);
+  await ap.waitForFunction((k) => document.querySelectorAll('[data-testid=user-row]').length === k, n);
+  ok(/dept=/.test(ap.url()), `a department's year chip lists its ${n} cadets`);
+  await ap.goto(B + '/admin/users?role=STUDENT');
+  await ap.getByTestId('cadet-dept').first().locator('a').first().click(); await ap.waitForURL(/dept=/);
+  const yearGroups = await ap.getByTestId('user-group').allInnerTexts();
+  ok(yearGroups.length > 0 && yearGroups.every((g) => /^(Year \d|No year level)/.test(g.trim())), 'one department\'s cadets are grouped by year level: ' + yearGroups.join(' | '));
+  await ap.getByTestId('user-view').getByRole('link', { name: 'Full list' }).click(); await ap.waitForURL(/view=list/);
+  ok(await ap.getByTestId('user-row').count() > 0, '"Full list" shows everyone');
+
+  // Manage dialog: set a year level; history shows earlier years.
+  await ap.goto(B + '/admin/users?role=STUDENT&view=list');
   await ap.locator('[data-username="6601006"]').getByTestId('manage-user').click();
   const dlg = ap.locator('dialog[open]');
   ok((await getComputedAnim(dlg)) === 'modal-in', 'dialogs animate in');

@@ -24,7 +24,7 @@ const ok = (c, m) => { if (!c) throw new Error('FAIL: ' + m); console.log('PASS'
   await shot(lp, 'login', false);
 
   const ad = await login('admin', 'Strong9Pass');
-  await ad.goto(B + '/admin/users?role=STUDENT');
+  await ad.goto(B + '/admin/users?role=STUDENT&view=list');
   await ad.locator('[data-testid=user-row][data-username="6601002"]').getByTestId('manage-user').click();
   await ad.getByRole('dialog').getByLabel('Full name').fill('นนอ.ทดสอบ เลื่อนยศ');
   await ad.getByRole('dialog').getByLabel('Username or ID').fill('7999');

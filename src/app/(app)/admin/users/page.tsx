@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { getI18n } from "@/lib/i18n/server";
 import { PageHeader } from "@/components/PageHeader";
 import { FilterBar } from "@/components/FilterBar";
+import { UsersOverview } from "./overview";
 import { CreateUserForm, ImportUsersForm, ManageUserForm, PromoteForm } from "./forms";
 import { YEAR_LEVELS } from "@/lib/year-level";
 import { currentAcademicYear } from "@/lib/year-level-server";
@@ -25,7 +26,7 @@ const TABS = [
   { role: "ADMIN", key: "users.tab.admins" },
 ] as const;
 
-export default async function UsersPage({ searchParams }: { searchParams: Promise<{ q?: string; role?: string; dept?: string; year?: string }> }) {
+export default async function UsersPage({ searchParams }: { searchParams: Promise<{ q?: string; role?: string; dept?: string; year?: string; view?: string }> }) {
   const me = await requireRole("ADMIN");
   const sp = await searchParams;
   const q = (sp.q ?? "").trim();
@@ -35,6 +36,10 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
   const academicYear = await currentAcademicYear();
   // "3" = that year level this academic year; "none" = cadets without one.
   const year = sp.year === "none" || YEAR_LEVELS.includes(Number(sp.year)) ? sp.year! : "";
+  // Hundreds of cadets in one list are hard to read: the Cadets and All tabs open on an overview by
+  // department and year level; picking one (or searching, or "Full list") shows the list.
+  const canOverview = role === null || role === "STUDENT";
+  const overview = canOverview && !q && !dept && !year && sp.view !== "list";
 
   const departments = await db.department.findMany({
     orderBy: [{ parentId: { sort: "asc", nulls: "first" } }, { position: "asc" }, { code: "asc" }],
@@ -53,7 +58,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
         : {}),
   };
   const [users, counts] = await Promise.all([
-    db.user.findMany({
+    overview ? Promise.resolve([]) : db.user.findMany({
       where: { ...filter, ...(role ? { role } : {}) },
       orderBy: [{ role: "asc" }, { username: "asc" }],
       take: 1000,
@@ -63,21 +68,25 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
   ]);
   const countOf = (r: Role | null) => counts.filter((c) => !r || c.role === r).reduce((n, c) => n + c._count._all, 0);
 
-  // Group by department (in the departments' own order), people without one last.
+  const levelOf = (u: (typeof users)[number]) => u.cadetYears.find((y) => y.academicYear === academicYear)?.yearLevel ?? null;
+  // Group by department (in the departments' own order), people without one last. The cadets of one
+  // department are grouped by year level instead.
+  const byYear = role === "STUDENT" && !!dept && !year;
   const order = new Map(departments.map((d, i) => [d.id, i]));
   const groups = new Map<string, typeof users>();
   for (const u of users) {
-    const k = u.departmentId ?? "";
+    const k = byYear ? String(levelOf(u) ?? "") : u.departmentId ?? "";
     groups.set(k, [...(groups.get(k) ?? []), u]);
   }
-  const groupKeys = [...groups.keys()].sort((a, b) => (a ? order.get(a) ?? 0 : 1e9) - (b ? order.get(b) ?? 0 : 1e9));
+  const groupKeys = [...groups.keys()].sort((a, b) =>
+    byYear ? (Number(a) || 99) - (Number(b) || 99) : (a ? order.get(a) ?? 0 : 1e9) - (b ? order.get(b) ?? 0 : 1e9),
+  );
 
   // For the promotion dialog: cadets per year level in each academic year on record.
   const yearCounts = await db.cadetYear.groupBy({ by: ["academicYear", "yearLevel"], where: { user: { role: "STUDENT", isActive: true } }, _count: { _all: true } });
   const promoCounts: Record<number, Record<number, number>> = {};
   for (const r of yearCounts) (promoCounts[r.academicYear] ??= {})[r.yearLevel] = r._count._all;
   const promoYears = Object.keys(promoCounts).map(Number).sort((a, b) => b - a);
-  const levelOf = (u: (typeof users)[number]) => u.cadetYears.find((y) => y.academicYear === academicYear)?.yearLevel ?? null;
   const showYear = role !== "INSTRUCTOR" && role !== "ADMIN";
 
   const now = new Date();
@@ -100,6 +109,12 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
     if (year && (!r || r === "STUDENT")) p.set("year", year);
     const s = p.toString();
     return `/admin/users${s ? `?${s}` : ""}`;
+  };
+  const listHref = () => {
+    const p = new URLSearchParams();
+    if (role) p.set("role", role);
+    p.set("view", "list");
+    return `/admin/users?${p}`;
   };
   const tabCls = (active: boolean) =>
     `inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm transition ${active ? "bg-surface-3 text-fg" : "text-muted hover:text-fg"}`;
@@ -135,6 +150,17 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
         ))}
       </nav>
 
+      {canOverview && (
+        <nav className="mb-3 inline-flex rounded-lg border border-border bg-surface p-0.5 text-sm" data-testid="user-view" aria-label={t("users.view.label")}>
+          <Link href={role ? `/admin/users?role=${role}` : "/admin/users"} className={`rounded-md px-3 py-1 ${overview ? "bg-surface-3 text-fg" : "text-muted hover:text-fg"}`} aria-current={overview ? "page" : undefined}>
+            {t("users.view.overview")}
+          </Link>
+          <Link href={listHref()} className={`rounded-md px-3 py-1 ${!overview ? "bg-surface-3 text-fg" : "text-muted hover:text-fg"}`} aria-current={!overview ? "page" : undefined}>
+            {t("users.view.list")}
+          </Link>
+        </nav>
+      )}
+
       <section className="overflow-hidden rounded-xl border border-border bg-surface">
         <FilterBar className="flex flex-wrap items-center gap-2 border-b border-border p-3">
           <input name="q" defaultValue={q} placeholder={t("users.search")} className="input h-9 min-w-0 flex-1 sm:max-w-xs" aria-label={t("users.search")} />
@@ -150,10 +176,12 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
               <option value="none">{t("yl.none")}</option>
             </select>
           )}
-          <span className="ml-auto pr-1 text-xs text-subtle" data-testid="user-count">{t("users.count", { n: users.length })}</span>
+          {!overview && <span className="ml-auto pr-1 text-xs text-subtle" data-testid="user-count">{t("users.count", { n: users.length })}</span>}
         </FilterBar>
 
-        {users.length === 0 ? (
+        {overview ? (
+          <UsersOverview role={role} academicYear={academicYear} departments={departments} lang={lang} />
+        ) : users.length === 0 ? (
           <p className="py-10 text-center text-sm text-muted">{t("users.none")}</p>
         ) : (
           <div className="overflow-x-auto">
@@ -176,7 +204,9 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
                   return [
                     <tr key={`g-${k}`} className="bg-surface-2" data-testid="user-group">
                       <td colSpan={(role ? 5 : 6) + (showYear ? 1 : 0)} className="pl-5 text-xs font-semibold text-muted">
-                        {d ? (
+                        {byYear ? (
+                          k ? t("yl.level", { n: Number(k) }) : t("yl.none")
+                        ) : d ? (
                           <span className="cc inline-flex items-center gap-2" style={{ ["--cc" as string]: deptColor({ ...d, parent: d.parent }) ?? "var(--color-accent)" }}>
                             <span className="cc-bar h-3 w-1 rounded" />
                             <span className="font-mono">{d.code}</span> {name(d)}
