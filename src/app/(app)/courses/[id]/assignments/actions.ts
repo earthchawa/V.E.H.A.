@@ -11,7 +11,7 @@ import { audit } from "@/lib/audit";
 import { getI18n } from "@/lib/i18n/server";
 import { deleteStoredFile } from "@/lib/storage";
 import { incomingFiles } from "@/lib/uploads";
-import { AI_ANSWER_LIMIT, AI_ANSWER_VARIANTS, aiAnswersEnabled, generateAiAnswers } from "@/lib/ai-answers";
+import { AI_ANSWER_LIMIT, AI_SOURCE_PREFIX, AI_ANSWER_VARIANTS, aiAnswersEnabled, generateAiAnswers } from "@/lib/ai-answers";
 import { acceptsSubmissions, isPastDue, parseBangkokLocal, uploadLimits } from "@/lib/assignments";
 import { config } from "@/lib/config";
 import { extractFile, type Extracted } from "@/lib/similarity/extract";
@@ -286,9 +286,6 @@ export async function addReferenceDocumentAction(assignmentId: string, _: FormSt
   return { success: t("src.added") };
 }
 
-/** Title prefix of AI-generated reference answers (also how they are counted and recognised in the list). */
-const AI_TITLE = "AI · ";
-
 /**
  * Ask an AI model the assignment's question a few times and keep the answers as reference documents
  * (lib/ai-answers.ts). Sends only the assignment's title, instructions and starter text.
@@ -299,7 +296,7 @@ export async function generateAiAnswersAction(assignmentId: string, _: FormState
   const { t } = await getI18n();
   if (!aiAnswersEnabled()) return { error: t("ai.err.off") };
   if (!assignment.instructions?.trim()) return { error: t("ai.err.noInstructions") };
-  const have = await db.similaritySource.count({ where: { assignmentId, kind: "DOCUMENT", title: { startsWith: AI_TITLE } } });
+  const have = await db.similaritySource.count({ where: { assignmentId, kind: "DOCUMENT", title: { startsWith: AI_SOURCE_PREFIX } } });
   if (have + AI_ANSWER_VARIANTS > AI_ANSWER_LIMIT) return { error: t("ai.err.limit", { n: AI_ANSWER_LIMIT }) };
 
   const { answers, error } = await generateAiAnswers(assignment.title, assignment.instructions, assignment.baseText);
@@ -310,7 +307,7 @@ export async function generateAiAnswersAction(assignmentId: string, _: FormState
       data: {
         assignmentId,
         kind: "DOCUMENT",
-        title: `${AI_TITLE}${t("ai.sourceTitle", { n: have + i + 1 })} (${a.model})`,
+        title: `${AI_SOURCE_PREFIX}${t("ai.sourceTitle", { n: have + i + 1 })} (${a.model})`,
         content,
         segments: segments as Prisma.InputJsonValue,
         createdById: user.id,

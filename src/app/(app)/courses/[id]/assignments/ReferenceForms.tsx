@@ -9,18 +9,21 @@ import { useI18n } from "@/lib/i18n/client";
 import { addPastAssignmentSourceAction, addReferenceDocumentAction, generateAiAnswersAction } from "./actions";
 
 /** Add a reference document: pasted text (a web page, a model answer, an AI chatbot's answer) and/or files. */
-export function ReferenceDocumentForm({ assignmentId }: { assignmentId: string }) {
+export function ReferenceDocumentForm({ assignmentId, aiEnabled }: { assignmentId: string; aiEnabled: boolean }) {
   const [state, action, pending] = useActionState(addReferenceDocumentAction.bind(null, assignmentId), undefined);
   const { t } = useI18n();
   return (
     <KeepForm action={action} pending={pending} state={state} resetOnSuccess closeOnSuccess directUpload className="space-y-4">
-      <p className="rounded-lg border border-border bg-surface-2 px-3 py-2.5 text-xs leading-relaxed text-muted">{t("src.docHint")}</p>
+      <div className="space-y-1.5 rounded-lg border border-border bg-surface-2 px-3 py-2.5 text-xs leading-relaxed text-muted">
+        <p>{t("src.docHint")}</p>
+        <p>{t(aiEnabled ? "src.docHint.ai" : "src.docHint.noAi")}</p>
+      </div>
       <div>
         <label className="label" htmlFor="src-title">{t("src.title")}</label>
         <input id="src-title" name="title" className="input" required placeholder={t("src.titlePlaceholder")} />
       </div>
       <div>
-        <label className="label" htmlFor="src-url">{t("src.url")} <span className="text-subtle">({t("common.optional")})</span></label>
+        <label className="label" htmlFor="src-url">{t("src.url")} <span className="text-subtle">{t("common.optional")}</span></label>
         <input id="src-url" name="url" type="url" className="input" placeholder="https://" />
       </div>
       <div>
@@ -28,7 +31,7 @@ export function ReferenceDocumentForm({ assignmentId }: { assignmentId: string }
         <textarea id="src-text" name="text" rows={8} className="input font-mono text-[13px]" placeholder={t("src.textPlaceholder")} />
       </div>
       <div>
-        <span className="label">{t("src.files")} <span className="text-subtle">({t("common.optional")})</span></span>
+        <span className="label">{t("src.files")} <span className="text-subtle">{t("common.optional")}</span></span>
         <FileDropzone id="src-files" name="files" multiple />
       </div>
       <FormMessage state={state} />

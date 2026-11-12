@@ -17,6 +17,8 @@ export const aiAnswerModel = () => process.env.AI_ANSWER_MODEL || "claude-sonnet
 /** How many answers one click asks for, and how many AI answers one assignment may hold. */
 export const AI_ANSWER_VARIANTS = 3;
 export const AI_ANSWER_LIMIT = 9;
+/** Title prefix of AI-generated reference answers (also how they are counted and recognised in the list). */
+export const AI_SOURCE_PREFIX = "AI · ";
 
 /** The different ways cadets tend to ask: as-is, briefly, and "like a student wrote it". */
 export const VARIANT_STYLES = [
