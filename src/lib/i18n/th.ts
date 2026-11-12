@@ -847,7 +847,7 @@ export const th: Record<Key, string> = {
   "users.view.list": "รายชื่อทั้งหมด",
   "users.ov.byYear": "นนอ. ตามชั้นปี (ปีการศึกษา {year})",
   "users.ov.byDept": "นนอ. ตามกองวิชา / ภาควิชา",
-  "users.ov.staff": "อาจารย์และผู้ดูแลระบบ ตามสังกัด",
+  "users.ov.staff": "อาจารย์ ตามกองวิชา",
   "users.manage": "จัดการ",
   "users.saveChanges": "บันทึกการแก้ไข",
   "users.usernameHint": "นนอ. ใช้เลขประจำตัว บุคลากรใช้ username ในการเข้าระบบ ถ้าแก้ ต้องแจ้งเจ้าของบัญชี เพราะค่าเดิมจะใช้ไม่ได้แล้ว",

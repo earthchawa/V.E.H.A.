@@ -36,9 +36,9 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
   const academicYear = await currentAcademicYear();
   // "3" = that year level this academic year; "none" = cadets without one.
   const year = sp.year === "none" || YEAR_LEVELS.includes(Number(sp.year)) ? sp.year! : "";
-  // Hundreds of cadets in one list are hard to read: the Cadets and All tabs open on an overview by
-  // department and year level; picking one (or searching, or "Full list") shows the list.
-  const canOverview = role === null || role === "STUDENT";
+  // Hundreds of cadets in one list are hard to read: the All, Cadets and Instructors tabs open on an overview
+  // by department (and year level for cadets); picking one (or searching, or "Full list") shows the list.
+  const canOverview = role !== "ADMIN";
   const overview = canOverview && !q && !dept && !year && sp.view !== "list";
 
   const departments = await db.department.findMany({
@@ -50,7 +50,12 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
 
   const filter: Prisma.UserWhereInput = {
     ...(q ? { OR: [{ username: { contains: q, mode: "insensitive" } }, { fullName: { contains: q, mode: "insensitive" } }] } : {}),
-    ...(dept === "none" ? { departmentId: null } : dept ? { departmentId: dept } : {}),
+    // A department includes its subject areas (ภาควิชา).
+    ...(dept === "none"
+      ? { departmentId: null }
+      : dept
+        ? { departmentId: { in: [dept, ...departments.filter((d) => d.parentId === dept).map((d) => d.id)] } }
+        : {}),
     ...(year === "none"
       ? { role: "STUDENT" as const, cadetYears: { none: { academicYear } } }
       : year

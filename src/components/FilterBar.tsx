@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 /**
@@ -13,6 +13,14 @@ export function FilterBar({ children, className }: { children: React.ReactNode; 
   const params = useSearchParams();
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const form = useRef<HTMLFormElement>(null);
+
+  // Links elsewhere on the page (e.g. overview cards) change the query without remounting this form:
+  // keep the selects showing what the URL says. Text inputs are left alone so typing is never overwritten.
+  useEffect(() => {
+    for (const el of Array.from(form.current?.elements ?? [])) {
+      if (el instanceof HTMLSelectElement && el.name) el.value = params.get(el.name) ?? "";
+    }
+  }, [params]);
 
   const apply = () => {
     const next = new URLSearchParams(params.toString());

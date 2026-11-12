@@ -33,6 +33,15 @@ const ok = (c, m) => { if (!c) throw new Error('FAIL: ' + m); console.log('PASS'
   ok(true, '"No year level" lists the cadets without one');
   await ap.goto(B + '/admin/users?role=INSTRUCTOR');
   ok(await ap.getByTestId('year-filter').count() === 0 && await ap.getByTestId('user-year').count() === 0, 'no year column on the instructors tab');
+  // Instructors tab: one card per department (กองวิชา), its subject areas inside; empty departments still listed.
+  const topDepts = sql(`select count(*) from "Department" where "parentId" is null`);
+  ok(String(await ap.getByTestId('staff-dept').count()) >= topDepts && await ap.getByTestId('user-row').count() === 0, `instructors tab opens on ${topDepts}+ department cards`);
+  const mc = ap.getByTestId('staff-dept').filter({ hasText: 'Mathematics and Computer' });
+  const mcTotal = sql(`select count(*) from "User" u join "Department" d on d.id=u."departmentId" left join "Department" p on p.id=d."parentId" where u.role='INSTRUCTOR' and (d.code='MC' or p.code='MC')`);
+  ok((await mc.innerText()).includes(mcTotal) && await mc.getByTestId('dept-area').count() > 0, `MC card counts its subject areas' ${mcTotal} instructors`);
+  await mc.locator('a').first().click(); await ap.waitForURL(/dept=/);
+  await ap.waitForFunction((k) => document.querySelectorAll('[data-testid=user-row]').length === k, Number(mcTotal));
+  ok(true, 'a department card lists the instructors of the department and its subject areas');
 
   // Cadets tab opens on an overview by department and year level; each number opens that slice of the list.
   await ap.goto(B + '/admin/users?role=STUDENT');

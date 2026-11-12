@@ -863,7 +863,7 @@ export const en = {
   "users.view.list": "Full list",
   "users.ov.byYear": "Cadets by year level (academic year {year})",
   "users.ov.byDept": "Cadets by department",
-  "users.ov.staff": "Instructors and admins by department",
+  "users.ov.staff": "Instructors by department",
   "users.manage": "Manage",
   "users.saveChanges": "Save changes",
   "users.usernameHint": "Cadets sign in with their cadet number, staff with their username. If you change it, tell them: their old one stops working.",
