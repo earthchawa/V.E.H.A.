@@ -21,6 +21,13 @@ const ok = (c, m) => { if (!c) throw new Error('FAIL: ' + m); console.log('PASS'
   // ---------- Year levels ----------
   const ap = await firstLogin('admin', 'Adm1nPass99');
   await ap.goto(B + '/admin/users?role=STUDENT&view=list');
+  // The page-title ⓘ near the top opens below itself, not under the sticky header.
+  const tipBtn = ap.locator('h1 [data-testid=info-tip]').first();
+  await tipBtn.hover();
+  const tip = ap.locator('[role=tooltip]:visible').first();
+  await tip.waitFor();
+  const headerBottom = await ap.evaluate(() => document.querySelector('header.sticky').getBoundingClientRect().bottom);
+  ok((await tip.boundingBox()).y >= headerBottom, 'a tooltip near the top is not hidden under the header');
   const yearCell = (u) => ap.locator(`[data-username="${u}"] [data-testid=user-year]`);
   ok((await yearCell('6601001').innerText()).trim() === 'Year 2', 'cadet list shows this year\'s year level');
   ok((await yearCell('6601006').innerText()).trim() === '—', 'a cadet without a year level shows a dash');
