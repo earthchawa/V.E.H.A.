@@ -1,7 +1,7 @@
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
-import { del, get, put } from "@vercel/blob";
+import { BlobNotFoundError, del, get, head, put } from "@vercel/blob";
 import { config } from "./config";
 import { db } from "./db";
 
@@ -61,10 +61,24 @@ export async function saveFile(file: File): Promise<string> {
 /** Size of a Blob file, or null when it does not exist. */
 export async function blobSize(key: string): Promise<number | null> {
   if (!isBlobKey(key)) return null;
+  // The store's own record of the size. A download's Content-Length is not enough: text files (.txt, .csv,
+  // .html…) come back compressed without it, which made a real upload look empty.
+  try {
+    return (await head(key)).size;
+  } catch (e) {
+    if (e instanceof BlobNotFoundError) return null;
+  }
   const r = await get(key, { access: "private", useCache: false });
   if (!r || r.statusCode !== 200) return null;
-  await r.stream.cancel().catch(() => undefined);
-  return r.blob.size;
+  const length = r.headers.get("content-encoding") ? null : r.headers.get("content-length");
+  if (length) {
+    await r.stream.cancel().catch(() => undefined);
+    return Number(length);
+  }
+  let size = 0;
+  const reader = r.stream.getReader();
+  for (let part = await reader.read(); !part.done; part = await reader.read()) size += part.value.byteLength;
+  return size;
 }
 
 export async function readStoredFile(key: string): Promise<Buffer> {
