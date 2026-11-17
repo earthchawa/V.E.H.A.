@@ -10,7 +10,8 @@
 //   VEHA_URL=https://… VEHA_ADMIN_PASSWORD=… node scripts/similarity-eval/run-web.cjs <dataset-dir>
 //
 // Env: VEHA_URL (default http://localhost:3000), VEHA_ADMIN_USER (admin), VEHA_ADMIN_PASSWORD (required),
-//      EXP_PREFIX (simtest), EXP_COURSE (SIM901), EXP_YEAR (2569), EXP_SEMESTER (1).
+//      EXP_PREFIX (simtest), EXP_COURSE (SIM901), EXP_YEAR (2569), EXP_SEMESTER (1),
+//      EXP_THEME (light) and EXP_LANG (th) for the screenshots.
 // Re-running is safe: accounts, course and assignments are reused, files are resubmitted.
 // Output: <dataset-dir>/web-run/ — credentials.json (test-account passwords: keep private), mapping.csv,
 //         scores.csv, run-log.txt, *.png. Never put real cadet data in the dataset.
@@ -29,6 +30,8 @@ const PREFIX = process.env.EXP_PREFIX || "simtest";
 const COURSE = process.env.EXP_COURSE || "SIM901";
 const YEAR = process.env.EXP_YEAR || "2569";
 const SEM = process.env.EXP_SEMESTER || "1";
+const THEME = process.env.EXP_THEME || "light"; // light | dark
+const LANG = process.env.EXP_LANG || "th"; // th | en (language of the pages in the screenshots)
 
 const OUT = path.join(dir, "web-run");
 fs.mkdirSync(OUT, { recursive: true });
@@ -57,7 +60,15 @@ fs.writeFileSync(credFile, JSON.stringify(creds, null, 2));
 
 (async () => {
   const browser = await chromium.launch();
-  const page = async () => (await browser.newContext({ viewport: { width: 1360, height: 900 }, locale: "en-US" })).newPage();
+  // Screenshots for print: light theme, UI language of choice, no fade-in animation caught half-way.
+  const page = async () => {
+    const ctx = await browser.newContext({ viewport: { width: 1360, height: 900 }, locale: "en-US", reducedMotion: "reduce" });
+    await ctx.addCookies([
+      { name: "theme", value: THEME, url: BASE },
+      { name: "lang", value: LANG, url: BASE },
+    ]);
+    return ctx.newPage();
+  };
   const done = (p) => p.waitForURL((u) => !/\/(login|change-password)/.test(u.pathname), { timeout: 30000 });
 
   /** Sign in; on a first sign-in, change the temporary password to the final one. */
@@ -190,7 +201,7 @@ fs.writeFileSync(credFile, JSON.stringify(creds, null, 2));
         // Both are checked the same way (prose is tokenised as text, a .py file as code).
         if (pasted) await cp.locator("#s-text").fill(body);
         else await cp.locator("#s-files").setInputFiles(path.join(subDir, task, f));
-        await cp.getByRole("button", { name: /^(Submit|Resubmit|ส่งงาน|ส่งงานใหม่)$/ }).click();
+        await cp.getByRole("button", { name: /^(Submit|Resubmit|ส่งงาน|ส่งใหม่|ส่งงานใหม่)$/ }).click();
         const outcome = await Promise.race([
           cp.getByText(/^(Submitted\.|ส่งงานแล้ว)$/).first().waitFor({ timeout: 90000 }).then(() => "ok", () => "timeout"),
           cp.locator("form [role=alert]").first().waitFor({ timeout: 90000 }).then(() => "alert", () => "timeout"),
