@@ -2,7 +2,8 @@
 // Runs the similarity experiment through the real web UI of a V.E.H.A. site (local or deployed):
 //   1. admin imports test accounts (one instructor + N cadets, synthetic) and a one-row schedule (test course),
 //   2. the instructor creates one assignment per task (T1, T2, P1, P2, ...),
-//   3. each test cadet signs in and submits one file per task (files from make-variants.mjs),
+//   3. each test cadet signs in and submits one file per task (files from make-variants.mjs): Thai prose (.txt)
+//      is pasted into the answer box, code (.py) is attached,
 //   4. the instructor's compare page is read for every pair in pairs.csv, with "ignore common passages"
 //      on (the default) and then off; scores go to scores.csv, screenshots to the output folder.
 //
@@ -180,10 +181,15 @@ fs.writeFileSync(credFile, JSON.stringify(creds, null, 2));
       // Up to 3 tries. A try counts when the page says "Submitted", or — if the message was missed — when the
       // file shows up in the cadet's own submission after a reload. On a deployed site the browser uploads the
       // file first (Vercel Blob), which can stall now and then.
+      const pasted = f.endsWith(".txt");
+      const body = pasted ? fs.readFileSync(path.join(subDir, task, f), "utf8") : null;
       let ok = false;
       for (let attempt = 1; attempt <= 3 && !ok; attempt++) {
         await cp.goto(asgUrl[task]);
-        await cp.locator("#s-files").setInputFiles(path.join(subDir, task, f));
+        // Prose (.txt) goes into the answer box, as a cadet would paste it; code is attached as a file.
+        // Both are checked the same way (prose is tokenised as text, a .py file as code).
+        if (pasted) await cp.locator("#s-text").fill(body);
+        else await cp.locator("#s-files").setInputFiles(path.join(subDir, task, f));
         await cp.getByRole("button", { name: /^(Submit|Resubmit|ส่งงาน|ส่งงานใหม่)$/ }).click();
         const outcome = await Promise.race([
           cp.getByText(/^(Submitted\.|ส่งงานแล้ว)$/).first().waitFor({ timeout: 90000 }).then(() => "ok", () => "timeout"),
@@ -196,7 +202,9 @@ fs.writeFileSync(credFile, JSON.stringify(creds, null, 2));
           const alert = outcome === "alert" ? await cp.locator("form [role=alert]").first().textContent() : "(no message)";
           log(`try ${attempt}: ${task} ${f} as ${u} — ${outcome}: ${String(alert).trim()} (screenshot ${path.basename(shot)})`);
           await cp.goto(asgUrl[task]);
-          ok = (await cp.getByRole("link", { name: f, exact: true }).count()) > 0;
+          ok = pasted
+            ? (await cp.locator("#s-text").inputValue()).trim() === body.trim()
+            : (await cp.getByRole("link", { name: f, exact: true }).count()) > 0;
           if (ok) log(`  …the file is in ${u}'s submission after all`);
         }
       }
