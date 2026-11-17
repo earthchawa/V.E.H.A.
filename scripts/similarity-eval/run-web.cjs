@@ -177,10 +177,30 @@ fs.writeFileSync(credFile, JSON.stringify(creds, null, 2));
     for (const task of tasks) {
       const f = files[task][i];
       if (!f) continue;
-      await cp.goto(asgUrl[task]);
-      await cp.locator("#s-files").setInputFiles(path.join(subDir, task, f));
-      await cp.getByRole("button", { name: /^(Submit|Resubmit|ส่งงาน|ส่งงานใหม่)$/ }).click();
-      await cp.getByText(/^(Submitted\.|ส่งงานแล้ว)$/).first().waitFor({ timeout: 60000 });
+      // Up to 3 tries. A try counts when the page says "Submitted", or — if the message was missed — when the
+      // file shows up in the cadet's own submission after a reload. On a deployed site the browser uploads the
+      // file first (Vercel Blob), which can stall now and then.
+      let ok = false;
+      for (let attempt = 1; attempt <= 3 && !ok; attempt++) {
+        await cp.goto(asgUrl[task]);
+        await cp.locator("#s-files").setInputFiles(path.join(subDir, task, f));
+        await cp.getByRole("button", { name: /^(Submit|Resubmit|ส่งงาน|ส่งงานใหม่)$/ }).click();
+        const outcome = await Promise.race([
+          cp.getByText(/^(Submitted\.|ส่งงานแล้ว)$/).first().waitFor({ timeout: 90000 }).then(() => "ok", () => "timeout"),
+          cp.locator("form [role=alert]").first().waitFor({ timeout: 90000 }).then(() => "alert", () => "timeout"),
+        ]);
+        if (outcome === "ok") ok = true;
+        else {
+          const shot = path.join(OUT, `error-${task}-${u}-try${attempt}.png`);
+          await cp.screenshot({ path: shot, fullPage: true }).catch(() => {});
+          const alert = outcome === "alert" ? await cp.locator("form [role=alert]").first().textContent() : "(no message)";
+          log(`try ${attempt}: ${task} ${f} as ${u} — ${outcome}: ${String(alert).trim()} (screenshot ${path.basename(shot)})`);
+          await cp.goto(asgUrl[task]);
+          ok = (await cp.getByRole("link", { name: f, exact: true }).count()) > 0;
+          if (ok) log(`  …the file is in ${u}'s submission after all`);
+        }
+      }
+      if (!ok) throw new Error(`could not submit ${task} ${f} as ${u} after 3 tries — see the error-*.png screenshots`);
       mapping.push([task, f, u]);
       log("submitted", task, f, "as", u);
     }
