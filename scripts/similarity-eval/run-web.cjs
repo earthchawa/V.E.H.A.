@@ -200,7 +200,10 @@ fs.writeFileSync(credFile, JSON.stringify(creds, null, 2));
         // Prose (.txt) goes into the answer box, as a cadet would paste it; code is attached as a file.
         // Both are checked the same way (prose is tokenised as text, a .py file as code).
         if (pasted) await cp.locator("#s-text").fill(body);
-        else await cp.locator("#s-files").setInputFiles(path.join(subDir, task, f));
+        else {
+          await cp.locator("#s-text").fill(""); // an answer typed earlier would be checked together with the file
+          await cp.locator("#s-files").setInputFiles(path.join(subDir, task, f));
+        }
         await cp.getByRole("button", { name: /^(Submit|Resubmit|ส่งงาน|ส่งใหม่|ส่งงานใหม่)$/ }).click();
         const outcome = await Promise.race([
           cp.getByText(/^(Submitted\.|ส่งงานแล้ว)$/).first().waitFor({ timeout: 90000 }).then(() => "ok", () => "timeout"),
@@ -220,6 +223,13 @@ fs.writeFileSync(credFile, JSON.stringify(creds, null, 2));
         }
       }
       if (!ok) throw new Error(`could not submit ${task} ${f} as ${u} after 3 tries — see the error-*.png screenshots`);
+      // A pasted answer keeps files attached earlier (the form only replaces files when new ones are sent),
+      // and they would be checked too. Stop rather than measure a mixed submission.
+      if (pasted) {
+        await cp.goto(asgUrl[task]);
+        const old = await cp.locator('a[href^="/api/submission-files/"]').count();
+        if (old) throw new Error(`${u}'s ${task} submission still has ${old} attached file(s) from before. Delete the test section ${COURSE} (Admin → Courses) and run again.`);
+      }
       mapping.push([task, f, u]);
       log("submitted", task, f, "as", u);
     }
