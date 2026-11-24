@@ -184,12 +184,12 @@ export function CodeRunner({ language, files, testId }: { language: CodeLanguage
           srcDoc={preview.html}
           data-run-preview="1"
           data-testid="code-preview"
-          className="h-72 w-full rounded-lg border border-border bg-white"
+          className="h-[28rem] max-h-[70vh] w-full rounded-lg border border-border bg-white"
         />
       )}
       {(lines.length > 0 || language !== "web") && (
         <pre
-          className="max-h-72 min-h-16 overflow-auto rounded-lg border border-border bg-bg p-3 font-mono text-xs leading-relaxed whitespace-pre-wrap break-words select-text"
+          className="max-h-96 min-h-24 overflow-auto rounded-lg border border-border bg-bg p-3 font-mono text-xs leading-relaxed whitespace-pre-wrap break-words select-text"
           aria-live="polite"
           aria-label={t("code.output")}
           data-testid="code-output"

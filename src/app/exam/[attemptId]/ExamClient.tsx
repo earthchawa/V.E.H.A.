@@ -278,7 +278,7 @@ export function ExamClient({
     <div className="select-none">
       {/* Sticky status bar */}
       <div className="sticky top-0 z-20 border-b border-border bg-bg/90 backdrop-blur">
-        <div className="mx-auto flex max-w-3xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5">
           <span className="text-xs text-muted" data-testid="answered">{t("qz.answered", { n: answeredCount, total: questions.length })}</span>
           <span className={`text-xs ${saveState === "offline" ? "text-danger" : "text-subtle"}`} data-testid="save-state">
             {saveState === "saving" ? t("qz.saving") : saveState === "saved" ? t("qz.saved") : saveState === "offline" ? t("qz.offline") : ""}
@@ -292,7 +292,7 @@ export function ExamClient({
             {t("qz.submit")}
           </button>
         </div>
-        <nav className="mx-auto flex max-w-3xl flex-wrap gap-1 px-4 pb-2.5">
+        <nav className="mx-auto flex max-w-5xl flex-wrap gap-1 px-4 pb-2.5">
           {questions.map((q, i) => (
             <a
               key={q.id}
@@ -312,7 +312,7 @@ export function ExamClient({
             data-kind={warning.kind}
             className={`border-t px-4 py-2.5 ${warning.kind === "left" ? "border-red-500/40 bg-red-500/15" : "border-amber-500/40 bg-amber-500/10"}`}
           >
-            <div className="mx-auto flex max-w-3xl items-center gap-3">
+            <div className="mx-auto flex max-w-5xl items-center gap-3">
               <span aria-hidden className={warning.kind === "left" ? "text-danger" : "text-warning"}>⚠</span>
               <p className={`min-w-0 flex-1 text-sm font-medium ${warning.kind === "left" ? "text-danger" : "text-warning"}`}>
                 {warning.kind === "left" ? t("qz.warn.left", { n: warning.n }) : t("qz.warn.blocked")}
@@ -325,7 +325,7 @@ export function ExamClient({
         )}
       </div>
 
-      <ol className="mx-auto max-w-3xl space-y-6 px-4 py-8">
+      <ol className="mx-auto max-w-5xl space-y-6 px-4 py-8">
         {questions.map((q, i) => {
           const r = answers[q.id] ?? {};
           return (
@@ -378,7 +378,7 @@ export function ExamClient({
                 <textarea
                   value={r.text ?? ""}
                   onChange={(e) => update(q.id, { text: e.target.value })}
-                  rows={q.codeAnswer ? 12 : 8}
+                  rows={q.codeAnswer ? 18 : 10}
                   className={`input select-text ${q.codeAnswer ? "font-mono text-[13px]" : ""}`}
                   aria-label={t("qz.yourAnswer")}
                   spellCheck={!q.codeAnswer}
@@ -398,6 +398,7 @@ export function ExamClient({
               {q.type === "CODE" && q.language && (
                 <CodeWorkspace
                   idPrefix={q.id}
+                  editorHeight="min(32rem, 60vh)"
                   language={q.language}
                   files={r.files ?? q.starter}
                   onChange={(files) => update(q.id, { files })}
@@ -408,7 +409,7 @@ export function ExamClient({
         })}
       </ol>
 
-      <div className="mx-auto max-w-3xl px-4 pb-16">
+      <div className="mx-auto max-w-5xl px-4 pb-16">
         <button type="button" onClick={onSubmitClick} disabled={submitting} className="btn w-full">{t("qz.submit")}</button>
       </div>
 

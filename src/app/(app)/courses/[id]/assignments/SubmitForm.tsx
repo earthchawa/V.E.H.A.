@@ -40,7 +40,7 @@ export function SubmitForm({
     <KeepForm action={action} pending={pending} beforeSubmit={check} directUpload className="space-y-4">
       <div>
         <label className="label" htmlFor="s-text">{t("asg.text")}</label>
-        <textarea id="s-text" name="textAnswer" rows={8} className="input" defaultValue={defaultText} />
+        <textarea id="s-text" name="textAnswer" rows={14} className="input min-h-48 resize-y" defaultValue={defaultText} />
       </div>
       <div>
         <label className="label" htmlFor="s-files">{t("asg.files")}</label>

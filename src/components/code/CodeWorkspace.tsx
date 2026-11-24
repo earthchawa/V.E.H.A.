@@ -16,12 +16,15 @@ export function CodeWorkspace({
   onChange,
   readOnly = false,
   idPrefix,
+  editorHeight,
 }: {
   language: CodeLanguage;
   files: CodeFiles;
   onChange?: (files: CodeFiles) => void;
   readOnly?: boolean;
   idPrefix: string;
+  /** Minimum editor height (CSS length); the exam page asks for a taller editor than review screens. */
+  editorHeight?: string;
 }) {
   const { t } = useI18n();
   const names = LANGUAGE_FILES[language];
@@ -56,7 +59,7 @@ export function CodeWorkspace({
         </div>
         {names.map((n) => (
           <div key={`${idPrefix}-${n}`} hidden={active !== n}>
-            <CodeEditor value={current[n] ?? ""} onChange={(v) => edit(n, v)} fileName={n} readOnly={readOnly} label={`${t("code.editor")} ${n}`} />
+            <CodeEditor value={current[n] ?? ""} onChange={(v) => edit(n, v)} fileName={n} readOnly={readOnly} minHeight={editorHeight} label={`${t("code.editor")} ${n}`} />
           </div>
         ))}
       </div>

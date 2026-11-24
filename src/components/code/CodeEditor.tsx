@@ -12,7 +12,7 @@ export function CodeEditor({
   onChange,
   fileName,
   readOnly = false,
-  minHeight = "12rem",
+  minHeight = "16rem",
   label,
 }: {
   value: string;

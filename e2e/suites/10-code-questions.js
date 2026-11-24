@@ -51,6 +51,8 @@ const ok = (c, m) => { if (!c) throw new Error('FAIL: ' + m); console.log('PASS'
   const web = c1.locator('[data-testid=code-workspace][data-language=web]');
   await py.locator('.cm-content').waitFor();
   ok((await py.locator('.cm-content').textContent()).includes('n = int(input'), 'starter code loaded in editor');
+  const edBox = await py.getByTestId('code-editor').boundingBox();
+  ok(edBox.height >= 380 && edBox.width >= 800, 'exam code editor is roomy: ' + Math.round(edBox.width) + 'x' + Math.round(edBox.height));
 
   // paste is blocked inside the editor
   await py.locator('.cm-content').click();
